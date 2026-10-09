@@ -132,6 +132,9 @@ extraction (CA/US dose), exactly as the challenge's "extraction assistée par IA
 - Record URL for evidence: `https://ephy.anses.fr/ppp/<slug>` is not stable from the CSV; we cite the dataset
   resource URL + AMM number, and the E-Phy search URL `https://ephy.anses.fr/resultats_recherche/<AMM>` as human link.
 - Failure modes: weekly file name changes (resolve via API), header typos exist (`tade cultural max`), cp1252 vs UTF-8.
+- **Header trap (verified on the 2026-10-08 file):** column `identifiant usage lib court` contains the numeric use code
+  (e.g. `11012217`) and column `identifiant usage` contains the text `Culture*Traitement*Cible`. The parser keys on the
+  code and parses the text; do not trust the header names.
 
 ## 4. Brazil — MAPA open data portal, AGROFIT dataset (official ministry source)
 

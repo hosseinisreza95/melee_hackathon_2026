@@ -11,3 +11,4 @@ US-EPA-PPLS,Cancelled,withdrawn,
 US-EPA-PPLS,Pending,pending,
 FR-EPHY,AUTORISE,active,
 FR-EPHY,RETIRE,withdrawn,Date de retrait du produit gives the date
+BR-AGROFIT,TRUE,active,open file lists active registrations only; absence from the file is not a withdrawal

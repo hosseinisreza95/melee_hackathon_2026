@@ -13,7 +13,7 @@ after every `MUST` row is `done`.
 |---|---|---|---|---|
 | M1 | ≥ 3 official sources, ≥ 2 regions (fiche, README #1) | `src/lpc_regwatch/collectors/{ca_ppid,us_epa_ppls,fr_ephy,br_agrofit}.py` — 4 sources, 3 regions (NA, EU, LATAM) | `tests/test_collectors.py`; live snapshots 1,3,4,5 in DB; `data/source_registry.csv` notes say VERIFIED | collectors done, parsers todo |
 | M2 | Product × country × use comparison table with official source URL and collection date (fiche, README #2, #4) | `GET /compare` + Streamlit table | `tests/test_api.py::test_compare_has_evidence` checks every row carries `sourceUrl` + `collectedAt` | todo |
-| M3 | Original value preserved alongside normalized value (README #3, cahier §7 Normalisation) | DB columns `*_original` / `*_normalized` on `uses`, `registrations`, `products` | `scripts/validate_data.py` + `tests/test_db.py::test_original_columns_never_null_when_normalized` | in_progress |
+| M3 | Original value preserved alongside normalized value (README #3, cahier §7 Normalisation) | DB columns `*_original` / `*_normalized` on `uses`, `registrations`, `products`; parsers copy originals verbatim, normalize status only via `data/status_mapping.csv` | `scripts/validate_data.py` on the export; `tests/test_parsers.py` asserts originals and normalized status side by side | done for status; crop/pest/unit normalization in Step 3 |
 | M4 | Uncertainty, missing fields and validation status visible (README #5, cahier §7 Validation) | `validation_status` enum on every regulatory row; `warnings[]` in API answers; status badges in UI | `tests/test_api.py::test_missing_data_is_flagged_not_denied` | todo |
 | M5 | ≥ 1 sister-product match presented as hypothesis to confirm (fiche "Critères") | `product_aliases` with `relationship_type=sister_product_candidate`, `review_status=to_verify` | `tests/test_matching.py` asserts no candidate is ever returned with `confirmed` unless `review_status=validated` | todo |
 | M6 | Microsoft 365 interoperability demonstrated or documented (fiche, README #6) | `schema/openapi.yaml` served by FastAPI → Power Platform custom connector + Copilot Studio action; CSV/Excel export | `m365/README.md` with connector import steps + screenshots; `GET /export.csv` smoke test | todo |
@@ -50,10 +50,10 @@ after every `MUST` row is `done`.
 |---|---|---|---|
 | F1 | Search a product or active entity | `GET /products?q=` (name, alias, active entity) | todo |
 | F2 | Compare results between countries | `GET /compare?productId=&countries=` | todo |
-| F3 | Extract at least product, status, registration number, crop, target, dose when available | collectors (CA/US: crop+pest structured, dose only in label PDF → `dose_value=null`, warning) ; FR: all structured | in_progress |
-| F4 | Keep source and collection date | `raw_documents` + row-level evidence | in_progress |
-| F5 | Flag missing / uncertain | `validation_status`, `confidence`, `warnings[]` | todo |
-| F6 | Distinguish extracted vs validated | `validation_status` enum (`automatically_extracted` default) | in_progress |
+| F3 | Extract at least product, status, registration number, crop, target, dose when available | `parsers/*`: CA/US crop+pest structured with `pairing=unpaired_lists`, dose null (label PDF, Step 7); FR all structured incl. dose; BR crop↔pest paired, no dose | done (parsers) |
+| F4 | Keep source and collection date | `raw_documents` + `source_record_url`, `collected_at`, `snapshot_id`, `evidence_excerpt` on every row | done |
+| F5 | Flag missing / uncertain | `validation_status`, `confidence`, `pairing`; `warnings[]` in API (Step 4) | partial |
+| F6 | Distinguish extracted vs validated | `validation_status` enum, default `automatically_extracted`; `review_log` for RA changes | done (schema), UI in Step 5 |
 | F7 | Produce a comparison table | API + Streamlit + CSV export | todo |
 | F8 | Natural-language questions | `POST /ask` with tool-calling over F1/F2 | todo |
 | F9 | Demonstrate/document M365 integration | see M6 | todo |

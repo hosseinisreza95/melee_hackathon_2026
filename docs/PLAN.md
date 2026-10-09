@@ -34,7 +34,21 @@ from "schema drift". 8 offline tests green.
 Exit test: `tests/test_collectors.py` (offline, on fixtures) + one live run producing
 `data/raw/<source>/<date>/...` for all four sources.
 
-## Step 2 — Parsers (deterministic) → canonical rows
+## Step 2 — Parsers (deterministic) → canonical rows ✅ (2026-10-09)
+
+Live result (latest snapshots): CA 17 registrations / 300 uses / 14 historical names; US 29 registrations /
+5 438 uses (EPA site lists are very granular) / 15 aliases; FR 15 registrations / 144 uses with dose, PHI,
+max applications, BBCH; BR 171 registrations / 454 uses (17 Lallemand BR products + same-species competitors).
+Export to `data/*.csv` passes `scripts/validate_data.py`. 5 parser tests + loader/export round-trip green.
+
+Findings to carry into Step 3:
+- The same product is primary-named differently per market: FR "LALSTOP G46 WG" (AMM 2230771) vs CA "PRESTOP WG"
+  (32404) vs US "PRESTOP (WG)" (64137-13) whose official `altbrandnames` says "LALSTOP G46 WG". Today they are
+  two product ids (`P-LPC-G46`, `P-PRESTOP-WG`). Rule for Step 3: an official alternate name **on the same
+  registration** is an equivalence (not a hypothesis) → merge with evidence; "PRESTOP" (WP formulation) stays a
+  sister-product candidate.
+- E-Phy header names are misleading: 'identifiant usage lib court' holds the numeric code, 'identifiant usage'
+  holds the text. Documented in the parser.
 
 - `parsers/ca_ppid.py`: product rows → `products`, `registrations`, `uses` (site × pest, dose null).
 - `parsers/us_epa_ppls.py`: JSON → `products`, `registrations`, `uses` (site × pest, dose null),
