@@ -1,0 +1,25 @@
+# Data
+pandas
+numpy
+pyarrow
+openpyxl
+# ML / risk scoring
+scikit-learn
+lightgbm
+xgboost
+shap
+imbalanced-learn
+# Viz
+matplotlib
+seaborn
+plotly
+# Demo app / API
+streamlit
+fastapi
+uvicorn
+# Notebooks & utils
+jupyterlab
+ipykernel
+python-dotenv
+requests
+tqdm
