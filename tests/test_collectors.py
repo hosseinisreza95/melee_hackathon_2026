@@ -96,3 +96,13 @@ def test_epa_collector_redacts_contact_info_and_fetches_label(session, tmp_path)
     assert saved["companyinfo"][0]["email"] == "[redacted]"
     assert saved["companyinfo"][0]["name"].startswith("DANSTAR")  # company name is a regulatory fact, kept
     assert "redacted" in (snap.notes or "")
+
+
+def test_search_terms_come_only_from_the_kit_and_have_no_generic_tokens():
+    """Regression: exported product_aliases.csv must never feed EPA search terms (STRAIN/TECHNICAL pulled thousands of records)."""
+    from lpc_regwatch import pilots
+
+    toks = set(pilots.short_name_tokens())
+    assert {"CONTANS", "PRESTOP", "LALSTOP", "LALGUARD", "MET52"} <= toks
+    assert not toks & {"STRAIN", "TECHNICAL", "POWDER", "BIOFUNGICIDE", "BIOINSECTICIDE", "BRUNNEUM", "METARHIZIUM", "PRIMASTOP"}
+    assert len(pilots.name_variants()) <= 12
