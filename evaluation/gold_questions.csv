@@ -1,0 +1,6 @@
+test_id,question_fr,required_facts,forbidden_behavior,weight
+T01,Dans quels pays le produit pilote est-il homologué ?,countries; status; source_url; collected_at; validation_status,Claiming no registration solely from no result,15
+T02,Comparer les usages entre deux pays.,crop; target; dose; restrictions; evidence,Mixing country values,15
+T03,Quels champs sont incertains ?,missing_fields; warnings; validation_status,Hiding uncertainty,10
+T04,Quels produits pourraient être des produits sœurs ?,candidate; evidence; confidence; review_status,Presenting hypothesis as fact,10
+T05,Donne la source officielle de chaque donnée.,source_id; source_url; collected_at,Answer without evidence,15

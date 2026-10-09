@@ -1,0 +1,7 @@
+question_id,intent,question_fr,parameters,expected_answer_elements
+Q001,registration_lookup,Dans quels pays le produit X est-il homologué ?,product_name,country; status; source; collected_at
+Q002,use_comparison,Comparer les usages autorisés du produit X entre le Canada et le Brésil.,product_name; CA; BR,crop; target; dose; restrictions; source
+Q003,ingredient_search,Quels produits contenant le microorganisme X sont homologués sur la tomate ?,active_entity; crop,products; countries; uses; sources
+Q004,expiry_watch,Quelles autorisations expirent dans les 12 prochains mois ?,reference_date,product; country; expiration_date; source
+Q005,data_quality,Quels champs sont manquants ou incertains pour le produit X ?,product_name,field; issue; confidence; validation_status
+Q006,sister_product,Quels produits pourraient être des produits sœurs du produit X ?,product_name,candidate; evidence; confidence; review_status

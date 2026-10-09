@@ -1,0 +1,21 @@
+# Team-server deployment (infrastructure as code — cahier §15).
+# MVP: only the database is containerised in Step 0; api and ui services are added in Step 8.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: lpc_regwatch
+      POSTGRES_USER: lpc
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lpc}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lpc -d lpc_regwatch"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:

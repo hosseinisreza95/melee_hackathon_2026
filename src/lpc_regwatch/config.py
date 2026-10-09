@@ -1,0 +1,37 @@
+"""Central configuration, read from environment (.env) only.
+
+Why: the challenge requires no personal API key in the repo and an AI provider that is
+replaceable by configuration. Every external dependency is declared here and nowhere else.
+"""
+from __future__ import annotations
+
+import os
+from dataclasses import dataclass
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+ROOT = Path(__file__).resolve().parents[2]
+load_dotenv(ROOT / ".env", override=False)
+
+DISCLAIMER = (
+    "This prototype is not an official regulatory source. Regulatory Affairs validation is "
+    "required before any official, commercial or operational use. No result must not be "
+    "interpreted as no registration."
+)
+
+
+@dataclass(frozen=True)
+class Settings:
+    app_env: str = os.getenv("APP_ENV", "development")
+    database_url: str = os.getenv("DATABASE_URL", f"sqlite:///{(ROOT / 'data' / 'lpc_regwatch.sqlite').as_posix()}")
+    raw_dir: Path = Path(os.getenv("RAW_DIR", ROOT / "data" / "raw"))
+    # AI provider: any OpenAI-compatible endpoint (OpenAI, Gemini OpenAI-compat, Azure OpenAI, local)
+    ai_provider: str = os.getenv("AI_PROVIDER", "openai")
+    ai_model: str = os.getenv("AI_MODEL", "gpt-4o-mini")
+    ai_api_key: str = os.getenv("AI_API_KEY", "")
+    ai_base_url: str | None = os.getenv("AI_BASE_URL") or None
+    http_user_agent: str = os.getenv("HTTP_USER_AGENT", "lpc-regwatch/0.1 (hackathon prototype)")
+
+
+settings = Settings()

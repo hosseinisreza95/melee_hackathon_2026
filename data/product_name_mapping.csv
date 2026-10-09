@@ -1,0 +1,11 @@
+﻿mapping_id,product_id,name_variant,relationship_type,market_or_country,confidence_score,confidence_status,evidence_summary,evidence_type,review_status
+PNM-001,P-LPC-CONTANS,LALSTOP CONTANS WG,canonical_name,global,1.00,confirmed_internal,Confirmed canonical pilot name,internal_product_record,validated
+PNM-002,P-LPC-CONTANS,CONTANS WG,historical_or_market_name,multiple,0.98,confirmed_internal,Legacy product name associated with the same active strain; final country registration linkage must still be checked,internal_product_record,validated
+PNM-003,P-LPC-G46,LALSTOP G46 WG,canonical_name,global,1.00,confirmed_internal,Confirmed canonical pilot name,internal_product_record,validated
+PNM-004,P-LPC-G46,PRESTOP,sister_product_candidate,FR,0.85,strong_candidate,Same microorganism/strain family appears in internal French product list; registration number differs,internal_product_list,to_verify
+PNM-005,P-LPC-G46,PRESTOP 4B,sister_product_candidate,FR,0.75,candidate,Same microorganism/strain family; formulation and registration differ,internal_product_list,to_verify
+PNM-006,P-LPC-G46,LALFRESH S,sister_product_candidate,FR,0.70,candidate,Same microorganism/strain family; product identity not established,internal_product_list,to_verify
+PNM-007,P-LPC-M52,LALGUARD M52 OD,canonical_name,global,1.00,confirmed_internal,Confirmed canonical pilot name,official_label_internal,validated
+PNM-008,P-LPC-M52,LALGUARD M52 GR,related_formulation,multiple,0.95,confirmed_related,Same M52 active strain family but different formulation,internal_product_list,validated
+PNM-009,P-LPC-M52,MITAXION G,sister_product_candidate,FR,0.80,strong_candidate,Same active organism/strain family in internal France list; identity/formulation requires review,internal_product_list,to_verify
+PNM-010,P-LPC-M52,MET52 OD,historical_or_market_name,multiple,0.70,candidate,Legacy market wording may occur; verify market and registration before linking,internal_label_history,to_verify

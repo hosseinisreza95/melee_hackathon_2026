@@ -1,0 +1,11 @@
+name: validate-starter
+on: [push, pull_request]
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python scripts/validate_data.py
+      - run: python scripts/evaluate_submission.py examples/sample_submission.json

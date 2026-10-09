@@ -1,0 +1,13 @@
+source_id,status_original,status_normalized,notes
+CA-PPID,Full Registration,active,
+CA-PPID,Temporary Product,active,time-limited registration; expiry_date carries the limit
+CA-PPID,Limited Term Product,active,time-limited registration
+CA-PPID,Emergency Registration,active,time-limited registration
+CA-PPID,Phase-Out,expired,product being phased out
+CA-PPID,Cancelled,withdrawn,
+US-EPA-PPLS,Active,active,
+US-EPA-PPLS,Inactive,withdrawn,PPLS wording for cancelled products
+US-EPA-PPLS,Cancelled,withdrawn,
+US-EPA-PPLS,Pending,pending,
+FR-EPHY,AUTORISE,active,
+FR-EPHY,RETIRE,withdrawn,Date de retrait du produit gives the date

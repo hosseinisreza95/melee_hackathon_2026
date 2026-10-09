@@ -1,25 +1,18 @@
-# Data
+# Runtime (MVP) — see docs/SPEC.md S6 for the "no undeclared dependency" rule
 pandas
-numpy
-pyarrow
-openpyxl
-# ML / risk scoring
-scikit-learn
-lightgbm
-xgboost
-shap
-imbalanced-learn
-# Viz
-matplotlib
-seaborn
-plotly
-# Demo app / API
-streamlit
+httpx
+python-dotenv
+pydantic>=2
+sqlalchemy>=2
 fastapi
 uvicorn
-# Notebooks & utils
-jupyterlab
-ipykernel
-python-dotenv
-requests
-tqdm
+streamlit
+plotly
+openai>=1          # OpenAI-compatible client; provider/base_url/model from .env (OpenAI, Gemini, Azure OpenAI)
+pymupdf            # label PDF text extraction
+lxml
+openpyxl           # Excel export
+# Optional server DB
+psycopg[binary]
+# Dev / test
+pytest

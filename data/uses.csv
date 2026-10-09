@@ -1,0 +1,2 @@
+use_id,registration_id,crop_name_original,crop_name_normalized,eppo_crop_code,target_name_original,target_name_normalized,eppo_target_code,application_method,dose_value,dose_unit_original,dose_unit_normalized,max_applications,application_interval_days,phi_days,rei_hours,restrictions_original,validation_status,is_synthetic
+U-DEMO-001,R-DEMO-001,Tomate,Tomato,,Pourriture grise,Botrytis cinerea,,,,,,,,,,Synthetic row for structure demonstration only,to_verify,true

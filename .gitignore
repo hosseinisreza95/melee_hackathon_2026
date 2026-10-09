@@ -1,11 +1,16 @@
+.env
 .venv/
 __pycache__/
 *.pyc
+.pytest_cache/
 .ipynb_checkpoints/
-.env
-data/raw/*
-data/processed/*
-!data/**/.gitkeep
-models/*
-!models/.gitkeep
 .DS_Store
+.vscode/
+output/
+secrets/
+# raw downloads and local DB are evidence, re-creatable by the collectors; never commit restricted data
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+data/*.sqlite

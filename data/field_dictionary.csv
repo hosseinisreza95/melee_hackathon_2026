@@ -1,0 +1,50 @@
+entity,field_name,data_type,required,definition,allowed_values_or_format,notes
+product,product_id,string,yes,Stable internal identifier,UUID or prefixed ID,Do not key on commercial name
+product,commercial_name,string,yes,Primary commercial name,,
+product,active_entity_original,string,no,Original active ingredient or microorganism,,Preserve source text
+product,active_entity_normalized,string,no,Normalized active entity,,Do not overwrite original
+product,formulation_code,string,no,"WG, OD, SC, WP, etc.",,
+product,is_synthetic,boolean,yes,Fictional or generated record,true|false,Must be visible
+product_alias,alias_id,string,yes,Alias identifier,,
+product_alias,product_id,string,yes,Parent product,,FK
+product_alias,alias_name,string,yes,"Alternative, historical or sister-product candidate name",,
+product_alias,relationship_type,enum,yes,Relationship nature,alternate_name|historical_name|sister_product_candidate|confirmed_sister_product,Candidates require review
+product_alias,confidence,number,no,Machine or analyst confidence,0..1,Not regulatory validation
+registration,registration_id,string,yes,Registration identifier,,
+registration,product_id,string,yes,Product identifier,,FK
+registration,country_code,string,yes,ISO 3166-1 alpha-2,2 uppercase letters,
+registration,authority_name,string,yes,Competent authority,,
+registration,registration_number,string,no,Official number,,
+registration,status_original,string,no,Source status wording,,
+registration,status_normalized,enum,yes,Normalized status,active|expired|withdrawn|pending|unknown,
+registration,approval_date,date,no,Approval date,YYYY-MM-DD,
+registration,expiration_date,date,no,Expiration/renewal date,YYYY-MM-DD,
+registration,source_id,string,yes,Source identifier,,FK
+registration,source_record_url,uri,yes,Direct official record URL,,
+registration,collected_at,datetime,yes,UTC collection timestamp,ISO 8601,
+registration,validation_status,enum,yes,Review state,automatically_extracted|to_verify|validated|rejected|obsolete|source_unavailable,
+use,use_id,string,yes,Authorized-use identifier,,
+use,registration_id,string,yes,Parent registration,,FK
+use,crop_name_original,string,no,Crop as sourced,,
+use,crop_name_normalized,string,no,Normalized crop,,
+use,eppo_crop_code,string,no,EPPO crop code,,Validate or flag
+use,target_name_original,string,no,Target as sourced,,
+use,target_name_normalized,string,no,Normalized target,,
+use,eppo_target_code,string,no,EPPO target code,,Validate or flag
+use,application_method,string,no,Application method,,
+use,dose_value,number,no,Numeric dose,,
+use,dose_unit_original,string,no,Source dose unit,,
+use,dose_unit_normalized,string,no,Normalized unit,,Do not alter meaning
+use,max_applications,integer,no,Maximum applications,,
+use,application_interval_days,number,no,"Minimum interval, days",,
+use,phi_days,number,no,"Pre-harvest interval, days",,
+use,rei_hours,number,no,"Restricted-entry interval, hours",,
+use,restrictions_original,string,no,Restrictions as sourced,,
+source,source_id,string,yes,Source identifier,,
+source,official_name,string,yes,Official source name,,
+source,country_or_region,string,yes,Coverage,,
+source,base_url,uri,yes,Official URL,,
+source,access_method,enum,yes,Access,web|api|download|sftp|manual_extract,
+source,data_format,string,yes,Observed formats,,
+source,license_name,string,no,Exact licence if known,,
+source,manual_validation_required,boolean,yes,Access/licence needs confirmation,true|false,

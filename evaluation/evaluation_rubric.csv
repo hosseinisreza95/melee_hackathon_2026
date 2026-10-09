@@ -1,0 +1,9 @@
+criterion_id,criterion,weight,success_evidence,assessment_method
+data_quality,Canonical completeness and faithful extraction,20,Required identifiers and fields; originals preserved,Machine + jury
+traceability,Source traceability and safeguards,20,"Source, URL, timestamp, state and disclaimer",Machine + jury
+normalization,Normalization and EPPO handling,15,Original/normalized distinction; verified mappings,Machine + jury
+ai,Appropriate grounded AI,15,"Extraction, matching or reasoning without unsupported claims",Jury
+m365,Microsoft 365 interoperability,15,API/export/custom connector/Dataverse/SharePoint/Copilot path,Jury
+architecture,"Portability, security and maintainability",10,"Restartable, no personal key, replaceable provider",Machine + jury
+ux,User experience,5,"Clear comparison, evidence and uncertainty",Jury
+bonus,Change detection or sister-product workflow,5,Optional with evidence and review controls,Jury; total capped at 100
