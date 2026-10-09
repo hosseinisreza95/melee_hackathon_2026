@@ -1,0 +1,9 @@
+﻿mapping_id,product_id,entity_type,name_variant,canonical_species,strain,eppo_code,relationship_type,confidence_score,confidence_status,evidence_summary,review_status
+AE-001,P-LPC-CONTANS,microorganism,Coniothyrium minitans strain CON/M/91-08,Coniothyrium minitans,CON/M/91-08,,current_label_name,1.00,confirmed_internal,Internal compatibility document,validated
+AE-002,P-LPC-CONTANS,taxonomic_or_label_alias,Coniothyrium minitans,Coniothyrium minitans,CON/M/91-08,,short_name,0.95,confirmed_internal,Strain omitted in short wording; do not use as exact strain identity without evidence,to_verify
+AE-003,P-LPC-G46,microorganism,Clonostachys rosea J1446,Clonostachys rosea,J1446,,current_label_name,1.00,confirmed_internal,Current French label and technical sheet,validated
+AE-004,P-LPC-G46,taxonomic_synonym,Gliocladium catenulatum J1446,Clonostachys rosea,J1446,,former_taxonomic_name,0.98,confirmed_internal,Internal technical sheet explicitly states former name,validated
+AE-005,P-LPC-M52,microorganism,Metarhizium brunneum strain Ma 43,Metarhizium brunneum,Ma 43,,current_eu_label_name,1.00,confirmed_internal,Current French and Belgian labels,validated
+AE-006,P-LPC-M52,strain_alias_candidate,Metarhizium brunneum F52,Metarhizium brunneum,F52,,market_or_regulatory_alias,0.90,strong_candidate,Internal product list and product content indicate F52/Ma 43 naming; confirm jurisdiction-specific equivalence,to_verify
+AE-007,P-LPC-M52,taxonomic_synonym,Metarhizium anisopliae F52,Metarhizium brunneum,F52,,former_taxonomic_name,0.90,strong_candidate,Internal product list identifies previously known name; jurisdiction-specific confirmation required,to_verify
+AE-008,P-LPC-M52,taxonomic_synonym,Metarhizium anisopliae var. anisopliae strain F52,Metarhizium brunneum,F52,,former_taxonomic_name,0.90,strong_candidate,Internal product list identifies previously known name,to_verify

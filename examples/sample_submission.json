@@ -1,0 +1,30 @@
+{
+  "submission_id": "demo-team",
+  "generated_at": "2026-10-10T00:00:00Z",
+  "answers": [
+    {
+      "test_id": "T01",
+      "answer": "No verified result is included in this synthetic example.",
+      "facts": [],
+      "evidence": [
+        {
+          "source_id": "CA-PPID",
+          "source_url": "https://open.canada.ca/data/dataset/e10b0d6e-04ac-4014-a64a-666c3874bbe0",
+          "collected_at": "2026-09-09T00:00:00Z",
+          "validation_status": "to_verify"
+        }
+      ],
+      "warnings": [
+        "Synthetic example."
+      ],
+      "disclaimer": "Regulatory Affairs validation is required."
+    }
+  ],
+  "m365_integration": {
+    "mechanism": "api",
+    "documentation_url": "schema/openapi.yaml"
+  },
+  "known_limitations": [
+    "No live regulatory data in this sample."
+  ]
+}

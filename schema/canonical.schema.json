@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LPC Regulatory Record",
+  "type": "object",
+  "required": [
+    "product",
+    "registration",
+    "source"
+  ],
+  "properties": {
+    "product": {
+      "type": "object",
+      "required": [
+        "product_id",
+        "commercial_name",
+        "is_synthetic"
+      ],
+      "properties": {
+        "product_id": {
+          "type": "string"
+        },
+        "commercial_name": {
+          "type": "string"
+        },
+        "active_entity_original": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "active_entity_normalized": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "formulation_code": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "is_synthetic": {
+          "type": "boolean"
+        }
+      }
+    },
+    "registration": {
+      "type": "object",
+      "required": [
+        "registration_id",
+        "country_code",
+        "status_normalized",
+        "source_id",
+        "source_record_url",
+        "collected_at",
+        "validation_status"
+      ],
+      "properties": {
+        "registration_id": {
+          "type": "string"
+        },
+        "country_code": {
+          "type": "string",
+          "pattern": "^[A-Z]{2}$"
+        },
+        "status_normalized": {
+          "enum": [
+            "active",
+            "expired",
+            "withdrawn",
+            "pending",
+            "unknown"
+          ]
+        },
+        "source_id": {
+          "type": "string"
+        },
+        "source_record_url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "collected_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "validation_status": {
+          "enum": [
+            "automatically_extracted",
+            "to_verify",
+            "validated",
+            "rejected",
+            "obsolete",
+            "source_unavailable"
+          ]
+        }
+      }
+    },
+    "uses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "use_id",
+          "validation_status"
+        ]
+      }
+    },
+    "source": {
+      "type": "object",
+      "required": [
+        "source_id",
+        "official_name",
+        "base_url"
+      ]
+    }
+  }
+}

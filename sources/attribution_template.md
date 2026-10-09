@@ -1,0 +1,12 @@
+# Source attribution template
+- Source organization:
+- Dataset/service:
+- Official URL:
+- Record URL:
+- Licence/version:
+- Required attribution:
+- Collection time UTC:
+- Access method:
+- Transformations:
+- Known exclusions/limits:
+- Validation owner/status:

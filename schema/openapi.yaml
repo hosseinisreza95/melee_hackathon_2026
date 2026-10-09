@@ -1,0 +1,174 @@
+openapi: 3.1.0
+info:
+  title: LPC Global Regulatory AI API
+  version: 0.1.0
+  description: Minimal portable hackathon contract. Regulatory Affairs validation is required.
+servers:
+  - url: http://localhost:8000
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      responses:
+        '200':
+          description: Service available
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: {type: string, const: ok}
+  /products:
+    get:
+      operationId: searchProducts
+      parameters:
+        - in: query
+          name: q
+          schema: {type: string}
+      responses:
+        '200':
+          description: Matching products
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: {$ref: '#/components/schemas/Product'}
+  /products/{productId}/registrations:
+    get:
+      operationId: getProductRegistrations
+      parameters:
+        - in: path
+          name: productId
+          required: true
+          schema: {type: string}
+        - in: query
+          name: country
+          schema: {type: string, pattern: '^[A-Z]{2}$'}
+      responses:
+        '200':
+          description: Registrations
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, disclaimer]
+                properties:
+                  items:
+                    type: array
+                    items: {$ref: '#/components/schemas/Registration'}
+                  disclaimer: {type: string}
+        '404':
+          description: No match. This is not proof of no registration.
+  /compare:
+    get:
+      operationId: compareProductUses
+      parameters:
+        - in: query
+          name: productId
+          required: true
+          schema: {type: string}
+        - in: query
+          name: countries
+          required: true
+          schema: {type: string, example: 'CA,US,BR'}
+      responses:
+        '200':
+          description: Comparison with evidence
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ComparisonResponse'}
+  /ask:
+    post:
+      operationId: askRegulatoryQuestion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [question]
+              properties:
+                question: {type: string, minLength: 3}
+                language: {type: string, default: fr}
+      responses:
+        '200':
+          description: Grounded answer
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Answer'}
+components:
+  schemas:
+    Product:
+      type: object
+      required: [productId, commercialName, isSynthetic]
+      properties:
+        productId: {type: string}
+        commercialName: {type: string}
+        activeEntityOriginal: {type: [string, 'null']}
+        activeEntityNormalized: {type: [string, 'null']}
+        formulationCode: {type: [string, 'null']}
+        isSynthetic: {type: boolean}
+    Evidence:
+      type: object
+      required: [sourceId, sourceUrl, collectedAt, validationStatus]
+      properties:
+        sourceId: {type: string}
+        sourceUrl: {type: string, format: uri}
+        collectedAt: {type: string, format: date-time}
+        validationStatus:
+          type: string
+          enum: [automatically_extracted, to_verify, validated, rejected, obsolete, source_unavailable]
+        excerpt: {type: [string, 'null']}
+    AuthorizedUse:
+      type: object
+      required: [useId, evidence]
+      properties:
+        useId: {type: string}
+        cropOriginal: {type: [string, 'null']}
+        cropNormalized: {type: [string, 'null']}
+        eppoCropCode: {type: [string, 'null']}
+        targetOriginal: {type: [string, 'null']}
+        targetNormalized: {type: [string, 'null']}
+        eppoTargetCode: {type: [string, 'null']}
+        doseValue: {type: [number, 'null']}
+        doseUnitOriginal: {type: [string, 'null']}
+        restrictionsOriginal: {type: [string, 'null']}
+        evidence: {$ref: '#/components/schemas/Evidence'}
+    Registration:
+      type: object
+      required: [registrationId, productId, countryCode, statusNormalized, evidence]
+      properties:
+        registrationId: {type: string}
+        productId: {type: string}
+        countryCode: {type: string, pattern: '^[A-Z]{2}$'}
+        authorityName: {type: string}
+        registrationNumber: {type: [string, 'null']}
+        statusNormalized:
+          type: string
+          enum: [active, expired, withdrawn, pending, unknown]
+        uses:
+          type: array
+          items: {$ref: '#/components/schemas/AuthorizedUse'}
+        evidence: {$ref: '#/components/schemas/Evidence'}
+    ComparisonResponse:
+      type: object
+      required: [productId, countries, registrations, warnings, disclaimer]
+      properties:
+        productId: {type: string}
+        countries: {type: array, items: {type: string}}
+        registrations: {type: array, items: {$ref: '#/components/schemas/Registration'}}
+        warnings: {type: array, items: {type: string}}
+        disclaimer: {type: string}
+    Answer:
+      type: object
+      required: [answer, evidence, warnings, disclaimer]
+      properties:
+        answer: {type: string}
+        evidence: {type: array, items: {$ref: '#/components/schemas/Evidence'}}
+        warnings: {type: array, items: {type: string}}
+        disclaimer: {type: string}

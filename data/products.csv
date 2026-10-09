@@ -1,0 +1,220 @@
+product_id,commercial_name,active_entity_original,active_entity_normalized,formulation_code,is_synthetic,validation_status,strain
+P-ANISO,Aniso,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (150 g/L)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-ANT-03-EC,ANT-03 EC,"Beauveria bassiana, cepa ANT-03  (Biológico) (9.8 g/L)",Beauveria bassiana ANT-03,EC,false,automatically_extracted,ANT-03
+P-ANT-03-WP,ANT-03 WP,"Beauveria bassiana, cepa ANT-03  (Biológico) (10 g/kg)",Beauveria bassiana ANT-03,WP,false,automatically_extracted,ANT-03
+P-APRILIS,APRILIS,Lactobacillus plantarum (Lactobacillus plantarum) 433.0 g/kg | Pediococcus acidilactici (Pediococcus acidilactici) 233.0 g/kg,Lactobacillus plantarum,,false,automatically_extracted,
+P-ARADYA,Aradya,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (400 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-ASSERTIVE,Assertive,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (2 10^4 UFC/mL) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (2 10^4 UFC/mL)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-AVAST-PLUS,Avast Plus,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (30 g/L) + Cordyceps fumosorosea, CCT 8119 (Biológico) (30 g/L) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (30 g/L)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-BEMIEX,Bemiex,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (7 g/L) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (7 g/L)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-BETHA,Betha,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (.01 g/kg) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (.01 g/kg)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-BIAGRO-CANA,Biagro Cana,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (40 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-BIAGRO-PASTO,Biagro Pasto,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (40 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-BIO-BLAST-BIOLOGICAL-TERMITICIDE,BIO-BLAST BIOLOGICAL TERMITICIDE,Metarhizium anisopliae Strain ESF1 (50%),Metarhizium anisopliae ESF1,,false,automatically_extracted,ESF1
+P-BIO-CERES-G-WB,BIO-CERES G WB,BEAUVERIA BASSIANA STRAIN ANT 03,Beauveria bassiana ANT 03,,false,automatically_extracted,ANT 03
+P-BIO-PATH-BIOLOGICAL-ROACH-CONTROL-SYSTEM,BIO-PATH BIOLOGICAL ROACH CONTROL SYSTEM,Metarhizium anisopliae Strain ESF1 (0.35%),Metarhizium anisopliae ESF1,,false,automatically_extracted,ESF1
+P-BIO-PATH-COCKROACH-CONTROL-CHAMBER,BIO-PATH COCKROACH CONTROL CHAMBER,Metarhizium anisopliae Strain ESF1 (0.35%),Metarhizium anisopliae ESF1,,false,automatically_extracted,ESF1
+P-BIO-PATH-FLY-CONTROL-CHAMBER,BIO-PATH FLY CONTROL CHAMBER,cis-9-Tricosene (0.03%); Metarhizium anisopliae Strain ESF1 (1.19%),Metarhizium anisopliae ESF1,,false,automatically_extracted,ESF1
+P-BIO-PATH-INSECTS-TECHNICAL,BIO-PATH INSECTS TECHNICAL,Metarhizium anisopliae Strain ESF1 (100%),Metarhizium anisopliae ESF1,,false,automatically_extracted,ESF1
+P-BIO-PATH-TECHNICAL,BIO-PATH TECHNICAL,Metarhizium anisopliae Strain ESF1 (100%),Metarhizium anisopliae ESF1,,false,automatically_extracted,ESF1
+P-BIO-PHYGGA,Bio Phygga,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (900 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-BIO-SAVE-R-10LP,BIO-SAVE(R) 10LP,PSEUDOMONAS SYRINGAE - STRAIN ESC-10,Pseudomonas syringae ESC-10,,false,automatically_extracted,ESC-10
+P-BIOATENA,Bioatena,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (300 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-BIOCAZ-POWER,BioCAZ Power,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (200 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-BIOCERES-D-GR,BIOCERES D GR,BEAUVERIA BASSIANA STRAIN ANT 03,Beauveria bassiana ANT 03,GR,false,automatically_extracted,ANT 03
+P-BIOCERES-G-EC,BIOCERES G EC,BEAUVERIA BASSIANA STRAIN ANT 03,Beauveria bassiana ANT 03,EC,false,automatically_extracted,ANT 03
+P-BIOCERES-G-WP,BIOCERES G WP,BEAUVERIA BASSIANA STRAIN ANT 03,Beauveria bassiana ANT 03,WP,false,automatically_extracted,ANT 03
+P-BIOFLEX-B-M,BioFlex B.M,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (115 g/L) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (115 g/L)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-BIOFOLL,Biofoll,Bacillus thuringiensis CCT8018 (Biológico) (100 g/L) + Beauveria bassiana CCT8006 (Biológico) (100 g/L) + Metarhizium anisopliae CCT8019 (Biológico) (100 g/L),Bacillus thuringiensis,,false,automatically_extracted,
+P-BIOFOLL-DUO,Biofoll Duo,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (300 g/L) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (300 g/L)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-BIOMATCH-JCO,Biomatch JCO,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (.0013 g/L) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (.0034 g/L)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-BIOMB,BioMB,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (50 g/L) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (50 g/L)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-BIOMETA,Biometa,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (990 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-BIOMETATRIL,Biometatril,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (150 g/kg) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (150 g/kg)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-BIOMETHA-GR-PLUS,Biometha GR Plus,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (100 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-BIOMTZ,BioMTZ,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (50 g/L)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-BIONATURE-BM,Bionature BM,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (10 ml/litro) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (10 ml/litro)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-BIONOVA-SANUS-META-SC,Bionova Sanus Meta SC,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (42 g/L)",Metarhizium anisopliae IBCB 425,SC,false,automatically_extracted,IBCB 425
+P-BIOOLIMPO,Bioolimpo,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (150 g/kg) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (150 g/kg)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-BIORHIZIUM-GR,Biorhizium GR,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (28.33 g/kg)",Metarhizium anisopliae IBCB 425,GR,false,automatically_extracted,IBCB 425
+P-BIORHIZIUM-WP,Biorhizium WP,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (930 g/kg)",Metarhizium anisopliae IBCB 425,WP,false,automatically_extracted,IBCB 425
+P-BIOSCAP,Bioscap,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (35 g/kg) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (35 g/kg)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-BIOSCAP-LIQ,Bioscap Liq,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (50 g/L) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (50 g/L)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-BIOTITAN-GR,BIOTITAN GR,BEAUVERIA BASSIANA STRAIN ANT 03,Beauveria bassiana ANT 03,GR,false,automatically_extracted,ANT 03
+P-BIOTITAN-WP,BIOTITAN WP,BEAUVERIA BASSIANA STRAIN ANT 03,Beauveria bassiana ANT 03,WP,false,automatically_extracted,ANT 03
+P-BMS-MAX,BMS MAX,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (25 g/L) + Metarhizium anisopliae (Produto Microbiológico) (25 g/L)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-BOMETIL,Bometil,"Beauveria bassiana (Produto Microbiológico) (150 g/kg) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (150 g/kg)",Beauveria bassiana IBCB 425,,false,automatically_extracted,IBCB 425
+P-BOVE-META-BOM-FUTURO,Bove-Meta Bom Futuro,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (10 g/L) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (10 g/L)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-BPT-03,BPT-03,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (7 g/L)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-BTP-076-20,BTP 076-20,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (300 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-BTP-078-20,BTP 078-20,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (150 g/kg) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (150 g/kg)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-CABUR,Caburé,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (50 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-CHONTROL-PASTE,CHONTROL PASTE,CHONDROSTEREUM PURPUREUM STRAIN PFC2139,Chondrostereum purpureum PFC2139,,false,automatically_extracted,PFC2139
+P-CICLO-COMBAT,Ciclo Combat,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (50 ml/litro) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (50 ml/litro)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-CINERAGRO-METARHIZIUM,Cineragro Metarhizium,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (100 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-COMBAT-MBC,Combat MBC,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (50 g/L)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-COMPOSTEC-MCO-METHA,Compostec MCO Metha,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (30 ml/litro)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-CR-7-TECHNICAL,CR-7 Technical,Clonostachys rosea strain CR-7 (50%),Clonostachys rosea CR-7,,false,automatically_extracted,CR-7
+P-CRYSTAL,Crystal,Bacillus thuringiensis (Produto Microbiológico) (1 x 10^9 UFC/mL),Bacillus thuringiensis,,false,automatically_extracted,
+P-DAUBKILL,Daubkill,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (30 ml/litro) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (30 ml/litro)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-DETROIT,Detroit,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (40 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-DIPL,Dipló,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (3.5 g/L) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (3.5 g/L)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-DOBBEL,Dobbel,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (3.5 g/L) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (3.5 g/L)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-DOUBLECOMBAT,Doublecombat,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (200 g/kg) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (200 g/kg)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-DUETTUS,Duettus,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (2 g/kg) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (4 g/kg)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-DUOCONTROL,DuoControl,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (2 g/L) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (2 g/L)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-DUOSHOCK,Duoshock,Beauveria bassiana ASN 053 (Biológico) (4 g/L) + Metarhizium anisopliae ASN 054 (Biológico) (4 g/L),Beauveria bassiana,,false,automatically_extracted,
+P-EASY-METANISO,Easy Metaniso,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (140 g/L)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-EASY-SPIR,Easy Spir,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (150 g/L) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (150 g/L)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-ECOCLAVY,EcoClavy,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (50 g/L)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-ECODUO,Ecoduo,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (20 g/kg) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (20 g/kg)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-ECOMETA,EcoMeta,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (50 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-ECOMETA-POWER,Ecometa Power,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (400 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-ECOTETRAN,Ecotetran,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (50 g/L) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (50 g/L)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-EQUILACT,EQUILACT,Lactobacillus plantarum (Lactobacillus plantarum)  ,Lactobacillus plantarum,,false,automatically_extracted,
+P-EQUIPLANT-500,EQUIPLANT 500,Enzymes (Enzymes) 100.0 U / G | Lactobacillus plantarum (Lactobacillus plantarum) 0.5 10 EXP 11 UFC/KG | Pediococcus pentosaceus (Pediococcus pentosaceus) 2.0 10 EXP 11 UFC/KG,Lactobacillus plantarum,,false,automatically_extracted,
+P-EVEDAR,Evedar,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (150 g/kg) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (150 g/kg)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-EVOLUT-DUO,Evolut Duo,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (.0013 g/L) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (.0013 g/L)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-EXCELLENCE-RUGGER,Excellence Rugger,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (91.4 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-FPSOLANO,FPSOLANO,Clonostachys rosea strain 321U (20%),Clonostachys rosea 321U,,false,automatically_extracted,321U
+P-FPSOLANO-TECHNICAL,FPSOLANO TECHNICAL,Clonostachys rosea strain 321U (100%),Clonostachys rosea 321U,,false,automatically_extracted,321U
+P-FUNGUS-HIZIUM,Fungus Hizium,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (50 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-FUNGUSS-METARHIZIUM-SC,Funguss-Metarhizium SC,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (50 g/L)",Metarhizium anisopliae IBCB 425,SC,false,automatically_extracted,IBCB 425
+P-FUNGUSS-METARHIZIUM-WP,Funguss-Metarhizium WP,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (50 g/kg)",Metarhizium anisopliae IBCB 425,WP,false,automatically_extracted,IBCB 425
+P-GAIA-CONTROL-RHIZIUM,Gaia Control Rhizium,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (50 ml/litro)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-GNC-009-2,GNC 009-2,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (400 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-GR-INN,Gr-Inn,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (1.07 x 10^9 conídios viáveis/g)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-GRANADA,Granada,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (200 1x10E10 UFC/g)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-GRATTO-META,Gratto Meta,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (200 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-GREEN-MUSCARDINE,Green Muscardine,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (40 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-GUARDIUM-WP,Guardium WP,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (2 g/kg) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (2 g/kg)",Beauveria bassiana IBCB 66,WP,false,automatically_extracted,IBCB 66
+P-HIZIUM-100,Hizium 100,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (200 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-HIZOCOOP-SC,Hizocoop SC,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (20 ml/litro) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (20 ml/litro)",Beauveria bassiana IBCB 66,SC,false,automatically_extracted,IBCB 66
+P-HIZOCOOP-WP,Hizocoop WP,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (20 g/kg) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (20 g/kg)",Beauveria bassiana IBCB 66,WP,false,automatically_extracted,IBCB 66
+P-IN-24-32,IN-24-32,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (100 g/kg) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (100 g/kg)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-IN-24-42,IN-24-42,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (250 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-INVER,Inver,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (100 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-JATASPAN-CINERAGRO-BEAUVERIA-METARHIZIUM,"Jataspan, Cineragro Beauveria+Metarhizium","Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (2 g/kg) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (2 g/kg)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-KAMOI-PRO,Kamoi Pro,"Clonostachys rosea, cepa CPQBA 040-11 DRM 07 (Produto Microbiológico) (200 g/kg)",Clonostachys rosea CPQBA 040-11 DRM 07,,false,automatically_extracted,CPQBA 040-11 DRM 07
+P-KBR-M19232DFEWP,KBR-M19232DFEWP,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (40 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-KBR-MAWP,KBR-MAWP,"Metarhizium anisopliae (Metsch) Sorokin, isolado E9  (Produto Microbiológico) (50 g/kg)",Metarhizium anisopliae E9,,false,automatically_extracted,E9
+P-KELUD,Kelud,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (8 x 10^9 conídios viáveis/g)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-LALCIDE-CHONDRO,LALCIDE CHONDRO,CHONDROSTEREUM PURPUREUM STRAIN PFC2139,Chondrostereum purpureum PFC2139,,false,automatically_extracted,PFC2139
+P-LALFRESH-S,LALFRESH S,Clonostachys rosea strain J1446 (93%),Clonostachys rosea J1446,,false,automatically_extracted,J1446
+P-LALGUARD-AZA,LALGUARD AZA,Azadirachtin (6%),,,false,automatically_extracted,
+P-LALGUARD-B33-EC,LALGUARD B33 EC,Beauveria bassiana strain ANT-03  (10%),Beauveria bassiana ANT-03,EC,false,automatically_extracted,ANT-03
+P-LALGUARD-B33-GR,LALGUARD B33 GR,Beauveria bassiana strain ANT-03  (7%),Beauveria bassiana ANT-03,GR,false,automatically_extracted,ANT-03
+P-LALGUARD-B33-WP,LALGUARD B33 WP,Beauveria bassiana strain ANT-03  (20%),Beauveria bassiana ANT-03,WP,false,automatically_extracted,ANT-03
+P-LALGUARD-C99-WP,Lalguard C99 WP,"Cordyceps javanica, isolado BRM 27666 (Produto Microbiológico) (150 g/kg)",Cordyceps javanica BRM 27666,WP,false,automatically_extracted,BRM 27666
+P-LALGUARD-M52-GR,LALGUARD M52 GR,METARHIZIUM BRUNNEUM STRAIN F52,Metarhizium brunneum F52,GR,false,automatically_extracted,F52
+P-LALNIX-OVER-SC,Lalnix Over SC,Bacillus Velensis IBSBF 3238 (Biológico) (1 x 10^9 UFC/mL),Velensis ibsbf,SC,false,automatically_extracted,
+P-LALNIX-RESIST,Lalnix Resist,Trichoderma endophyticum isolado IBCB 56/12 (Produto Microbiológico) (3 x 10^9 conídios viáveis/g),Trichoderma endophyticum IBCB 56/12,,false,automatically_extracted,IBCB 56/12
+P-LALSTOP-I32-SC,Lalstop I32 SC,Bacillus amyloliquefaciens (Produto Microbiológico) (15 g/L),Bacillus amyloliquefaciens,SC,false,automatically_extracted,
+P-LALSTOP-K61-WS,LALSTOP K61 WS,Streptomyces strain K61 (50%),Streptomyces strain K61,WS,false,automatically_extracted,K61
+P-LALSTOP-ORGANIC-DS,Lalstop Organic DS,"Trichoderma asperellum, isolado URM-5911 (Produto Microbiológico) (130 g/kg)",Trichoderma asperellum URM-5911,DS,false,automatically_extracted,URM-5911
+P-LANCEIRO-BIOAGREEN,Lanceiro Bioagreen,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (20 g/kg) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (20 g/kg)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-LPC-CONTANS,LALSTOP CONTANS WG,CONIOTHYRIUM MINITANS STRAIN CON/M/91-08,Coniothyrium minitans CON/M/91-08,WG,false,automatically_extracted,CON/M/91-08
+P-LPC-G46,LALSTOP G46 WG,"Clonostachys rosea souche J1446 (Clonostachys rosea, souche J1446) 1000000000 UFC/g",Clonostachys rosea J1446,WG,false,automatically_extracted,J1446
+P-LPC-M52,LALGUARD M52 OD,METARHIZIUM BRUNNEUM STRAIN F52,Metarhizium brunneum F52,OD,false,automatically_extracted,F52
+P-MAHAZAI,Mahazai,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (400 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-MAVIC-BIO,Mavic Bio,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (22 g/L)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-MB-CONTROL,MB Control,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (10 g/L) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (10 g/L)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-MBC-VETOR,MBC Vetor,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (50 g/L) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (50 g/L)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-MBYO-META,MBYO Meta,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (50 ml/litro)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-MENTHAR,Menthar,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (350 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-MERITA,Merita,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (300 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-MESOPEL-MIX,Mesopel Mix,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (.0013 g/L) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (.0034 g/L)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-META-TURBO,Meta-Turbo,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (300 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-META-TURBO-MAX,Meta-Turbo Max,Metarhizium anisopliae BV12 (Biológico) (26 g/L),Metarhizium anisopliae,,false,automatically_extracted,
+P-META-TURBO-SC,Meta-Turbo SC,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (22 g/L)",Metarhizium anisopliae IBCB 425,SC,false,automatically_extracted,IBCB 425
+P-METABIO-SC,Metabio SC,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (50 ml/litro)",Metarhizium anisopliae IBCB 425,SC,false,automatically_extracted,IBCB 425
+P-METABIO-WP,Metabio WP,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (50 g/kg)",Metarhizium anisopliae IBCB 425,WP,false,automatically_extracted,IBCB 425
+P-METABIOL,Metabiol,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (1.48 x10^9 esporos/g)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-METABOV,Metabov,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (25 g/kg) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (25 g/kg)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-METACOMBAT,Metacombat,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (400 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-METACOMBAT-PRO,Metacombat Pro,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (300 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-METAFORT-CELENE-CIALIST-AG-100-METARHIZZI-METARHIZ-AGRI-RHIZIFORT-METAVIRTUS-NATURALIS,"Metafort, Celene, Cialist, AG 100, Metarhizzi, Metarhiz-agri, Rhizifort, Metavirtus, Naturalis","Metarhizium anisopliae, isolado IBCB 425* (Biológico) (125 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-METALEAF,Metaleaf,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (50 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-METAMIP,Metamip,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (900 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-METAMIX-WG,Metamix WG,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (280 g/kg)",Metarhizium anisopliae IBCB 425,WG,false,automatically_extracted,IBCB 425
+P-METARFITO,Metarfito,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (1.12 x10^12 conídeos/ha)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-METARHIZIUM-AGCN,Metarhizium AGCN,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (40 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-METARHIZIUM-ANISOPLIAE-BOM-FUTURO,Metarhizium Anisopliae Bom Futuro,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (280 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-METARHIZIUM-BRUNNEUM-STRAIN-F52-TECHNICAL,Metarhizium brunneum Strain F52 Technical,Metarhizium brunneum (formerly known as Metarhizium anisopliae) Strain F52 (99.6%),Metarhizium brunneum F52,,false,automatically_extracted,F52
+P-METARHIZIUM-JCO,Metarhizium JCO,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (16.5 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-METARHIZIUM-JCO-WP,Metarhizium JCO WP,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (16.5 g/kg)",Metarhizium anisopliae IBCB 425,WP,false,automatically_extracted,IBCB 425
+P-METARHIZIUM-LEVEN-01-WP,Metarhizium Leven 01 WP,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (40 g/kg)",Metarhizium anisopliae IBCB 425,WP,false,automatically_extracted,IBCB 425
+P-METARHIZIUM-LEVEN-03-WP,Metarhizium Leven 03 WP,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (400 g/kg)",Metarhizium anisopliae IBCB 425,WP,false,automatically_extracted,IBCB 425
+P-METARHIZIUM-OLIGOS,Metarhizium Oligos,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (50 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-METARHIZIUM-PROBIO,Metarhizium Probio,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (80 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-METARHIZONAT,Metarhizonat,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (900 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-METARHYD,Metarhyd,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (1.38 x10^9 conídios)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-METARHYD-FR-25,Metarhyd FR 25,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (200 ml/litro)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-METARPLAN,Metarplan,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (1.4 x10^9 conídios)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-METARRIL-WP-E9,Metarril WP E9,"Metarhizium anisopliae (Metsch) Sorokin, isolado E9  (Produto Microbiológico) (50 g/kg)",Metarhizium anisopliae E9,,false,automatically_extracted,E9
+P-METARRIZ-GR-BIOCONTROL,Metarriz GR Biocontrol,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (40 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-METARRIZ-PLUS-BIOCONTROL,Metarriz Plus Biocontrol,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (400 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-METARRIZ-WP-BIOCONTROL,Metarriz WP Biocontrol,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (900 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-METASHIELD,Metashield,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (300 g/L)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-METASHOCK,Metashock,"Metarhizium anisopliae, Cepa CCT8094 (Biológico) (4 g/L)",Metarhizium anisopliae CCT8094,,false,automatically_extracted,CCT8094
+P-METATOP,Metatop,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (200 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-METATRIL,Metatril,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (300 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-METHA-EXTREME,Metha Extreme,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (50 g/L)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-METHA-PROTECTION,Metha Protection,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (40 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-METHABIO,Methabio,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (50 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-METHACONTROL,MethaControl,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (30 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-METHACONTROL-EVOLUTION,Methacontrol Evolution,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (100 g/L)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-METHAMAX-EC,Methamax EC,Metarhizium anisopliae (Metsch) Cepa IBCB348 (Produto Microbiológico) (25 g/L),Metarhizium anisopliae IBCB348,EC,false,automatically_extracted,IBCB348
+P-METHAOURO,MethaOuro,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (300 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-METI,Metiê,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (300 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-METTABASSI,Mettabassi,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (3.2 g/kg) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (4 g/kg)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-METTAPLUS,Mettaplus,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (7 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-METTAR-WP,Mettar WP,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (200 g/kg)",Metarhizium anisopliae IBCB 425,WP,false,automatically_extracted,IBCB 425
+P-METTUS-ORG,Mettus Org,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (300 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-MITAXION-EC,Mitaxion EC,Metarhizium brunneum (formerly known as Metarhizium anisopliae) Strain F52 (11%),Metarhizium brunneum F52,EC,false,automatically_extracted,F52
+P-MITAXION-EX-G,Mitaxion EX G,Metarhizium brunneum (formerly known as Metarhizium anisopliae) Strain F52 (2%),Metarhizium brunneum F52,,false,automatically_extracted,F52
+P-MITAXION-G,Mitaxion G,Metarhizium brunneum (formerly known as Metarhizium anisopliae) Strain F52 (2%),Metarhizium brunneum F52,,false,automatically_extracted,F52
+P-MITAXION-TECHNICAL,MITAXION TECHNICAL,Metarhizium brunneum (formerly known as Metarhizium anisopliae) Strain F52 (97.6%),Metarhizium brunneum F52,,false,automatically_extracted,F52
+P-MODERA,Modera,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (40 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-MTH,Mth,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (60 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-MYCOSTOP,MYCOSTOP,Streptomyces souche K61 (Streptomyces K61 (formerly S. griseoviridis)) 500000000 UFC/g,Streptomyces souche K61,,false,automatically_extracted,K61
+P-MYCOSTOP-BIOFUNGICIDE,MYCOSTOP BIOFUNGICIDE,STREPTOMYCES GRISEOVIRIDIS STRAIN K61,Streptomyces griseoviridis K61,,false,automatically_extracted,K61
+P-NAT-FUNGI,Nat Fungi,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (50 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-NODUMIX,Nodumix,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (10 g/kg) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (10 g/kg)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-NODUMIX-L,Nodumix L,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (10 g/L) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (10 g/L)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-NODURHIZIUM,Nodurhizium,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (40 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-NODURHIZIUM-L,Nodurhizium L,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (30 g/L)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-ONIX-OG,Onix OG,"Bacillus methylotrophicus, isolado UFPEDA20* (Produto Microbiológico) (15 g/L)",Bacillus methylotrophicus UFPEDA20,,false,automatically_extracted,UFPEDA20
+P-OPALA,Opala,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (1 x10^9 UFC/g )",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-OPALA-WP,Opala WP,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (150 g/kg)",Metarhizium anisopliae IBCB 425,WP,false,automatically_extracted,IBCB 425
+P-OPTIMUN,Optimun,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (50 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-ORGANIC-WP,Organic WP,"Trichoderma asperellum, isolado URM-5911 (Produto Microbiológico) (1 10*10 UFC/g)",Trichoderma asperellum URM-5911,WP,false,automatically_extracted,URM-5911
+P-PARAGRAN,Paragran,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (48.1 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-PERC-PROTECTION,Perc Protection,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (100 g/L)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-PEROVAR,Perovar,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (300 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-PRESTOP,PRESTOP,CLONOSTACHYS ROSEA STRAIN J1446,Clonostachys rosea J1446,,false,automatically_extracted,J1446
+P-PRESTOP-4B,PRESTOP 4B,"Clonostachys rosea souche J1446 (Clonostachys rosea, souche J1446) 100000000 UFC/g",Clonostachys rosea J1446,,false,automatically_extracted,J1446
+P-PRESTOP-WG,PRESTOP WG,CLONOSTACHYS ROSEA STRAIN J1446,Clonostachys rosea J1446,WG,false,automatically_extracted,J1446
+P-PRIMASTOP-BIOFUNGICIDE-POWDER,PRIMASTOP BIOFUNGICIDE POWDER,Clonostachys rosea strain J1446 (37%),Clonostachys rosea J1446,,false,automatically_extracted,J1446
+P-PROPIOLACT-MS01,PROPIOLACT MS01,Lactobacillus plantarum (Lactobacillus plantarum) 60.0 10 EXP 9  UFC/G | Propionibacterium acidipropionici (Propionibacterium acidipropionici) 60.0 10 EXP 9  UFC/G,Lactobacillus plantarum,,false,automatically_extracted,
+P-PROTENSIL,PROTENSIL,Lactobacillus plantarum (Lactobacillus plantarum)  ,Lactobacillus plantarum,,false,automatically_extracted,
+P-QUALITY,Quality,"Trichoderma asperellum, isolado URM-5911 (Produto Microbiológico) (280 g/L)",Trichoderma asperellum URM-5911,,false,automatically_extracted,URM-5911
+P-QUALYBIO-META-CONTROL,Qualybio Meta Control,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (300 g/L)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-QUERO-QUERO,Quero-Quero,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (50 g/kg) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (50 g/kg)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-QUESTMETA-DRY,Questmeta Dry,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (400 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-RAUBTIER,Raubtier,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (50 g/L) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (50 g/L)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-REPORTH,Reporth,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (20 g/kg) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (20 g/kg)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-RIZOS,Rizos,Bacillus subtilis (Produto Microbiológico) (3 x 10^9 UFC/mL),Bacillus subtilis,,false,automatically_extracted,
+P-RIZOS-OG,Rizos OG,"Bacillus subtilis, isolado UFPEDA764* (Produto Microbiológico) (1.5 %)",Bacillus subtilis UFPEDA764,,false,automatically_extracted,UFPEDA764
+P-ROTSTOP,ROTSTOP,Phlebiopsis gigantea souche VRA 1835 (Phlebiopsis gigantea) 2000000.0 UFC/g,Phlebiopsis gigantea VRA 1835,,false,automatically_extracted,VRA 1835
+P-ROTSTOP-C,ROTSTOP C,PHLEBIOPSIS GIGANTEA,Phlebiopsis gigantea,,false,automatically_extracted,
+P-SLT-25,SLT-25,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (3.5 g/L) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (3.5 g/L)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-TBIO,Tbio,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (2.5 g/kg) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (2.5 g/kg)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-TEC-007-B,TEC-007-B,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (5 ml/litro) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (5 ml/litro)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
+P-TEC-FINISH,Tec Finish,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (80 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-TEC-FINISH-OF,Tec Finish Of,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (100 ml/litro)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-TICK-EX-G,TICK-EX G,Metarhizium brunneum (formerly known as Metarhizium anisopliae) Strain F52 (2%),Metarhizium brunneum F52,,false,automatically_extracted,F52
+P-TREEAZIN-SYSTEMIC-INSECTICIDE,TREEAZIN SYSTEMIC INSECTICIDE,AZADIRACHTIN,,,false,automatically_extracted,
+P-UMET,Umet,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (7 g/L)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
+P-VECTORITE-WITH-CR-7,Vectorite with CR-7,Clonostachys rosea strain CR-7 (5%),Clonostachys rosea CR-7,,false,automatically_extracted,CR-7
+P-ZOCK,Zock,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (5 g/L) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (5 g/L)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66

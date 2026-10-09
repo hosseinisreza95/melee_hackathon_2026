@@ -1,0 +1,26 @@
+{
+  "submission_id": "team-name",
+  "generated_at": "2026-10-10T00:00:00Z",
+  "answers": [
+    {
+      "test_id": "T01",
+      "answer": "",
+      "facts": [],
+      "evidence": [
+        {
+          "source_id": "",
+          "source_url": "https://example.org",
+          "collected_at": "2026-10-10T00:00:00Z",
+          "validation_status": "to_verify"
+        }
+      ],
+      "warnings": [],
+      "disclaimer": "Regulatory Affairs validation is required."
+    }
+  ],
+  "m365_integration": {
+    "mechanism": "api|dataverse|sharepoint|power_automate|copilot_studio|other",
+    "documentation_url": ""
+  },
+  "known_limitations": []
+}
