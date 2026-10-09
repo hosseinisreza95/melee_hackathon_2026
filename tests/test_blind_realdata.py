@@ -22,8 +22,11 @@ sys.path.insert(0, str(ROOT / "src"))
 from lpc_regwatch.db import session as dbsession  # noqa: E402
 from lpc_regwatch.db.models import AuthorizedUse, ProductAlias, RawDocument, Registration, Snapshot  # noqa: E402
 
+import os
+
 DB = ROOT / "data" / "lpc_regwatch.sqlite"
-pytestmark = pytest.mark.skipif(not DB.exists(), reason="real database not built (run scripts/collect.py + parse.py)")
+DB_URL = os.getenv("DATABASE_URL") or (f"sqlite:///{DB.as_posix()}" if DB.exists() else None)  # server: PostgreSQL via env
+pytestmark = pytest.mark.skipif(DB_URL is None, reason="real database not built (run scripts/collect.py + parse.py)")
 
 
 @pytest.fixture(scope="module")
@@ -34,7 +37,7 @@ def real_client():
     import lpc_regwatch.api.ask as askmod
     from lpc_regwatch.config import Settings
 
-    eng = dbsession.get_engine(f"sqlite:///{DB.as_posix()}")
+    eng = dbsession.get_engine(DB_URL)
     Session = sessionmaker(bind=eng, expire_on_commit=False)
     appmod.get_session = lambda: Session()
     askmod.settings = Settings(ai_api_key="")
