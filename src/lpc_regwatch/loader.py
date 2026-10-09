@@ -15,7 +15,7 @@ from pathlib import Path
 from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
-from .db.models import AuthorizedUse, Product, ProductAlias, Registration, Source
+from .db.models import AuthorizedUse, ChangeLog, Product, ProductAlias, Registration, Source
 from .parsers.base import Batch
 
 STARTER_COLUMNS = {
@@ -31,12 +31,13 @@ STARTER_COLUMNS = {
              "target_name_normalized", "eppo_target_code", "application_method", "dose_value", "dose_unit_original",
              "dose_unit_normalized", "max_applications", "application_interval_days", "phi_days", "rei_hours",
              "restrictions_original", "validation_status", "is_synthetic", "pairing", "growth_stage_min", "growth_stage_max",
-             "use_status_original", "source_record_url", "collected_at", "extraction_method", "evidence_excerpt"],
+             "use_status_original", "source_record_url", "collected_at", "extraction_method", "evidence_excerpt",
+             "dose_value_normalized", "eppo_crop_status", "eppo_target_status", "confidence", "raw_document_id"],
 }
 
 
 def load_batch(session: Session, b: Batch) -> dict[str, int]:
-    counts = {"products_new": 0, "aliases": 0, "registrations": 0, "uses": 0}
+    counts = {"products_new": 0, "aliases": 0, "registrations": 0, "uses": 0, "changes": 0}
     for pid, p in b.products.items():
         existing = session.get(Product, pid)
         if existing is None:
@@ -52,6 +53,8 @@ def load_batch(session: Session, b: Batch) -> dict[str, int]:
             session.add(ProductAlias(**a))
             counts["aliases"] += 1
     reg_ids = [r["registration_id"] for r in b.registrations]
+    # ---- change detection (bonus A1): compare with what the previous snapshot of this source said
+    counts["changes"] = _detect_changes(session, b, reg_ids)
     if reg_ids:
         session.execute(delete(AuthorizedUse).where(AuthorizedUse.registration_id.in_(reg_ids)))
     for r in b.registrations:
@@ -63,6 +66,62 @@ def load_batch(session: Session, b: Batch) -> dict[str, int]:
         counts["uses"] += 1
     session.commit()
     return counts
+
+
+TRACKED_FIELDS = ("status_original", "status_normalized", "expiration_date", "approval_date", "holder_original",
+                  "active_entity_original", "formulation_original")
+
+
+def _val(v):
+    if v is None:
+        return None
+    if hasattr(v, "value"):
+        return v.value
+    if isinstance(v, dt.datetime):
+        return v.strftime("%Y-%m-%d")
+    return str(v)
+
+
+def _detect_changes(session: Session, b: Batch, reg_ids: list[str]) -> int:
+    """Write change_log rows for field changes, use-count changes, new and vanished registrations.
+    A registration that vanished from the source is marked is_current=False: 'no longer listed' is
+    recorded as such, never turned into a withdrawal (G4)."""
+    previous = {r.registration_id: r for r in session.query(Registration).filter(Registration.source_id == b.source_id)}
+    first_load = not previous
+    n = 0
+    new_rows = {r["registration_id"]: r for r in b.registrations}
+    uses_new: dict[str, int] = {}
+    for u in b.uses:
+        uses_new[u["registration_id"]] = uses_new.get(u["registration_id"], 0) + 1
+    for rid, row in new_rows.items():
+        old = previous.get(rid)
+        if old is None:
+            if not first_load:
+                session.add(ChangeLog(entity_type="registration", entity_id=rid, field="existence", old_value=None,
+                                      new_value="appeared in source", from_snapshot_id=None, to_snapshot_id=b.snapshot_id))
+                n += 1
+            continue
+        if old.snapshot_id == b.snapshot_id:
+            continue  # re-parse of the same snapshot: nothing to compare
+        for f in TRACKED_FIELDS:
+            ov, nv = _val(getattr(old, f)), _val(row.get(f))
+            if ov != nv:
+                session.add(ChangeLog(entity_type="registration", entity_id=rid, field=f, old_value=ov, new_value=nv,
+                                      from_snapshot_id=old.snapshot_id, to_snapshot_id=b.snapshot_id))
+                n += 1
+        old_uses = session.query(AuthorizedUse).filter_by(registration_id=rid).count()
+        if old_uses != uses_new.get(rid, 0):
+            session.add(ChangeLog(entity_type="registration", entity_id=rid, field="uses_count", old_value=str(old_uses),
+                                  new_value=str(uses_new.get(rid, 0)), from_snapshot_id=old.snapshot_id, to_snapshot_id=b.snapshot_id))
+            n += 1
+    for rid, old in previous.items():
+        if rid not in new_rows and old.is_current and old.snapshot_id != b.snapshot_id:
+            old.is_current = False
+            session.add(ChangeLog(entity_type="registration", entity_id=rid, field="is_current", old_value="true",
+                                  new_value="false (no longer listed by the source; not a withdrawal)",
+                                  from_snapshot_id=old.snapshot_id, to_snapshot_id=b.snapshot_id))
+            n += 1
+    return n
 
 
 def _fmt(v):

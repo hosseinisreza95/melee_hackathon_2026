@@ -4,7 +4,7 @@ from __future__ import annotations
 import csv
 from pathlib import Path
 
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, inspect, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -39,6 +39,7 @@ def init_db(url: str | None = None, seed_sources: bool = True) -> Engine:
     """Create all tables and seed the `sources` table from data/source_registry.csv."""
     eng = get_engine(url)
     Base.metadata.create_all(eng)
+    _add_missing_columns(eng)
     if seed_sources:
         with sessionmaker(bind=eng)() as s:
             path = ROOT / "data" / "source_registry.csv"
@@ -60,3 +61,18 @@ def init_db(url: str | None = None, seed_sources: bool = True) -> Engine:
                     ))
             s.commit()
     return eng
+
+
+def _add_missing_columns(eng: Engine) -> None:
+    """Additive migration: create columns that exist in the models but not yet in the database.
+    Enough for this project (we only ever add nullable columns); documented in infra/README.md."""
+    insp = inspect(eng)
+    with eng.begin() as conn:
+        for table in Base.metadata.sorted_tables:
+            if not insp.has_table(table.name):
+                continue
+            existing = {c["name"] for c in insp.get_columns(table.name)}
+            for col in table.columns:
+                if col.name not in existing:
+                    ddl = f'ALTER TABLE {table.name} ADD COLUMN {col.name} {col.type.compile(eng.dialect)}'
+                    conn.execute(text(ddl))

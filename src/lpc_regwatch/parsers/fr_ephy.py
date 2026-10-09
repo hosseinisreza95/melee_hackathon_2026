@@ -49,7 +49,7 @@ class FrEphyParser(BaseParser):
 
         for _, r in rel.iterrows():
             amm = r["numero AMM"].strip()
-            pid = b.add_product(r["nom produit"], r["Substances actives"])
+            pid = b.add_product(r["nom produit"], r["Substances actives"], url=url, country=self.country)
             ev = excerpt(r.to_dict(), ["numero AMM", "nom produit", "seconds noms commerciaux", "titulaire", "type commercial",
                                        "Substances actives", "fonctions", "formulations", c_etat, c_first, c_retrait, "gamme usage"])
             rid = b.add_registration(f"R-FR-{amm}", pid, self.country, self.authority, amm, r[c_etat], url, doc.raw_document_id,

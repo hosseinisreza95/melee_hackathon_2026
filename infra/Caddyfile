@@ -1,0 +1,29 @@
+# Single public entry point. HTTP on the server IP (no domain yet); switch the site address to a domain
+# to get automatic HTTPS from Caddy.
+:80 {
+	encode gzip
+
+	# API (FastAPI) under /api — strip the prefix, keep docs working through root_path-free redirects
+	handle_path /api/* {
+		reverse_proxy api:8000
+	}
+	redir /api /api/ 301
+
+	# Pitch presentation (static HTML)
+	handle_path /pitch/* {
+		root * /srv/presentation
+		file_server
+	}
+	redir /pitch /pitch/ 301
+
+	# Streamlit UI (websocket aware)
+	handle {
+		reverse_proxy ui:8501
+	}
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+}

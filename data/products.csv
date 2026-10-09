@@ -14,7 +14,7 @@ P-BIO-BLAST-BIOLOGICAL-TERMITICIDE,BIO-BLAST BIOLOGICAL TERMITICIDE,Metarhizium 
 P-BIO-CERES-G-WB,BIO-CERES G WB,BEAUVERIA BASSIANA STRAIN ANT 03,Beauveria bassiana ANT 03,,false,automatically_extracted,ANT 03
 P-BIO-PATH-BIOLOGICAL-ROACH-CONTROL-SYSTEM,BIO-PATH BIOLOGICAL ROACH CONTROL SYSTEM,Metarhizium anisopliae Strain ESF1 (0.35%),Metarhizium anisopliae ESF1,,false,automatically_extracted,ESF1
 P-BIO-PATH-COCKROACH-CONTROL-CHAMBER,BIO-PATH COCKROACH CONTROL CHAMBER,Metarhizium anisopliae Strain ESF1 (0.35%),Metarhizium anisopliae ESF1,,false,automatically_extracted,ESF1
-P-BIO-PATH-FLY-CONTROL-CHAMBER,BIO-PATH FLY CONTROL CHAMBER,cis-9-Tricosene (0.03%); Metarhizium anisopliae Strain ESF1 (1.19%),Metarhizium anisopliae ESF1,,false,automatically_extracted,ESF1
+P-BIO-PATH-FLY-CONTROL-CHAMBER,BIO-PATH FLY CONTROL CHAMBER,cis-9-Tricosene (0.03%); Metarhizium anisopliae Strain ESF1 (1.19%),Tricosene metarhizium ESF1,,false,automatically_extracted,ESF1
 P-BIO-PATH-INSECTS-TECHNICAL,BIO-PATH INSECTS TECHNICAL,Metarhizium anisopliae Strain ESF1 (100%),Metarhizium anisopliae ESF1,,false,automatically_extracted,ESF1
 P-BIO-PATH-TECHNICAL,BIO-PATH TECHNICAL,Metarhizium anisopliae Strain ESF1 (100%),Metarhizium anisopliae ESF1,,false,automatically_extracted,ESF1
 P-BIO-PHYGGA,Bio Phygga,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (900 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
@@ -72,7 +72,7 @@ P-ECOMETA,EcoMeta,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (50 g/
 P-ECOMETA-POWER,Ecometa Power,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (400 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
 P-ECOTETRAN,Ecotetran,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (50 g/L) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (50 g/L)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
 P-EQUILACT,EQUILACT,Lactobacillus plantarum (Lactobacillus plantarum)  ,Lactobacillus plantarum,,false,automatically_extracted,
-P-EQUIPLANT-500,EQUIPLANT 500,Enzymes (Enzymes) 100.0 U / G | Lactobacillus plantarum (Lactobacillus plantarum) 0.5 10 EXP 11 UFC/KG | Pediococcus pentosaceus (Pediococcus pentosaceus) 2.0 10 EXP 11 UFC/KG,Lactobacillus plantarum,,false,automatically_extracted,
+P-EQUIPLANT-500,EQUIPLANT 500,Enzymes (Enzymes) 100.0 U / G | Lactobacillus plantarum (Lactobacillus plantarum) 0.5 10 EXP 11 UFC/KG | Pediococcus pentosaceus (Pediococcus pentosaceus) 2.0 10 EXP 11 UFC/KG,Enzymes enzymes,,false,automatically_extracted,
 P-EVEDAR,Evedar,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (150 g/kg) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (150 g/kg)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
 P-EVOLUT-DUO,Evolut Duo,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (.0013 g/L) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (.0013 g/L)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
 P-EXCELLENCE-RUGGER,Excellence Rugger,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (91.4 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
@@ -107,10 +107,10 @@ P-LALGUARD-B33-GR,LALGUARD B33 GR,Beauveria bassiana strain ANT-03  (7%),Beauver
 P-LALGUARD-B33-WP,LALGUARD B33 WP,Beauveria bassiana strain ANT-03  (20%),Beauveria bassiana ANT-03,WP,false,automatically_extracted,ANT-03
 P-LALGUARD-C99-WP,Lalguard C99 WP,"Cordyceps javanica, isolado BRM 27666 (Produto Microbiológico) (150 g/kg)",Cordyceps javanica BRM 27666,WP,false,automatically_extracted,BRM 27666
 P-LALGUARD-M52-GR,LALGUARD M52 GR,METARHIZIUM BRUNNEUM STRAIN F52,Metarhizium brunneum F52,GR,false,automatically_extracted,F52
-P-LALNIX-OVER-SC,Lalnix Over SC,Bacillus Velensis IBSBF 3238 (Biológico) (1 x 10^9 UFC/mL),Velensis ibsbf,SC,false,automatically_extracted,
+P-LALNIX-OVER-SC,Lalnix Over SC,Bacillus Velensis IBSBF 3238 (Biológico) (1 x 10^9 UFC/mL),Bacillus velensis,SC,false,automatically_extracted,
 P-LALNIX-RESIST,Lalnix Resist,Trichoderma endophyticum isolado IBCB 56/12 (Produto Microbiológico) (3 x 10^9 conídios viáveis/g),Trichoderma endophyticum IBCB 56/12,,false,automatically_extracted,IBCB 56/12
 P-LALSTOP-I32-SC,Lalstop I32 SC,Bacillus amyloliquefaciens (Produto Microbiológico) (15 g/L),Bacillus amyloliquefaciens,SC,false,automatically_extracted,
-P-LALSTOP-K61-WS,LALSTOP K61 WS,Streptomyces strain K61 (50%),Streptomyces strain K61,WS,false,automatically_extracted,K61
+P-LALSTOP-K61-WS,LALSTOP K61 WS,Streptomyces strain K61 (50%),Streptomyces strain K61,WS,false,automatically_extracted,K61 Collection de
 P-LALSTOP-ORGANIC-DS,Lalstop Organic DS,"Trichoderma asperellum, isolado URM-5911 (Produto Microbiológico) (130 g/kg)",Trichoderma asperellum URM-5911,DS,false,automatically_extracted,URM-5911
 P-LANCEIRO-BIOAGREEN,Lanceiro Bioagreen,"Beauveria bassiana, isolado IBCB 66* (Produto Microbiológico) (20 g/kg) + Metarhizium anisopliae, isolado IBCB 425* (Biológico) (20 g/kg)",Beauveria bassiana IBCB 66,,false,automatically_extracted,IBCB 66
 P-LPC-CONTANS,LALSTOP CONTANS WG,CONIOTHYRIUM MINITANS STRAIN CON/M/91-08,Coniothyrium minitans CON/M/91-08,WG,false,automatically_extracted,CON/M/91-08
@@ -194,7 +194,6 @@ P-PERC-PROTECTION,Perc Protection,"Metarhizium anisopliae, isolado IBCB 425* (Bi
 P-PEROVAR,Perovar,"Metarhizium anisopliae, isolado IBCB 425* (Biológico) (300 g/kg)",Metarhizium anisopliae IBCB 425,,false,automatically_extracted,IBCB 425
 P-PRESTOP,PRESTOP,CLONOSTACHYS ROSEA STRAIN J1446,Clonostachys rosea J1446,,false,automatically_extracted,J1446
 P-PRESTOP-4B,PRESTOP 4B,"Clonostachys rosea souche J1446 (Clonostachys rosea, souche J1446) 100000000 UFC/g",Clonostachys rosea J1446,,false,automatically_extracted,J1446
-P-PRESTOP-WG,PRESTOP WG,CLONOSTACHYS ROSEA STRAIN J1446,Clonostachys rosea J1446,WG,false,automatically_extracted,J1446
 P-PRIMASTOP-BIOFUNGICIDE-POWDER,PRIMASTOP BIOFUNGICIDE POWDER,Clonostachys rosea strain J1446 (37%),Clonostachys rosea J1446,,false,automatically_extracted,J1446
 P-PROPIOLACT-MS01,PROPIOLACT MS01,Lactobacillus plantarum (Lactobacillus plantarum) 60.0 10 EXP 9  UFC/G | Propionibacterium acidipropionici (Propionibacterium acidipropionici) 60.0 10 EXP 9  UFC/G,Lactobacillus plantarum,,false,automatically_extracted,
 P-PROTENSIL,PROTENSIL,Lactobacillus plantarum (Lactobacillus plantarum)  ,Lactobacillus plantarum,,false,automatically_extracted,

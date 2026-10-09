@@ -29,9 +29,16 @@ class Settings:
     # AI provider: any OpenAI-compatible endpoint (OpenAI, Gemini OpenAI-compat, Azure OpenAI, local)
     ai_provider: str = os.getenv("AI_PROVIDER", "openai")
     ai_model: str = os.getenv("AI_MODEL", "gpt-4o-mini")
-    ai_api_key: str = os.getenv("AI_API_KEY", "")
+    # Accepted key names: AI_API_KEY (documented), OPENAI_API_KEY, OPEN_AI (team convention). Never logged.
+    ai_api_key: str = os.getenv("AI_API_KEY") or os.getenv("OPENAI_API_KEY") or os.getenv("OPEN_AI") or ""
     ai_base_url: str | None = os.getenv("AI_BASE_URL") or None
     http_user_agent: str = os.getenv("HTTP_USER_AGENT", "lpc-regwatch/0.1 (hackathon prototype)")
+    api_base_url: str = os.getenv("API_BASE_URL", "http://localhost:8000")  # used by the Streamlit thin client
+    public_base_url: str = os.getenv("PUBLIC_BASE_URL", "http://localhost:8000")  # advertised in OpenAPI servers[]
+
+    @property
+    def ai_enabled(self) -> bool:
+        return bool(self.ai_api_key)
 
 
 settings = Settings()

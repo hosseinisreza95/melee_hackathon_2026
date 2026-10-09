@@ -1,5 +1,35 @@
-# Team-server deployment (infrastructure as code — cahier §15).
-# MVP: only the database is containerised in Step 0; api and ui services are added in Step 8.
+# LPC regulatory-watch prototype — production-style stack for the team server (cahier §15: infrastructure as code).
+#
+#   db        PostgreSQL 16 (canonical store)
+#   api       FastAPI (schema/openapi.yaml + extensions)          -> http://<host>/api/
+#   ui        Streamlit thin client of the API                     -> http://<host>/
+#   proxy     Caddy reverse proxy (single public port 80)          -> /api/* -> api, /pitch/* -> presentation, /* -> ui
+#   pipeline  one-shot job: collect -> parse -> normalize -> labels -> submission (run manually or by cron)
+#
+# Usage (from the repo root):  docker compose -f infra/docker-compose.yml --env-file .env up -d --build
+#                              docker compose -f infra/docker-compose.yml --env-file .env run --rm pipeline
+name: lpc-regwatch
+
+x-app: &app
+  build:
+    context: ..
+    dockerfile: infra/Dockerfile
+  image: lpc-regwatch:latest
+  env_file: ../.env
+  environment:
+    DATABASE_URL: postgresql+psycopg://lpc:${POSTGRES_PASSWORD:-lpc}@db:5432/lpc_regwatch
+    RAW_DIR: /app/data/raw
+    API_BASE_URL: http://api:8000
+    PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost/api}
+  volumes:
+    - rawdata:/app/data/raw
+    - processed:/app/data/processed
+    - output:/app/output
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options: {max-size: "10m", max-file: "3"}
+
 services:
   db:
     image: postgres:16-alpine
@@ -7,15 +37,55 @@ services:
       POSTGRES_DB: lpc_regwatch
       POSTGRES_USER: lpc
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lpc}
-    ports:
-      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U lpc -d lpc_regwatch"]
       interval: 10s
       timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  api:
+    <<: *app
+    command: ["python", "scripts/serve_api.py"]
+    depends_on:
+      db: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
       retries: 5
+
+  ui:
+    <<: *app
+    command: ["streamlit", "run", "src/lpc_regwatch/ui/app.py", "--server.port=8501", "--server.address=0.0.0.0",
+              "--server.headless=true", "--browser.gatherUsageStats=false", "--server.enableXsrfProtection=false"]
+    depends_on:
+      api: {condition: service_healthy}
+
+  pipeline:
+    <<: *app
+    command: ["bash", "scripts/pipeline.sh"]
+    restart: "no"
+    profiles: ["jobs"]
+    depends_on:
+      db: {condition: service_healthy}
+
+  proxy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ../presentation:/srv/presentation:ro
+      - caddy_data:/data
+    depends_on: [api, ui]
+    restart: unless-stopped
 
 volumes:
   pgdata:
+  rawdata:
+  processed:
+  output:
+  caddy_data:

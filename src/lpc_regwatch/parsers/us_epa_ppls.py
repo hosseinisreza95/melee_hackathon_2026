@@ -40,7 +40,7 @@ class UsEpaPplsParser(BaseParser):
             regno = rec["eparegno"]
             url = API_URL.format(regno=regno)
             formulation = ", ".join(f.get("formulation") for f in rec.get("formulations") or [] if f.get("formulation")) or None
-            pid = b.add_product(rec["productname"], active_txt)
+            pid = b.add_product(rec["productname"], active_txt, url=url, country=self.country)
             ev = (f"eparegno={regno} | productname={rec.get('productname')} | product_status={rec.get('product_status')} "
                   f"| product_status_date={rec.get('product_status_date')} | cancel_flag={rec.get('cancel_flag')} "
                   f"| company={holder} | formulation={formulation} | active_ingredients={active_txt} "

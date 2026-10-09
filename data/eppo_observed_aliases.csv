@@ -1,0 +1,51 @@
+concept_id,alias,language,kind,eppo_code_candidate,scientific_name,seen_in_source,mapping_status,note
+tomato,tomatoes,en,crop,,,US-EPA-PPLS,to_verify,plural wording in EPA sites
+tomato,tomate,fr,crop,,,FR-EPHY,to_verify,
+eggplant,aubergine,fr,crop,,,FR-EPHY,to_verify,
+sweet_pepper,pepper,en,crop,,,CA-PPID,to_verify,CA uses PEPPER for Capsicum annuum
+sweet_pepper,peppers,en,crop,,,US-EPA-PPLS,to_verify,
+sweet_pepper,poivron,fr,crop,,,FR-EPHY,to_verify,
+strawberry,strawberries,en,crop,,,US-EPA-PPLS,to_verify,
+strawberry,fraisier,fr,crop,,,FR-EPHY,to_verify,
+lettuce,laitue,fr,crop,,,FR-EPHY,to_verify,
+cucumber,cucumbers,en,crop,,,US-EPA-PPLS,to_verify,
+cucumber,concombre,fr,crop,,,FR-EPHY,to_verify,
+potato,potatoes,en,crop,,,US-EPA-PPLS,to_verify,
+onion,onions,en,crop,,,US-EPA-PPLS,to_verify,
+onion,oignon,fr,crop,,,FR-EPHY,to_verify,
+leek,leeks,en,crop,,,US-EPA-PPLS,to_verify,
+leek,poireau,fr,crop,,,FR-EPHY,to_verify,
+carrot,carrots,en,crop,,,CA-PPID,to_verify,
+soybean,soybeans,en,crop,,,CA-PPID,to_verify,
+oilseed_rape,canola,en,crop,,,CA-PPID,to_verify,CA writes SPRING CANOLA / WINTER CANOLA
+oilseed_rape,spring canola,en,crop,,,CA-PPID,to_verify,
+oilseed_rape,winter canola,en,crop,,,CA-PPID,to_verify,
+grapevine,vigne,fr,crop,,,FR-EPHY,to_verify,
+maize,maïs doux,fr,crop,,,FR-EPHY,to_verify,sweet maize is a use group of maize in E-Phy
+watermelon,watermelons,en,crop,,,US-EPA-PPLS,to_verify,
+alfalfa,alfalfa,en,crop,MEDSA,Medicago sativa,CA-PPID,to_verify,concept not in starter list; code from memory - verify against EPPO
+sunflower,sunflower,en,crop,HELAN,Helianthus annuus,CA-PPID,to_verify,concept not in starter list
+safflower,safflower,en,crop,CTHTI,Carthamus tinctorius,CA-PPID,to_verify,concept not in starter list
+bean,dry edible beans,en,crop,PHSVX,Phaseolus vulgaris,CA-PPID,to_verify,concept not in starter list
+bean,snap beans,en,crop,PHSVX,Phaseolus vulgaris,CA-PPID,to_verify,
+bean,beans,en,crop,PHSVX,Phaseolus vulgaris,US-EPA-PPLS,to_verify,
+spinach,spinach,en,crop,SPQOL,Spinacia oleracea,US-EPA-PPLS,to_verify,concept not in starter list
+spinach,epinard,fr,crop,SPQOL,Spinacia oleracea,FR-EPHY,to_verify,
+celery,celery,en,crop,APUGV,Apium graveolens,CA-PPID,to_verify,concept not in starter list
+celery,céleri-branche,fr,crop,APUGV,Apium graveolens,FR-EPHY,to_verify,
+cabbage,cabbage,en,crop,BRSOL,Brassica oleracea,CA-PPID,to_verify,concept not in starter list; species-level code
+cabbage,choux,fr,crop,BRSOL,Brassica oleracea,FR-EPHY,to_verify,E-Phy group Choux
+cauliflower,cauliflower,en,crop,BRSOL,Brassica oleracea,CA-PPID,to_verify,species-level code only
+broccoli,broccoli,en,crop,BRSOL,Brassica oleracea,CA-PPID,to_verify,species-level code only
+radish,radish,en,crop,RAPSR,Raphanus sativus,CA-PPID,to_verify,concept not in starter list
+radish,radishes,en,crop,RAPSR,Raphanus sativus,US-EPA-PPLS,to_verify,
+asparagus,asperge,fr,crop,ASPOF,Asparagus officinalis,FR-EPHY,to_verify,concept not in starter list
+turnip,navet,fr,crop,,Brassica rapa,FR-EPHY,to_verify,no code proposed
+turnip,turnips,en,crop,,Brassica rapa,US-EPA-PPLS,to_verify,
+all_crops,todas as culturas,pt,crop,,,BR-AGROFIT,to_verify,AGROFIT label-level authorisation all crops; no EPPO code applicable
+all_crops,traitements généraux,fr,crop,,,FR-EPHY,to_verify,E-Phy general treatment (not crop-specific)
+botrytis_cinerea,pourriture grise,fr,pest,,,FR-EPHY,to_verify,
+sclerotinia_sclerotiorum,white mold,en,pest,,,US-EPA-PPLS,to_verify,
+sclerotinia_sclerotiorum,white mold (sclerotinia sclerotiorum),en,pest,,,US-EPA-PPLS,to_verify,
+sclerotinia_minor,lettuce drop,en,pest,,,US-EPA-PPLS,to_verify,
+otiorhynchus_sulcatus,black vine weevil,en,pest,,,US-EPA-PPLS,to_verify,

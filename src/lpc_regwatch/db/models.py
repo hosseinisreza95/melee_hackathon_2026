@@ -175,9 +175,11 @@ class AuthorizedUse(Base):
     crop_name_original: Mapped[str | None] = mapped_column(Text)
     crop_name_normalized: Mapped[str | None] = mapped_column(Text)
     eppo_crop_code: Mapped[str | None] = mapped_column(String(10))
+    eppo_crop_status: Mapped[str | None] = mapped_column(String(12))  # to_verify|validated|list|unmapped
     target_name_original: Mapped[str | None] = mapped_column(Text)
     target_name_normalized: Mapped[str | None] = mapped_column(Text)
     eppo_target_code: Mapped[str | None] = mapped_column(String(10))
+    eppo_target_status: Mapped[str | None] = mapped_column(String(12))
     application_method: Mapped[str | None] = mapped_column(Text)
     dose_value: Mapped[float | None] = mapped_column(Float)
     dose_unit_original: Mapped[str | None] = mapped_column(String(60))

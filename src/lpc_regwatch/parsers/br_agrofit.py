@@ -44,7 +44,7 @@ class BrAgrofitParser(BaseParser):
             r = g.iloc[0]
             names = [n.strip() for n in re.split(r"[/;]", r["MARCA_COMERCIAL"]) if n.strip()]
             name = names[0] if names else r["MARCA_COMERCIAL"].strip()
-            pid = b.add_product(name, r["INGREDIENTE_ATIVO"])
+            pid = b.add_product(name, r["INGREDIENTE_ATIVO"], url=url, country=self.country)
             ev = excerpt(r.to_dict(), ["NR_REGISTRO", "MARCA_COMERCIAL", "FORMULACAO", "INGREDIENTE_ATIVO", "TITULAR_DE_REGISTRO",
                                        "CLASSE", "CLASSE_TOXICOLOGICA", "CLASSE_AMBIENTAL", "ORGANICOS", "SITUACAO"])
             rid = b.add_registration(f"R-BR-{regno.strip()}", pid, self.country, self.authority, regno.strip(), r["SITUACAO"], url,

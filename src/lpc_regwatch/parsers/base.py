@@ -119,7 +119,23 @@ def pilot_name_index() -> dict[str, str]:
         for r in csv.DictReader(f):
             if r["relationship_type"] in ("canonical_name", "historical_or_market_name"):
                 idx[norm_name(r["name_variant"])] = r["product_id"]
+    # official equivalences discovered in the sources (same registration carries both names); see matching.py
+    p = ROOT / "data" / "product_equivalences_observed.csv"
+    if p.exists():
+        with p.open(encoding="utf-8-sig", newline="") as f:
+            for r in csv.DictReader(f):
+                idx[norm_name(r["name_variant"])] = r["product_id"]
     return idx
+
+
+@lru_cache
+def canonical_names() -> dict[str, str]:
+    with (ROOT / "data" / "products.csv").open(encoding="utf-8-sig", newline="") as f:
+        return {r["product_id"]: r["commercial_name"] for r in csv.DictReader(f) if r["product_id"].startswith("P-LPC-")}
+
+
+def canonical_name_for(pid: str) -> str | None:
+    return canonical_names().get(pid)
 
 
 def product_id_for(name: str) -> str:
@@ -158,16 +174,21 @@ class Batch:
     uses: list[dict] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
 
-    def add_product(self, name: str, active_original: str | None, formulation_code: str | None = None) -> str:
+    def add_product(self, name: str, active_original: str | None, formulation_code: str | None = None,
+                    url: str | None = None, country: str | None = None) -> str:
         pid = product_id_for(name)
+        canonical = canonical_name_for(pid) or name.replace("®", "").strip()
         p = self.products.setdefault(pid, {
-            "product_id": pid, "commercial_name": name.replace("®", "").strip(),
+            "product_id": pid, "commercial_name": canonical,
             "active_entity_original": active_original or None,
             "active_entity_normalized": active_normalized(active_original),
             "strain": strain_of(active_original),
             "formulation_code": formulation_code or formulation_code_from_name(name),
             "is_synthetic": False, "validation_status": "automatically_extracted",
         })
+        if norm_name(name) != norm_name(canonical) and url:
+            # the source writes the pilot product under another (equivalent) name: keep that wording as an official alias
+            self.add_alias(pid, name, "alternate_name", f"Name as written in the {self.source_id} record", url, country)
         return p["product_id"]
 
     def add_alias(self, product_id: str, alias: str, relationship: str, evidence: str, url: str,

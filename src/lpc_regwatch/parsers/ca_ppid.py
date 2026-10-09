@@ -38,7 +38,7 @@ class CaPpidParser(BaseParser):
         for _, r in rel.iterrows():
             regno = r["Registration number"].strip()
             url = RECORD_URL.format(regno=regno)
-            pid = b.add_product(r["Product name - English"], r["Active ingredients - English"])
+            pid = b.add_product(r["Product name - English"], r["Active ingredients - English"], url=url, country=self.country)
             rid = b.add_registration(
                 f"R-CA-{regno}", pid, self.country, self.authority, regno, r["Registration Status"], url,
                 prod_doc.raw_document_id, "csv_parser",
