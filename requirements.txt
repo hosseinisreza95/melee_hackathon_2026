@@ -16,3 +16,4 @@ openpyxl           # Excel export
 psycopg[binary]
 # Dev / test
 pytest
+pyyaml             # tests read schema/openapi.yaml

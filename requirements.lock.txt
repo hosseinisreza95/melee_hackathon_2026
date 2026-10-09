@@ -195,3 +195,4 @@ watchdog==6.0.0
     # via streamlit
 websockets==17.2
     # via streamlit
+pyyaml==6.0.2
