@@ -1,0 +1,1115 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "LPC Regulatory Watch",
+    "version": "0.1.0",
+    "description": "Regulatory-watch prototype API (official sources CA/US/FR/BR). Not an official regulatory source: every answer carries evidence (source, URL, collection time, validation status) and a disclaimer. No result is not proof of no registration.",
+    "contact": {
+      "name": "LPC hackathon team"
+    }
+  },
+  "host": "37.187.176.97",
+  "basePath": "C:/Program Files/Git/api",
+  "schemes": [
+    "http"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "getHealth",
+        "summary": "Health",
+        "description": "Health",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "schema": {}
+          }
+        },
+        "produces": [
+          "application/json"
+        ],
+        "x-ms-visibility": "advanced"
+      }
+    },
+    "/products": {
+      "get": {
+        "operationId": "searchProducts",
+        "summary": "Products",
+        "description": "Products",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "description": "Commercial name, alias (official or hypothesis) or active entity; substring, case-insensitive",
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "type": "integer",
+            "default": 50
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "schema": {
+              "$ref": "#/definitions/ProductsResponse"
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "schema": {
+              "$ref": "#/definitions/HTTPValidationError"
+            }
+          }
+        },
+        "produces": [
+          "application/json"
+        ],
+        "x-ms-visibility": "important"
+      }
+    },
+    "/products/{productId}/registrations": {
+      "get": {
+        "operationId": "getProductRegistrations",
+        "summary": "Product Registrations",
+        "description": "Product Registrations",
+        "parameters": [
+          {
+            "name": "productId",
+            "in": "path",
+            "required": true,
+            "description": "",
+            "type": "string"
+          },
+          {
+            "name": "country",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "type": "string",
+            "pattern": "^[A-Za-z]{2}$"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "schema": {
+              "$ref": "#/definitions/RegistrationsResponse"
+            }
+          },
+          "404": {
+            "description": "No match. This is not proof of no registration."
+          },
+          "422": {
+            "description": "Validation Error",
+            "schema": {
+              "$ref": "#/definitions/HTTPValidationError"
+            }
+          }
+        },
+        "produces": [
+          "application/json"
+        ],
+        "x-ms-visibility": "advanced"
+      }
+    },
+    "/compare": {
+      "get": {
+        "operationId": "compareProductUses",
+        "summary": "Compare",
+        "description": "Compare",
+        "parameters": [
+          {
+            "name": "productId",
+            "in": "query",
+            "required": true,
+            "description": "",
+            "type": "string"
+          },
+          {
+            "name": "countries",
+            "in": "query",
+            "required": true,
+            "description": "",
+            "type": "string"
+          },
+          {
+            "name": "maxUsesPerRegistration",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "schema": {
+              "$ref": "#/definitions/ComparisonResponse"
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "schema": {
+              "$ref": "#/definitions/HTTPValidationError"
+            }
+          }
+        },
+        "produces": [
+          "application/json"
+        ],
+        "x-ms-visibility": "important"
+      }
+    },
+    "/ask": {
+      "post": {
+        "operationId": "askRegulatoryQuestion",
+        "summary": "Ask",
+        "description": "Ask",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AskRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "schema": {
+              "$ref": "#/definitions/Answer"
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "schema": {
+              "$ref": "#/definitions/HTTPValidationError"
+            }
+          }
+        },
+        "produces": [
+          "application/json"
+        ],
+        "x-ms-visibility": "important"
+      }
+    },
+    "/products/{productId}/aliases": {
+      "get": {
+        "operationId": "aliases_products__productId__aliases_get",
+        "summary": "Official alternate/historical names and sister-product hypotheses with review status",
+        "description": "Official alternate/historical names and sister-product hypotheses with review status",
+        "parameters": [
+          {
+            "name": "productId",
+            "in": "path",
+            "required": true,
+            "description": "",
+            "type": "string"
+          },
+          {
+            "name": "relationship",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "schema": {
+              "type": "array",
+              "title": "Response Aliases Products  Productid  Aliases Get",
+              "items": {
+                "$ref": "#/definitions/AliasOut"
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "schema": {
+              "$ref": "#/definitions/HTTPValidationError"
+            }
+          }
+        },
+        "produces": [
+          "application/json"
+        ],
+        "x-ms-visibility": "advanced"
+      }
+    },
+    "/expiring": {
+      "get": {
+        "operationId": "expiring__expiring_get",
+        "summary": "Registrations expiring within N months (CA and FR carry dates)",
+        "description": "Registrations expiring within N months (CA and FR carry dates)",
+        "parameters": [
+          {
+            "name": "months",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "type": "integer",
+            "default": 12
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "schema": {}
+          },
+          "422": {
+            "description": "Validation Error",
+            "schema": {
+              "$ref": "#/definitions/HTTPValidationError"
+            }
+          }
+        },
+        "produces": [
+          "application/json"
+        ],
+        "x-ms-visibility": "advanced"
+      }
+    },
+    "/changes": {
+      "get": {
+        "operationId": "changes__changes_get",
+        "summary": "Field-level changes detected between snapshots",
+        "description": "Field-level changes detected between snapshots",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "type": "integer",
+            "default": 200
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "schema": {
+              "type": "array",
+              "title": "Response Changes  Changes Get",
+              "items": {
+                "$ref": "#/definitions/ChangeOut"
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "schema": {
+              "$ref": "#/definitions/HTTPValidationError"
+            }
+          }
+        },
+        "produces": [
+          "application/json"
+        ],
+        "x-ms-visibility": "advanced"
+      }
+    },
+    "/sources": {
+      "get": {
+        "operationId": "sources_sources_get",
+        "summary": "Registered official sources, licences, limits and last collection",
+        "description": "Registered official sources, licences, limits and last collection",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "schema": {}
+          }
+        },
+        "produces": [
+          "application/json"
+        ],
+        "x-ms-visibility": "advanced"
+      }
+    },
+    "/export.csv": {
+      "get": {
+        "operationId": "export_csv__export_csv_get",
+        "summary": "Flat product x country x use table (for Power Automate / SharePoint / Excel)",
+        "description": "Flat product x country x use table (for Power Automate / SharePoint / Excel)",
+        "parameters": [
+          {
+            "name": "productId",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "type": "string"
+          },
+          {
+            "name": "countries",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "schema": {}
+          },
+          "422": {
+            "description": "Validation Error",
+            "schema": {
+              "$ref": "#/definitions/HTTPValidationError"
+            }
+          }
+        },
+        "produces": [
+          "text/csv"
+        ],
+        "x-ms-visibility": "advanced"
+      }
+    }
+  },
+  "definitions": {
+    "AliasOut": {
+      "type": "object",
+      "title": "AliasOut",
+      "properties": {
+        "aliasId": {
+          "type": "string",
+          "title": "Aliasid"
+        },
+        "productId": {
+          "type": "string",
+          "title": "Productid"
+        },
+        "aliasName": {
+          "type": "string",
+          "title": "Aliasname"
+        },
+        "countryCode": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "relationshipType": {
+          "type": "string",
+          "title": "Relationshiptype"
+        },
+        "confidence": {
+          "type": "number",
+          "x-nullable": true
+        },
+        "evidence": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "sourceRecordUrl": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "reviewStatus": {
+          "type": "string",
+          "title": "Reviewstatus"
+        }
+      },
+      "required": [
+        "aliasId",
+        "productId",
+        "aliasName",
+        "countryCode",
+        "relationshipType",
+        "confidence",
+        "evidence",
+        "sourceRecordUrl",
+        "reviewStatus"
+      ]
+    },
+    "Answer": {
+      "type": "object",
+      "title": "Answer",
+      "properties": {
+        "answer": {
+          "type": "string",
+          "title": "Answer"
+        },
+        "evidence": {
+          "type": "array",
+          "title": "Evidence",
+          "items": {
+            "$ref": "#/definitions/Evidence"
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "title": "Warnings",
+          "items": {
+            "type": "string"
+          }
+        },
+        "disclaimer": {
+          "type": "string",
+          "title": "Disclaimer"
+        },
+        "facts": {
+          "type": "array",
+          "title": "Facts",
+          "items": {
+            "type": "object"
+          }
+        },
+        "intent": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "toolsUsed": {
+          "type": "array",
+          "title": "Toolsused",
+          "items": {
+            "type": "string"
+          }
+        },
+        "model": {
+          "type": "string",
+          "x-nullable": true
+        }
+      },
+      "required": [
+        "answer",
+        "evidence",
+        "warnings",
+        "disclaimer"
+      ]
+    },
+    "AskRequest": {
+      "type": "object",
+      "title": "AskRequest",
+      "properties": {
+        "question": {
+          "type": "string",
+          "title": "Question"
+        },
+        "language": {
+          "type": "string",
+          "default": "fr",
+          "title": "Language"
+        }
+      },
+      "required": [
+        "question"
+      ]
+    },
+    "AuthorizedUse": {
+      "type": "object",
+      "title": "AuthorizedUse",
+      "properties": {
+        "useId": {
+          "type": "string",
+          "title": "Useid"
+        },
+        "cropOriginal": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "cropNormalized": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "eppoCropCode": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "eppoCropStatus": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "targetOriginal": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "targetNormalized": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "eppoTargetCode": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "eppoTargetStatus": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "applicationMethod": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "doseValue": {
+          "type": "number",
+          "x-nullable": true
+        },
+        "doseUnitOriginal": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "doseValueNormalized": {
+          "type": "number",
+          "x-nullable": true
+        },
+        "doseUnitNormalized": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "maxApplications": {
+          "type": "integer",
+          "x-nullable": true
+        },
+        "phiDays": {
+          "type": "number",
+          "x-nullable": true
+        },
+        "growthStageMin": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "growthStageMax": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "restrictionsOriginal": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "pairing": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "evidence": {
+          "$ref": "#/definitions/Evidence"
+        }
+      },
+      "required": [
+        "useId",
+        "evidence"
+      ]
+    },
+    "ChangeOut": {
+      "type": "object",
+      "title": "ChangeOut",
+      "properties": {
+        "changeId": {
+          "type": "integer",
+          "title": "Changeid"
+        },
+        "entityType": {
+          "type": "string",
+          "title": "Entitytype"
+        },
+        "entityId": {
+          "type": "string",
+          "title": "Entityid"
+        },
+        "field": {
+          "type": "string",
+          "title": "Field"
+        },
+        "oldValue": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "newValue": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "fromSnapshotId": {
+          "type": "integer",
+          "x-nullable": true
+        },
+        "toSnapshotId": {
+          "type": "integer",
+          "title": "Tosnapshotid"
+        },
+        "detectedAt": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Detectedat"
+        }
+      },
+      "required": [
+        "changeId",
+        "entityType",
+        "entityId",
+        "field",
+        "oldValue",
+        "newValue",
+        "fromSnapshotId",
+        "toSnapshotId",
+        "detectedAt"
+      ]
+    },
+    "ComparisonResponse": {
+      "type": "object",
+      "title": "ComparisonResponse",
+      "properties": {
+        "productId": {
+          "type": "string",
+          "title": "Productid"
+        },
+        "countries": {
+          "type": "array",
+          "title": "Countries",
+          "items": {
+            "type": "string"
+          }
+        },
+        "registrations": {
+          "type": "array",
+          "title": "Registrations",
+          "items": {
+            "$ref": "#/definitions/Registration"
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "title": "Warnings",
+          "items": {
+            "type": "string"
+          }
+        },
+        "disclaimer": {
+          "type": "string",
+          "title": "Disclaimer"
+        },
+        "coverage": {
+          "type": "array",
+          "title": "Coverage",
+          "items": {
+            "$ref": "#/definitions/CountryCoverage"
+          }
+        },
+        "commercialName": {
+          "type": "string",
+          "x-nullable": true
+        }
+      },
+      "required": [
+        "productId",
+        "countries",
+        "registrations",
+        "warnings",
+        "disclaimer"
+      ]
+    },
+    "CountryCoverage": {
+      "type": "object",
+      "title": "CountryCoverage",
+      "properties": {
+        "countryCode": {
+          "type": "string",
+          "title": "Countrycode"
+        },
+        "sourceId": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "collectedAt": {
+          "type": "string",
+          "format": "date-time",
+          "x-nullable": true
+        },
+        "coverage": {
+          "type": "string",
+          "enum": [
+            "found",
+            "not_found_in_source",
+            "source_not_collected"
+          ],
+          "title": "Coverage"
+        },
+        "note": {
+          "type": "string",
+          "title": "Note"
+        }
+      },
+      "required": [
+        "countryCode",
+        "sourceId",
+        "collectedAt",
+        "coverage",
+        "note"
+      ]
+    },
+    "Evidence": {
+      "type": "object",
+      "title": "Evidence",
+      "properties": {
+        "sourceId": {
+          "type": "string",
+          "title": "Sourceid"
+        },
+        "sourceUrl": {
+          "type": "string",
+          "title": "Sourceurl"
+        },
+        "collectedAt": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Collectedat"
+        },
+        "validationStatus": {
+          "type": "string",
+          "enum": [
+            "automatically_extracted",
+            "to_verify",
+            "validated",
+            "rejected",
+            "obsolete",
+            "source_unavailable"
+          ],
+          "title": "Validationstatus"
+        },
+        "excerpt": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "extractionMethod": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "confidence": {
+          "type": "number",
+          "x-nullable": true
+        },
+        "snapshotId": {
+          "type": "integer",
+          "x-nullable": true
+        }
+      },
+      "required": [
+        "sourceId",
+        "sourceUrl",
+        "collectedAt",
+        "validationStatus"
+      ]
+    },
+    "HTTPValidationError": {
+      "type": "object",
+      "title": "HTTPValidationError",
+      "properties": {
+        "detail": {
+          "type": "array",
+          "title": "Detail",
+          "items": {
+            "$ref": "#/definitions/ValidationError"
+          }
+        }
+      }
+    },
+    "Product": {
+      "type": "object",
+      "title": "Product",
+      "properties": {
+        "productId": {
+          "type": "string",
+          "title": "Productid"
+        },
+        "commercialName": {
+          "type": "string",
+          "title": "Commercialname"
+        },
+        "activeEntityOriginal": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "activeEntityNormalized": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "formulationCode": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "isSynthetic": {
+          "type": "boolean",
+          "default": false,
+          "title": "Issynthetic"
+        },
+        "strain": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "countries": {
+          "type": "array",
+          "title": "Countries",
+          "items": {
+            "type": "string"
+          }
+        },
+        "matchedOn": {
+          "type": "string",
+          "x-nullable": true
+        }
+      },
+      "required": [
+        "productId",
+        "commercialName"
+      ]
+    },
+    "ProductsResponse": {
+      "type": "object",
+      "title": "ProductsResponse",
+      "properties": {
+        "items": {
+          "type": "array",
+          "title": "Items",
+          "items": {
+            "$ref": "#/definitions/Product"
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "title": "Warnings",
+          "items": {
+            "type": "string"
+          }
+        },
+        "disclaimer": {
+          "type": "string",
+          "x-nullable": true
+        }
+      },
+      "required": [
+        "items"
+      ]
+    },
+    "Registration": {
+      "type": "object",
+      "title": "Registration",
+      "properties": {
+        "registrationId": {
+          "type": "string",
+          "title": "Registrationid"
+        },
+        "productId": {
+          "type": "string",
+          "title": "Productid"
+        },
+        "countryCode": {
+          "type": "string",
+          "title": "Countrycode"
+        },
+        "authorityName": {
+          "type": "string",
+          "title": "Authorityname"
+        },
+        "registrationNumber": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "statusOriginal": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "statusNormalized": {
+          "type": "string",
+          "enum": [
+            "active",
+            "expired",
+            "withdrawn",
+            "pending",
+            "unknown"
+          ],
+          "title": "Statusnormalized"
+        },
+        "approvalDate": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "expirationDate": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "holderOriginal": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "activeEntityOriginal": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "formulationOriginal": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "isCurrent": {
+          "type": "boolean",
+          "default": true,
+          "title": "Iscurrent"
+        },
+        "usesCount": {
+          "type": "integer",
+          "default": 0,
+          "title": "Usescount"
+        },
+        "uses": {
+          "type": "array",
+          "title": "Uses",
+          "items": {
+            "$ref": "#/definitions/AuthorizedUse"
+          }
+        },
+        "evidence": {
+          "$ref": "#/definitions/Evidence"
+        }
+      },
+      "required": [
+        "registrationId",
+        "productId",
+        "countryCode",
+        "authorityName",
+        "statusNormalized",
+        "evidence"
+      ]
+    },
+    "RegistrationsResponse": {
+      "type": "object",
+      "title": "RegistrationsResponse",
+      "properties": {
+        "items": {
+          "type": "array",
+          "title": "Items",
+          "items": {
+            "$ref": "#/definitions/Registration"
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "title": "Warnings",
+          "items": {
+            "type": "string"
+          }
+        },
+        "disclaimer": {
+          "type": "string",
+          "title": "Disclaimer"
+        }
+      },
+      "required": [
+        "items",
+        "disclaimer"
+      ]
+    },
+    "ReviewRequest": {
+      "type": "object",
+      "title": "ReviewRequest",
+      "properties": {
+        "entityType": {
+          "type": "string",
+          "enum": [
+            "registration",
+            "use",
+            "alias",
+            "product"
+          ],
+          "title": "Entitytype"
+        },
+        "entityId": {
+          "type": "string",
+          "title": "Entityid"
+        },
+        "newStatus": {
+          "type": "string",
+          "enum": [
+            "to_verify",
+            "validated",
+            "rejected",
+            "obsolete"
+          ],
+          "title": "Newstatus"
+        },
+        "reviewer": {
+          "type": "string",
+          "title": "Reviewer"
+        },
+        "note": {
+          "type": "string",
+          "x-nullable": true
+        }
+      },
+      "required": [
+        "entityType",
+        "entityId",
+        "newStatus",
+        "reviewer"
+      ]
+    },
+    "ValidationError": {
+      "type": "object",
+      "title": "ValidationError",
+      "properties": {
+        "loc": {
+          "type": "array",
+          "title": "Location",
+          "items": {
+            "type": "string",
+            "x-nullable": true
+          }
+        },
+        "msg": {
+          "type": "string",
+          "title": "Message"
+        },
+        "type": {
+          "type": "string",
+          "title": "Error Type"
+        },
+        "input": {
+          "title": "Input"
+        },
+        "ctx": {
+          "type": "object",
+          "title": "Context"
+        }
+      },
+      "required": [
+        "loc",
+        "msg",
+        "type"
+      ]
+    }
+  },
+  "securityDefinitions": {
+    "api_key": {
+      "type": "apiKey",
+      "in": "header",
+      "name": "X-API-Key",
+      "description": "Not enforced by the prototype; placeholder for the Entra ID / API Management design in m365/README.md"
+    }
+  },
+  "security": [],
+  "x-ms-connector-metadata": [
+    {
+      "propertyName": "Website",
+      "propertyValue": "http://37.187.176.97C:/Program Files/Git/api/docs"
+    },
+    {
+      "propertyName": "Privacy policy",
+      "propertyValue": "http://37.187.176.97C:/Program Files/Git/api/sources"
+    },
+    {
+      "propertyName": "Categories",
+      "propertyValue": "Data;Business Intelligence"
+    }
+  ]
+}

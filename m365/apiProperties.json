@@ -1,0 +1,10 @@
+{
+  "properties": {
+    "connectionParameters": {},
+    "iconBrandColor": "#2e7d32",
+    "capabilities": [],
+    "publisher": "LPC hackathon team",
+    "stackOwner": "Lallemand Plant Care",
+    "policyTemplateInstances": []
+  }
+}

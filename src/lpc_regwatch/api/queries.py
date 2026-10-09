@@ -11,7 +11,7 @@ from sqlalchemy import func, or_
 from sqlalchemy.orm import Session, selectinload
 
 from ..config import DISCLAIMER
-from ..db.models import AuthorizedUse, ChangeLog, Product, ProductAlias, Registration, Source
+from ..db.models import AuthorizedUse, ChangeLog, Product, ProductAlias, Registration, RegStatus, Source
 from ..parsers.base import norm_name
 
 COUNTRY_SOURCES = {"CA": "CA-PPID", "US": "US-EPA-PPLS", "FR": "FR-EPHY", "BR": "BR-AGROFIT"}
@@ -210,8 +210,11 @@ def products_by_active_entity(session: Session, species: str, crop: str | None =
 def expiring(session: Session, months: int = 12, reference: dt.date | None = None) -> list[dict]:
     ref = reference or dt.date.today()
     limit = ref + dt.timedelta(days=int(months * 30.44))
+    # only registrations that are active today and whose expiry falls inside the window; a FR 'date de retrait'
+    # on a withdrawn product is a past event, not an upcoming expiry
     q = (session.query(Registration).options(selectinload(Registration.product))
          .filter(Registration.expiration_date.isnot(None), Registration.expiration_date <= dt.datetime.combine(limit, dt.time()),
+                 Registration.expiration_date >= dt.datetime.combine(ref, dt.time()), Registration.status_normalized == RegStatus.active,
                  Registration.is_current.is_(True)).order_by(Registration.expiration_date))
     out = []
     for r in q:

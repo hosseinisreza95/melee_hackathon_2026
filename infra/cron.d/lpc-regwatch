@@ -1,0 +1,7 @@
+# Daily refresh of the LPC regulatory-watch data (collect -> parse -> normalize -> labels -> export -> submission)
+# Install: sudo cp infra/cron.d/lpc-regwatch /etc/cron.d/lpc-regwatch && sudo chmod 644 /etc/cron.d/lpc-regwatch
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+30 3 * * * ubuntu cd /opt/lpc-regwatch && docker compose -f infra/docker-compose.yml --env-file .env --profile jobs run --rm pipeline >> /var/log/lpc-regwatch-pipeline.log 2>&1
+# prune raw snapshots older than 60 days (evidence of the last two months stays)
+0 5 * * 0 ubuntu docker run --rm -v lpc-regwatch_rawdata:/raw alpine find /raw -mindepth 2 -maxdepth 2 -type d -mtime +60 -exec rm -rf {} + >> /var/log/lpc-regwatch-pipeline.log 2>&1

@@ -1,90 +1,87 @@
-# LPC Global Regulatory AI Starter Kit
+# LPC Regulatory Watch — AI agent for global plant-protection registrations
 
-Starter repository for the Lallemand Plant Care challenge at Hackathon IA for Impact 2026.
+Prototype built in 30 h for the Lallemand Plant Care challenge (Hackathon IA for Impact 2026, Mêlée Numérique Toulouse).
+It collects **official** registration data for plant protection products, stores it with full provenance, normalises
+it without ever overwriting the original wording, and answers product × country × use questions with evidence.
 
-> **Team working notes (hackathon build):** the step-by-step plan is in [`docs/PLAN.md`](docs/PLAN.md),
-> the requirement → component → test matrix in [`docs/SPEC.md`](docs/SPEC.md), the verified source access
-> report in [`docs/SOURCES.md`](docs/SOURCES.md) and the database design in [`docs/DATA_MODEL.md`](docs/DATA_MODEL.md).
-> MVP sources: Canada PPID, US EPA PPLS, France E-Phy (2 regions). Dev setup:
-> `uv pip install -r requirements.txt` (or `pip install -r requirements.txt`), `cp .env.example .env`,
-> `python scripts/init_db.py`, `pytest`.
+> **Regulatory disclaimer:** this repository and any prototype built from it are not official regulatory sources.
+> Extracted information requires Regulatory Affairs validation before official, commercial or operational use.
+> **No result must not be interpreted as no registration.**
 
-## Mission
-Build a functional proof of concept that collects, structures, normalizes and compares official plant protection product registration information across markets. Any technology may be used, but the result must expose a credible Microsoft 365 integration path.
+| | |
+|---|---|
+| Live demo (team server) | UI `http://37.187.176.97/` · API docs `http://37.187.176.97/api/docs` · pitch `http://37.187.176.97/pitch/` |
+| Sources (4, 3 regions) | Health Canada PPID (CA) · US EPA PPLS (US) · ANSES E-Phy (FR) · MAPA AGROFIT (BR) |
+| Pilot products | LALSTOP CONTANS WG · LALSTOP G46 WG · LALGUARD M52 OD |
+| Team report (FR) | [docs/AVANCEMENT_FR.md](docs/AVANCEMENT_FR.md) — what was done, challenges, solutions, why |
+| Requirement matrix | [docs/SPEC.md](docs/SPEC.md) · plan [docs/PLAN.md](docs/PLAN.md) · sources [docs/SOURCES.md](docs/SOURCES.md) · limits [docs/LIMITATIONS.md](docs/LIMITATIONS.md) |
 
-## Minimum success criteria
-1. Integrate at least **3 official sources** from at least **2 regions**.
-2. Produce a product x country x use comparison.
-3. Preserve original values alongside normalized values.
-4. Cite the official source and collection timestamp for every regulatory assertion.
-5. Make uncertainty, missing fields and validation status visible.
-6. Demonstrate or document Microsoft 365 interoperability.
-7. Deliver a repository restartable from this README without personal API keys.
+## Minimum success criteria → where
 
-> **Regulatory disclaimer:** This repository and any prototype built from it are not official regulatory sources. Extracted information requires Regulatory Affairs validation before official, commercial or operational use. No result must not be interpreted automatically as no registration.
+1. ≥ 3 official sources, ≥ 2 regions → 4 sources, 3 regions, `src/lpc_regwatch/collectors/`, verified in `docs/SOURCES.md`.
+2. Product × country × use comparison → `GET /compare`, UI *Comparaison* and *Carte*, `GET /export.csv|xlsx`.
+3. Original values alongside normalised → every `*_original` / `*_normalized` pair in `uses`, `registrations`, `products`.
+4. Source + timestamp on every assertion → `evidence{sourceId, sourceUrl, collectedAt, validationStatus}` on every row; `raw_documents` with sha256.
+5. Uncertainty visible → `warnings[]`, `validation_status`, `pairing`, `eppo_*_status`, `confidence`; UI badges.
+6. Microsoft 365 → `m365/` (Power Platform connector files generated from the live API, Power Automate flow, Copilot Studio action, Entra ID design).
+7. Restartable without personal keys → this README; AI provider is 4 env lines; everything except AI label extraction and AI phrasing works with **no key at all**.
+
+## Run it (clean machine, 10 minutes + download time)
+
+```bash
+git clone https://github.com/hosseinisreza95/melee_hackathon_2026.git && cd melee_hackathon_2026
+python -m venv .venv && . .venv/bin/activate        # Windows: .venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+cp .env.example .env                                 # no value is required
+python scripts/init_db.py                            # SQLite in data/
+python scripts/collect.py --source all               # ≈ 420 MB of official files into data/raw/<source>/<timestamp>/
+python scripts/parse.py --source all                 # canonical rows + data/*.csv export + organiser validator
+python scripts/normalize.py                          # EPPO / units / taxonomy / equivalences / sister hypotheses
+python scripts/extract_labels.py                     # optional: needs AI_API_KEY; reads the 6 pilot label PDFs
+python scripts/build_submission.py                   # output/submission.json → evaluator 70/70
+python scripts/serve_api.py                          # http://localhost:8000/docs
+streamlit run src/lpc_regwatch/ui/app.py             # http://localhost:8501
+pytest -q                                            # 52 tests: schema, collectors (offline), parsers, normalisation, API, gold T01–T05, blind real-data checks
+```
+
+Docker (production-style stack: PostgreSQL + API + UI + Caddy, one public port): see [infra/README.md](infra/README.md).
+
+## How a question is answered (and why it cannot invent)
+
+```
+question ─► deterministic planner (intent, product, countries, species, crop)
+         ─► predefined read-only queries on the canonical store  ──► FACTS + EVIDENCE + WARNINGS
+         ─► (optional) LLM rephrases FACTS only  ─► grounding guard: any number/country not in FACTS ⇒ rejected
+         ─► Answer { answer, evidence[], warnings[], disclaimer }
+```
+
+Try: `POST /ask {"question": "Dans quels pays LALSTOP CONTANS WG est-il homologué ?"}`.
 
 ## Repository map
-```text
-.
-├── README.md / QUICKSTART.md / LICENSE.md / CONTRIBUTING.md
-├── data/          # CSV templates and starter records
-├── schema/        # Canonical model, JSON Schema and OpenAPI
-├── evaluation/    # Rubric, gold questions and output contract
-├── scripts/       # Data validation and scoring
-├── business/      # Questions and glossary
-├── sources/       # Source-use and attribution guidance
-├── examples/      # Sample API and submission payloads
-└── tests/         # Smoke test
+
+```
+src/lpc_regwatch/   collectors/ parsers/ normalize/ matching.py loader.py extract/ api/ ui/ llm/ db/ config.py pilots.py
+scripts/            init_db.py collect.py parse.py normalize.py extract_labels.py build_submission.py serve_api.py
+                    export_m365_connector.py pipeline.sh validate_data.py evaluate_submission.py probe/
+data/               starter mappings (EPPO, names, active entities) + observed aliases + exported canonical CSVs
+docs/               SPEC, PLAN, SOURCES, DATA_MODEL, ARCHITECTURE, RA_VALIDATION_PROCEDURE, LIMITATIONS, EVAL, AVANCEMENT_FR
+m365/               apiDefinition.swagger.json, apiProperties.json, README, Power Automate flow, Copilot Studio action
+infra/              Dockerfile, docker-compose.yml, Caddyfile, cron.d/, README
+presentation/       pitch deck (self-contained HTML, animated)
+tests/              52 tests incl. gold questions and blind checks against the raw official files
+schema/ evaluation/ business/ sources/ examples/   organiser starter kit (unchanged)
 ```
 
-## Start
-```bash
-git clone <repository-url>
-cd lpc-global-regulatory-ai-starter
-python -m venv .venv
-# macOS/Linux: source .venv/bin/activate
-# Windows PowerShell: .venv\Scripts\Activate.ps1
-cp .env.example .env
-python scripts/validate_data.py
-python scripts/evaluate_submission.py examples/sample_submission.json
-```
-No third-party Python package is required for the starter scripts.
+## Data rules kept
 
-## Before development
-- Select the 3 official sources and 2 regions.
-- Select pilot products or active entities.
-- Document the normalization and human-review workflow.
-- Choose the Microsoft 365 integration mechanism.
-- Test every access and prepare a frozen fallback extract.
+- `*_original` is never modified; normalisation lives in `*_normalized` with a status (`to_verify`, `list`, `unmapped`).
+- Regulatory rows carry `source_id`, `source_record_url`, `collected_at`, `validation_status` (NOT NULL in the schema).
+- `unknown` / `not_found_in_source` / `source_not_collected` instead of invented values.
+- Sister-product matches are hypotheses until a reviewer validates them (`POST /review`, logged).
+- `is_synthetic` exists on every table and is `false` everywhere in this repository.
+- Personal contact data (EPA company contacts) is redacted at ingestion.
 
-## Data rules
-- Never modify `*_original` values.
-- Put transformations in `*_normalized` fields.
-- Regulatory assertions require `source_id`, `source_record_url`, `collected_at` and `validation_status`.
-- Use `unknown` or `not_found` rather than inventing information.
-- Sister-product matches are hypotheses until reviewed.
-- Synthetic data must use `is_synthetic=true`.
+## Licence
 
-## Canonical contract
-- Field definitions: `data/field_dictionary.csv`
-- Data model: `schema/canonical_data_model.md`
-- JSON Schema: `schema/canonical.schema.json`
-- Minimal API: `schema/openapi.yaml`
-
-Teams may extend the contract but must not silently remove traceability fields.
-
-## EPPO mappings
-The included mapping files are deliberately small. Candidate codes are marked `to_verify`; teams must verify them against EPPO before changing the status to `validated`.
-
-## Microsoft 365 interoperability
-Demonstrate or document at least one: REST API importable as a custom connector, Dataverse export, SharePoint/Power Automate JSON or CSV flow, Copilot Studio action, Azure/Entra ID design, or Teams/SharePoint interface.
-
-## Final checklist
-- [ ] Solution starts from a clean machine using the README.
-- [ ] No personal secret is required.
-- [ ] Sources, licences and limits are documented.
-- [ ] Official, derived and synthetic data are distinguishable.
-- [ ] API or export follows the documented contract.
-- [ ] Evaluation script runs.
-- [ ] Known limitations and regulatory disclaimer are visible.
-- [ ] Microsoft 365 integration is demonstrated or documented.
+Starter kit and this prototype: see `LICENSE.md`. Source data: Open Government Licence – Canada, US federal public data,
+Licence Ouverte (ANSES / data.gouv.fr), Creative Commons Attribution (MAPA). Attribution lines are printed by `GET /sources`.

@@ -298,7 +298,8 @@ def ask(session: Session, question: str, language: str = "fr") -> dict:
             else:
                 warnings.append(f"AI phrasing rejected by the grounding guard ({why}); deterministic answer shown instead.")
         except LLMUnavailable as e:
-            warnings.append(f"AI provider unavailable ({str(e)[:80]}); deterministic answer shown.")
+            kind = str(e).split(":", 1)[0].strip() or "error"
+            warnings.append(f"AI provider unavailable ({kind}); deterministic answer shown, built from the same facts.")
     # dedupe evidence by (source url, snapshot)
     seen = set()
     ev = []
