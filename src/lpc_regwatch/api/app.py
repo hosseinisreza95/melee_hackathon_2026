@@ -37,8 +37,24 @@ source, registered under another name, or the market may not be collected at all
 Sources: Health Canada PPID (CA), US EPA PPLS (US), ANSES E-Phy (FR), MAPA AGROFIT (BR).
 """
 
+from contextlib import asynccontextmanager
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    """Create tables and seed the sources table on first start (idempotent, additive); the API then serves an
+    empty but valid store until the pipeline has run."""
+    from ..db import init_db
+
+    try:
+        init_db()
+    except Exception as e:  # noqa: BLE001 - the health endpoint will show the problem
+        log.error("init_db failed at startup: %s", e)
+    yield
+
+
 app = FastAPI(title="LPC Global Regulatory AI API", version=__version__, description=DESCRIPTION,
-              servers=[{"url": settings.public_base_url}], docs_url="/docs", redoc_url="/redoc")
+              servers=[{"url": settings.public_base_url}], docs_url="/docs", redoc_url="/redoc", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
