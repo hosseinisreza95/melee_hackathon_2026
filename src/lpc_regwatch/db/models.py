@@ -107,11 +107,11 @@ class RawDocument(Base):
 # --------------------------------------------------------------------------- products
 class Product(Base):
     __tablename__ = "products"
-    product_id: Mapped[str] = mapped_column(String(60), primary_key=True)
-    commercial_name: Mapped[str] = mapped_column(String(200), index=True)
+    product_id: Mapped[str] = mapped_column(String(160), primary_key=True)
+    commercial_name: Mapped[str] = mapped_column(String(400), index=True)
     active_entity_original: Mapped[str | None] = mapped_column(Text)
     active_entity_normalized: Mapped[str | None] = mapped_column(Text)
-    strain: Mapped[str | None] = mapped_column(String(80))
+    strain: Mapped[str | None] = mapped_column(String(120))
     formulation_code: Mapped[str | None] = mapped_column(String(20))
     is_synthetic: Mapped[bool] = mapped_column(Boolean, default=False)
     validation_status: Mapped[ValidationStatus] = mapped_column(Enum(ValidationStatus), default=ValidationStatus.automatically_extracted)
@@ -122,9 +122,9 @@ class Product(Base):
 
 class ProductAlias(Base):
     __tablename__ = "product_aliases"
-    alias_id: Mapped[str] = mapped_column(String(60), primary_key=True)
+    alias_id: Mapped[str] = mapped_column(String(400), primary_key=True)
     product_id: Mapped[str] = mapped_column(ForeignKey("products.product_id"), index=True)
-    alias_name: Mapped[str] = mapped_column(String(200), index=True)
+    alias_name: Mapped[str] = mapped_column(String(400), index=True)
     country_code: Mapped[str | None] = mapped_column(String(2))
     relationship_type: Mapped[AliasRelation] = mapped_column(Enum(AliasRelation))
     confidence: Mapped[float | None] = mapped_column(Float)
@@ -139,17 +139,17 @@ class ProductAlias(Base):
 # --------------------------------------------------------------------------- registrations & uses
 class Registration(Base):
     __tablename__ = "registrations"
-    registration_id: Mapped[str] = mapped_column(String(60), primary_key=True)
+    registration_id: Mapped[str] = mapped_column(String(120), primary_key=True)
     product_id: Mapped[str] = mapped_column(ForeignKey("products.product_id"), index=True)
     country_code: Mapped[str] = mapped_column(String(2), index=True)
-    authority_name: Mapped[str] = mapped_column(String(200))
-    registration_number: Mapped[str | None] = mapped_column(String(60), index=True)
-    holder_original: Mapped[str | None] = mapped_column(String(200))
-    status_original: Mapped[str | None] = mapped_column(String(100))
+    authority_name: Mapped[str] = mapped_column(String(300))
+    registration_number: Mapped[str | None] = mapped_column(String(80), index=True)
+    holder_original: Mapped[str | None] = mapped_column(String(400))
+    status_original: Mapped[str | None] = mapped_column(String(150))
     status_normalized: Mapped[RegStatus] = mapped_column(Enum(RegStatus), default=RegStatus.unknown)
     approval_date: Mapped[dt.date | None] = mapped_column(DateTime)
     expiration_date: Mapped[dt.date | None] = mapped_column(DateTime)
-    formulation_original: Mapped[str | None] = mapped_column(String(120))
+    formulation_original: Mapped[str | None] = mapped_column(Text)
     active_entity_original: Mapped[str | None] = mapped_column(Text)
     # --- traceability (NOT NULL by design: G2)
     source_id: Mapped[str] = mapped_column(ForeignKey("sources.source_id"), index=True)
@@ -170,7 +170,7 @@ class Registration(Base):
 
 class AuthorizedUse(Base):
     __tablename__ = "uses"
-    use_id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    use_id: Mapped[str] = mapped_column(String(160), primary_key=True)
     registration_id: Mapped[str] = mapped_column(ForeignKey("registrations.registration_id"), index=True)
     crop_name_original: Mapped[str | None] = mapped_column(Text)
     crop_name_normalized: Mapped[str | None] = mapped_column(Text)
@@ -182,17 +182,17 @@ class AuthorizedUse(Base):
     eppo_target_status: Mapped[str | None] = mapped_column(String(12))
     application_method: Mapped[str | None] = mapped_column(Text)
     dose_value: Mapped[float | None] = mapped_column(Float)
-    dose_unit_original: Mapped[str | None] = mapped_column(String(60))
+    dose_unit_original: Mapped[str | None] = mapped_column(String(120))
     dose_unit_normalized: Mapped[str | None] = mapped_column(String(60))
     dose_value_normalized: Mapped[float | None] = mapped_column(Float)
     max_applications: Mapped[int | None] = mapped_column(Integer)
     application_interval_days: Mapped[float | None] = mapped_column(Float)
     phi_days: Mapped[float | None] = mapped_column(Float)
     rei_hours: Mapped[float | None] = mapped_column(Float)
-    growth_stage_min: Mapped[str | None] = mapped_column(String(10))  # BBCH
-    growth_stage_max: Mapped[str | None] = mapped_column(String(10))
+    growth_stage_min: Mapped[str | None] = mapped_column(String(40))  # BBCH
+    growth_stage_max: Mapped[str | None] = mapped_column(String(40))
     restrictions_original: Mapped[str | None] = mapped_column(Text)
-    use_status_original: Mapped[str | None] = mapped_column(String(60))
+    use_status_original: Mapped[str | None] = mapped_column(String(120))
     # CA/US give sites[] and pests[] as independent lists -> pairing is not asserted by the source
     pairing: Mapped[str] = mapped_column(String(20), default="source_paired")  # source_paired|unpaired_lists|llm_paired
     # --- traceability
@@ -216,7 +216,7 @@ class ChangeLog(Base):
     __tablename__ = "change_log"
     change_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     entity_type: Mapped[str] = mapped_column(String(20))  # registration|use|product
-    entity_id: Mapped[str] = mapped_column(String(80), index=True)
+    entity_id: Mapped[str] = mapped_column(String(400), index=True)
     field: Mapped[str] = mapped_column(String(60))
     old_value: Mapped[str | None] = mapped_column(Text)
     new_value: Mapped[str | None] = mapped_column(Text)
@@ -231,7 +231,7 @@ class ReviewLog(Base):
     __tablename__ = "review_log"
     review_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     entity_type: Mapped[str] = mapped_column(String(20))
-    entity_id: Mapped[str] = mapped_column(String(80), index=True)
+    entity_id: Mapped[str] = mapped_column(String(400), index=True)
     old_status: Mapped[str] = mapped_column(String(30))
     new_status: Mapped[str] = mapped_column(String(30))
     reviewer: Mapped[str] = mapped_column(String(120))

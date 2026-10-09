@@ -69,3 +69,14 @@ def test_registration_with_traceability_ok(session):
     r = session.get(Registration, "R-T")
     assert r.validation_status.value == "automatically_extracted"
     assert r.status_normalized.value == "unknown"
+
+
+def test_string_columns_fit_observed_values():
+    """PostgreSQL enforces VARCHAR lengths (SQLite does not): the longest ids/names seen in the sources must fit."""
+    from lpc_regwatch.db.models import AuthorizedUse, Product, ProductAlias, Registration
+
+    assert Product.__table__.c.product_id.type.length >= 160
+    assert ProductAlias.__table__.c.alias_id.type.length >= 400 and ProductAlias.__table__.c.alias_name.type.length >= 400
+    assert AuthorizedUse.__table__.c.use_id.type.length >= 160 and Registration.__table__.c.holder_original.type.length >= 400
+    longest = "A-P-METARHIZIUM-BRUNNEUM-STRAIN-F52-TECHNICAL-MET52-TECHNICAL-US"
+    assert len(longest) <= ProductAlias.__table__.c.alias_id.type.length
