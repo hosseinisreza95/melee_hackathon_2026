@@ -1,1 +1,258 @@
-<!doctype html><meta charset="utf-8"><title>LPC Regulatory Watch — pitch</title><p>Pitch deck is being built. See <a href="/">the app</a> and <a href="/api/docs">the API</a>.</p>
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LPC Regulatory Watch — pitch</title>
+<meta name="description" content="Pitch du prototype d'agent IA de veille réglementaire mondiale (défi Lallemand Plant Care, Hackathon IA for Impact 2026).">
+<style>
+  :root {
+    --bg: #0b1410; --bg2: #10201a; --ink: #eef5f0; --muted: #9fb3a8; --green: #35c26b; --lime: #b8f25a; --amber: #f3b23e; --red: #ef6b6b; --blue: #6cb6ff;
+    --card: rgba(255,255,255,.05); --line: rgba(255,255,255,.12);
+    --font: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font-family: var(--font); overflow: hidden; }
+  body { background: radial-gradient(1200px 700px at 80% -10%, #16342a 0%, transparent 60%), radial-gradient(900px 600px at -10% 110%, #0f2a22 0%, transparent 55%), var(--bg); }
+  .deck { position: relative; width: 100vw; height: 100vh; }
+  .slide { position: absolute; inset: 0; padding: 6vh 8vw; display: flex; flex-direction: column; justify-content: center; opacity: 0; transform: translateY(24px); transition: opacity .55s ease, transform .55s ease; pointer-events: none; }
+  .slide.active { opacity: 1; transform: none; pointer-events: auto; }
+  h1 { font-size: clamp(34px, 5.2vw, 72px); line-height: 1.05; margin: 0 0 18px; letter-spacing: -.02em; }
+  h2 { font-size: clamp(26px, 3.4vw, 46px); margin: 0 0 22px; letter-spacing: -.02em; }
+  h2 small, .kicker { display: block; font-size: clamp(13px, 1.1vw, 16px); letter-spacing: .18em; text-transform: uppercase; color: var(--green); font-weight: 600; margin-bottom: 10px; }
+  p, li { font-size: clamp(16px, 1.45vw, 22px); line-height: 1.5; color: var(--ink); }
+  .muted { color: var(--muted); }
+  .grid { display: grid; gap: 18px; }
+  .g2 { grid-template-columns: 1fr 1fr; } .g3 { grid-template-columns: repeat(3, 1fr); } .g4 { grid-template-columns: repeat(4, 1fr); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px 22px; backdrop-filter: blur(6px); }
+  .card h3 { margin: 0 0 8px; font-size: clamp(17px, 1.5vw, 22px); }
+  .card p { margin: 0; font-size: clamp(14px, 1.15vw, 18px); color: var(--muted); }
+  .tag { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; letter-spacing: .04em; }
+  .tag.ok { background: rgba(53,194,107,.18); color: var(--green); } .tag.warn { background: rgba(243,178,62,.18); color: var(--amber); }
+  .tag.bad { background: rgba(239,107,107,.18); color: var(--red); } .tag.info { background: rgba(108,182,255,.18); color: var(--blue); }
+  .tag.gray { background: rgba(255,255,255,.08); color: var(--muted); }
+  footer { position: fixed; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-between; align-items: center; padding: 10px 24px; font-size: 13px; color: var(--muted); }
+  .progress { position: fixed; top: 0; left: 0; height: 3px; background: linear-gradient(90deg, var(--green), var(--lime)); width: 0; transition: width .4s ease; }
+  .nav { position: fixed; right: 18px; bottom: 14px; display: flex; gap: 8px; }
+  .nav button { background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 8px 14px; cursor: pointer; font-size: 14px; }
+  .nav button:hover { border-color: var(--green); }
+  /* reveal items in order when slide becomes active */
+  .active .r { animation: rise .6s cubic-bezier(.2,.7,.2,1) both; }
+  .active .r:nth-child(1){animation-delay:.05s}.active .r:nth-child(2){animation-delay:.18s}.active .r:nth-child(3){animation-delay:.31s}.active .r:nth-child(4){animation-delay:.44s}.active .r:nth-child(5){animation-delay:.57s}.active .r:nth-child(6){animation-delay:.70s}.active .r:nth-child(7){animation-delay:.83s}.active .r:nth-child(8){animation-delay:.96s}
+  @keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+  /* pipeline flow */
+  .flow { display: grid; grid-template-columns: repeat(7, 1fr); align-items: center; gap: 10px; margin-top: 10px; }
+  .node { position: relative; text-align: center; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px 10px; min-height: 118px; display: flex; flex-direction: column; justify-content: center; }
+  .node b { display: block; font-size: clamp(14px, 1.2vw, 18px); margin-bottom: 4px; } .node span { font-size: clamp(11px, .95vw, 14px); color: var(--muted); }
+  .node::after { content: ""; position: absolute; right: -12px; top: 50%; width: 12px; height: 2px; background: var(--line); }
+  .node:last-child::after { display: none; }
+  .flowline { height: 4px; border-radius: 4px; background: linear-gradient(90deg, transparent, var(--green), var(--lime), transparent); background-size: 200% 100%; animation: flow 2.2s linear infinite; margin: 14px 0 6px; opacity: .8; }
+  @keyframes flow { from { background-position: 200% 0 } to { background-position: -200% 0 } }
+  /* counters */
+  .num { font-size: clamp(38px, 5vw, 70px); font-weight: 800; letter-spacing: -.03em; color: var(--lime); line-height: 1; }
+  .num + div { color: var(--muted); margin-top: 6px; font-size: clamp(13px, 1.1vw, 17px); }
+  /* table */
+  table { width: 100%; border-collapse: collapse; font-size: clamp(13px, 1.15vw, 17px); }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; letter-spacing: .04em; font-size: 13px; text-transform: uppercase; }
+  td.c { font-family: ui-monospace, Consolas, monospace; font-size: 13px; color: var(--muted); }
+  /* guard animation */
+  .guard { display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px; align-items: center; }
+  .pulse { width: 92px; height: 92px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; background: rgba(53,194,107,.15); border: 2px solid var(--green); animation: pulse 1.8s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(53,194,107,.35) } 50% { box-shadow: 0 0 0 18px rgba(53,194,107,0) } }
+  .strike { text-decoration: line-through; color: var(--red); }
+  .mono { font-family: ui-monospace, Consolas, monospace; font-size: 14px; color: var(--muted); }
+  .cols { display: grid; grid-template-columns: 1.1fr .9fr; gap: 28px; align-items: start; }
+  ul { margin: 0; padding-left: 22px; } li { margin: 6px 0; }
+  .title-wrap { max-width: 1100px; }
+  .brand { display: inline-flex; align-items: center; gap: 10px; color: var(--green); font-weight: 700; letter-spacing: .12em; text-transform: uppercase; font-size: 14px; margin-bottom: 16px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--lime); box-shadow: 0 0 18px var(--lime); animation: pulse 2s infinite; }
+  .sources { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 18px 0; }
+  .src { padding: 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); }
+  .src b { display: block; } .src span { font-size: 13px; color: var(--muted); }
+  .fmt { font-family: ui-monospace, Consolas, monospace; color: var(--amber); font-size: 13px; }
+  .map { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .map .cell { padding: 16px; border-radius: 14px; border: 1px solid var(--line); background: var(--card); }
+  .map .cell b { display: block; font-size: 18px; margin-bottom: 6px; }
+  @media (max-width: 900px) { .g2,.g3,.g4,.cols,.sources,.map { grid-template-columns: 1fr 1fr; } .flow { grid-template-columns: repeat(4,1fr); } .slide { padding: 4vh 5vw; overflow: auto; justify-content: flex-start; } }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+
+<!-- 1 -->
+<section class="slide active">
+  <div class="title-wrap">
+    <div class="brand r"><span class="dot"></span> Hackathon IA for Impact 2026 · Défi Lallemand Plant Care</div>
+    <h1 class="r">Un agent IA de veille réglementaire mondiale,<br><span style="color:var(--lime)">traçable</span> jusqu'à la source officielle.</h1>
+    <p class="r muted">Homologations de produits de biocontrôle : 4 sources officielles, 3 régions, un référentiel unique interrogeable en langage naturel — sans jamais inventer une donnée.</p>
+    <p class="r"><span class="tag ok">prototype déployé</span> &nbsp;<span class="tag info">API + UI + connecteur M365</span> &nbsp;<span class="tag warn">validation Regulatory Affairs requise</span></p>
+  </div>
+</section>
+
+<!-- 2 -->
+<section class="slide">
+  <h2><small>Le problème</small>Une même information, quatre formats, quatre langues, zéro clé commune</h2>
+  <div class="sources">
+    <div class="src r"><b>🇨🇦 Santé Canada — PPID</b><span>extraits CSV quotidiens</span><br><span class="fmt">Windows-1252 · cultures et cibles en listes séparées · pas de dose</span></div>
+    <div class="src r"><b>🇺🇸 US EPA — PPLS</b><span>API JSON + PDF d'étiquette</span><br><span class="fmt">685 « sites » pour un produit · dose uniquement dans le PDF</span></div>
+    <div class="src r"><b>🇫🇷 ANSES — E-Phy</b><span>zip hebdomadaire, URL changeante</span><br><span class="fmt">dose, DAR, BBCH structurés · en-têtes de colonnes trompeurs</span></div>
+    <div class="src r"><b>🇧🇷 MAPA — AGROFIT</b><span>CSV de 392 Mo</span><br><span class="fmt">produits actifs seulement · aucune date · souche dans un texte libre</span></div>
+  </div>
+  <p class="r">Un même produit s'appelle <b>LALSTOP G46 WG</b> en France, <b>PRESTOP WG</b> au Canada et <b>PRESTOP (WG)</b> aux États-Unis. Le micro-organisme a changé de nom (<i>Gliocladium</i> → <i>Clonostachys</i>, <i>M. anisopliae</i> → <i>M. brunneum</i>). Et l'absence d'une ligne ne prouve jamais l'absence d'homologation.</p>
+</section>
+
+<!-- 3 -->
+<section class="slide">
+  <h2><small>Ce que nous avons construit</small>Une chaîne où chaque transformation garde sa preuve</h2>
+  <div class="flowline"></div>
+  <div class="flow">
+    <div class="node r"><b>Collecte</b><span>fichiers officiels, horodatage, sha256, garde anti-dérive de schéma</span></div>
+    <div class="node r"><b>Preuves brutes</b><span>rien n'est modifié : CSV, JSON, PDF stockés tels quels</span></div>
+    <div class="node r"><b>Parseurs</b><span>déterministes, valeur originale conservée, extrait de preuve par ligne</span></div>
+    <div class="node r"><b>Normalisation</b><span>EPPO (exact seulement), unités, synonymes documentés, souche + espèce</span></div>
+    <div class="node r"><b>Base canonique</b><span>9 tables, source + date + statut obligatoires</span></div>
+    <div class="node r"><b>API</b><span>contrat OpenAPI du kit + /ask ancré</span></div>
+    <div class="node r"><b>Usages</b><span>UI, Power Platform, Copilot Studio, Excel</span></div>
+  </div>
+  <div class="flowline"></div>
+  <p class="r muted">Les PDF d'étiquette (dose au Canada et aux États-Unis) passent par un LLM, mais chaque ligne doit citer un extrait <b>mot pour mot</b> retrouvé dans le PDF — sinon elle est rejetée.</p>
+</section>
+
+<!-- 4 -->
+<section class="slide">
+  <h2><small>Résultats mesurés</small>Ce que la base contient ce soir</h2>
+  <div class="grid g4">
+    <div class="card r"><div class="num" data-count="4">0</div><div>sources officielles, 3 régions</div></div>
+    <div class="card r"><div class="num" data-count="3">0</div><div>produits pilotes retrouvés dans 3 pays chacun, sous un seul identifiant</div></div>
+    <div class="card r"><div class="num" data-count="232" id="n-reg">0</div><div>enregistrements, 6 300+ usages, 134 noms et hypothèses avec preuve</div></div>
+    <div class="card r"><div class="num" data-count="100">0</div><div>% des lignes réglementaires avec source, URL, date et statut de validation</div></div>
+  </div>
+  <div class="grid g3" style="margin-top:18px">
+    <div class="card r"><h3>52 tests automatisés</h3><p>schéma, collecteurs hors-ligne, parseurs, normalisation, contrat API, 5 questions « gold », cas adverses, et des tests « aveugles » qui relisent les fichiers officiels sans nos parseurs.</p></div>
+    <div class="card r"><h3>70 / 70 à l'évaluateur</h3><p>soumission générée par l'agent lui-même sur les cinq questions du jury ; traçabilité, avertissements, disclaimer, limites connues.</p></div>
+    <div class="card r"><h3>0 clé personnelle requise</h3><p>tout fonctionne sans IA ; le fournisseur LLM se change en 4 lignes de configuration (OpenAI, Azure OpenAI, Gemini, local).</p></div>
+  </div>
+</section>
+
+<!-- 5 -->
+<section class="slide">
+  <h2><small>Démonstration</small>LALSTOP CONTANS WG — produit × pays × usage</h2>
+  <div class="map">
+    <div class="cell r"><b>🇨🇦 Canada</b><span class="tag ok">active</span><br><span class="muted">n° 29066 · « Full Registration » · expire 2027-12-31 · 17 cultures</span><br><span class="mono">CA-PPID · 2026-10-09 UTC</span></div>
+    <div class="cell r"><b>🇺🇸 États-Unis</b><span class="tag ok">active</span><br><span class="muted">n° 64137-34 · « Active » · 685 sites · dose dans l'étiquette</span><br><span class="mono">US-EPA-PPLS · 2026-10-09 UTC</span></div>
+    <div class="cell r"><b>🇫🇷 France</b><span class="tag ok">active</span><br><span class="muted">AMM 9900189 · « AUTORISE » · 4 kg/ha · 1 application</span><br><span class="mono">FR-EPHY · 2026-10-09 UTC</span></div>
+    <div class="cell r"><b>🇧🇷 Brésil</b><span class="tag gray">non trouvé dans la source</span><br><span class="muted">absent d'AGROFIT au 2026-10-09 — <b>≠ non homologué</b></span><br><span class="mono">BR-AGROFIT · 2026-10-09 UTC</span></div>
+  </div>
+  <table style="margin-top:18px">
+    <tr><th>Pays</th><th>Culture (original)</th><th>Normalisée · EPPO</th><th>Cible (original)</th><th>Dose</th><th>Appariement</th></tr>
+    <tr class="r"><td>FR</td><td>Traitements généraux</td><td>All crops · —</td><td>Champignons (autres que pythiacées)</td><td>4.0 kg/ha · max 1</td><td><span class="tag ok">source_paired</span></td></tr>
+    <tr class="r"><td>CA</td><td>LETTUCE</td><td>Lettuce · LACSA <span class="tag warn">to_verify</span></td><td>SCLEROTINIA MINOR; SCLEROTINIA SCLEROTIORUM</td><td class="c">non structurée</td><td><span class="tag warn">unpaired_lists</span></td></tr>
+    <tr class="r"><td>US</td><td>LETTUCE (SOIL TREATMENT)</td><td>Lettuce · LACSA <span class="tag warn">to_verify</span></td><td>WHITE MOLD (SCLEROTINIA SCLEROTIORUM)</td><td class="c">étiquette (IA, à vérifier)</td><td><span class="tag info">llm_paired</span></td></tr>
+  </table>
+</section>
+
+<!-- 6 -->
+<section class="slide">
+  <h2><small>Gouvernance</small>Les règles que le code rend impossibles à contourner</h2>
+  <div class="grid g2">
+    <div class="card r"><h3>Chaque assertion a sa preuve</h3><p>source, URL officielle, date de collecte UTC, statut de validation, extrait de la ligne source : colonnes <b>NOT NULL</b>. Une ligne sans preuve est refusée par la base.</p></div>
+    <div class="card r"><h3>L'original n'est jamais écrasé</h3><p>« Full Registration » reste à côté de <i>active</i> ; « Fraisier » à côté de <i>Strawberry · FRAAN · to_verify</i>. Les codes EPPO sont des candidats tant qu'un humain ne les a pas validés.</p></div>
+    <div class="card r"><h3>Absence ≠ absence d'homologation</h3><p>trois états distincts : <span class="tag ok">trouvé</span> <span class="tag gray">non trouvé dans la source (date)</span> <span class="tag bad">source non connectée</span>. Le 404 de l'API le dit en toutes lettres.</p></div>
+    <div class="card r"><h3>Humain dans la boucle</h3><p>chaque changement de statut passe par <code>POST /review</code> : relecteur, date, justification journalisés. La confiance machine n'est pas une validité réglementaire.</p></div>
+  </div>
+</section>
+
+<!-- 7 -->
+<section class="slide">
+  <h2><small>IA maîtrisée</small>Le modèle ne décide de rien, il reformule des faits</h2>
+  <div class="guard">
+    <div class="card r"><h3>1. Planificateur déterministe</h3><p>intention, produit (noms et alias), pays, espèce, culture → requêtes prédéfinies en lecture seule. Les lignes retournées <b>sont</b> les preuves.</p><br><h3>2. LLM optionnel</h3><p>reçoit uniquement les faits et un brouillon ; peut améliorer la formulation, pas le contenu.</p></div>
+    <div class="pulse r">GUARD</div>
+    <div class="card r"><h3>3. Garde-fou d'ancrage</h3><p>tout nombre, numéro ou pays absent des faits ⇒ réponse du modèle rejetée, brouillon déterministe servi, avertissement visible.</p><p class="mono" style="margin-top:10px">« …homologué en <span class="strike">Allemagne</span> » → rejeté<br>« n° 29066, CA-PPID, 2026-10-09 » → accepté</p><br><h3>Étiquettes PDF</h3><p>schéma JSON strict ; extrait verbatim obligatoire, vérifié dans le texte du PDF ; lignes marquées <i>llm_pdf · à vérifier</i>.</p></div>
+  </div>
+</section>
+
+<!-- 8 -->
+<section class="slide">
+  <h2><small>Produits sœurs</small>Fait officiel, hypothèse du kit, hypothèse des données : trois niveaux, jamais mélangés</h2>
+  <table>
+    <tr><th>Nom</th><th>Relation</th><th>Preuve</th><th>Confiance</th><th>Statut</th></tr>
+    <tr class="r"><td>PRESTOP WG (CA 32404, US 64137-13)</td><td><span class="tag ok">alternate_name</span></td><td>le même enregistrement officiel porte les deux noms (historique PPID, altbrandnames EPA)</td><td>1.00</td><td>fait → fusionné sous LALSTOP G46 WG</td></tr>
+    <tr class="r"><td>PRESTOP (FR 2120177, CA 28820)</td><td><span class="tag warn">sister_product_candidate</span></td><td>kit LPC PNM-004 : même souche J1446, formulation et n° différents</td><td>0.85</td><td>to_verify</td></tr>
+    <tr class="r"><td>PRIMASTOP BIOFUNGICIDE POWDER (US 64137-8)</td><td><span class="tag warn">sister_product_candidate</span></td><td>même <i>Clonostachys rosea</i> J1446, même titulaire, autre n°</td><td>0.80</td><td>to_verify</td></tr>
+    <tr class="r"><td>Kamoi Pro (BR 27520, Agrivalle)</td><td><span class="tag gray">pas candidat</span></td><td>même espèce mais souche CPQBA 040-11 ≠ J1446 — l'espèce seule ne suffit jamais</td><td>—</td><td>—</td></tr>
+  </table>
+  <p class="r muted" style="margin-top:16px">La revue se fait dans l'interface ; la décision et son auteur sont journalisés. Un candidat n'est jamais affiché comme équivalent avant validation.</p>
+</section>
+
+<!-- 9 -->
+<section class="slide">
+  <h2><small>Microsoft 365</small>Même API, trois chemins vers l'équipe réglementaire</h2>
+  <div class="grid g3">
+    <div class="card r"><h3>Connecteur personnalisé</h3><p>définition Swagger 2.0 générée depuis l'API live (10 opérations) → Power Automate, Power Apps, Copilot Studio. Design Entra ID : rôles Reader / Reviewer.</p></div>
+    <div class="card r"><h3>Power Automate → SharePoint</h3><p>chaque lundi : <code>/export.csv</code> dans la bibliothèque RA, puis <code>/changes</code> et <code>/expiring</code> → message Teams si quelque chose a bougé.</p></div>
+    <div class="card r"><h3>Copilot Studio</h3><p>une action sur <code>POST /ask</code> ; réponse, preuves, avertissements, disclaimer affichés tels quels ; recherche web désactivée.</p></div>
+  </div>
+  <p class="r muted" style="margin-top:18px">Documenté avec les fichiers prêts à importer ; démonstration dans un tenant à réaliser par LPC (nous n'en avions pas pendant le hackathon).</p>
+</section>
+
+<!-- 10 -->
+<section class="slide">
+  <h2><small>Honnêteté et suite</small>Ce que ce prototype n'est pas — et ce qu'il devient</h2>
+  <div class="cols">
+    <div class="card r"><h3>Limites connues</h3><ul>
+      <li>4 sources ; Allemagne sondée mais écartée, Belgique/Uruguay/Mexique non collectés.</li>
+      <li>Dose CA/US uniquement via l'étiquette (IA, à vérifier) ; appariement culture/cible non affirmé par ces sources.</li>
+      <li>Brésil : produits actifs seulement, pas de dates.</li>
+      <li>Codes EPPO = candidats <i>to_verify</i> (~23 % des usages codés).</li>
+      <li>API sans authentification (données publiques) ; Entra ID documenté, pas construit.</li></ul></div>
+    <div class="card r"><h3>Chemin vers la production</h3><ul>
+      <li>Même code sur Azure : Azure OpenAI, API Management + Entra ID, Container Apps Jobs pour la collecte.</li>
+      <li>Nouvelles sources = une classe de collecteur ; extraits gelés de l'organisateur comme type de source.</li>
+      <li>Client EPPO Data Services pour passer les codes en <i>validated</i> sous contrôle RA.</li>
+      <li>Détection de changements déjà en place : il suffit de laisser tourner le cron.</li></ul></div>
+  </div>
+  <p class="r" style="margin-top:18px">Démo : <b>http://37.187.176.97/</b> · API : <b>/api/docs</b> · code : <b>github.com/hosseinisreza95/melee_hackathon_2026</b></p>
+  <p class="r muted">Ce prototype n'est pas une source réglementaire officielle. Validation Regulatory Affairs requise. Aucun résultat ≠ absence d'homologation.</p>
+</section>
+
+</div>
+<footer><span>LPC Regulatory Watch · Hackathon IA for Impact 2026 · Toulouse</span><span id="counter">1 / 10</span></footer>
+<div class="nav"><button id="prev" aria-label="précédent">←</button><button id="next" aria-label="suivant">→</button></div>
+<script>
+  const slides = [...document.querySelectorAll('.slide')];
+  let i = Math.max(0, Math.min(slides.length - 1, parseInt(location.hash.slice(1) || '1', 10) - 1));
+  const progress = document.getElementById('progress'), counter = document.getElementById('counter');
+  function animateCounters(slide) {
+    slide.querySelectorAll('[data-count]').forEach(el => {
+      const target = +el.dataset.count, dur = 1100, t0 = performance.now();
+      const step = t => { const p = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - p, 3); el.textContent = Math.round(target * e).toLocaleString('fr-FR'); if (p < 1) requestAnimationFrame(step); };
+      requestAnimationFrame(step);
+    });
+  }
+  function show(n) {
+    i = (n + slides.length) % slides.length;
+    slides.forEach((s, k) => s.classList.toggle('active', k === i));
+    progress.style.width = ((i + 1) / slides.length * 100) + '%';
+    counter.textContent = (i + 1) + ' / ' + slides.length;
+    location.hash = i + 1;
+    animateCounters(slides[i]);
+  }
+  document.getElementById('next').onclick = () => show(i + 1);
+  document.getElementById('prev').onclick = () => show(i - 1);
+  document.addEventListener('keydown', e => {
+    if (['ArrowRight', ' ', 'PageDown', 'Enter'].includes(e.key)) { e.preventDefault(); show(i + 1); }
+    if (['ArrowLeft', 'PageUp', 'Backspace'].includes(e.key)) { e.preventDefault(); show(i - 1); }
+    if (e.key === 'Home') show(0); if (e.key === 'End') show(slides.length - 1);
+  });
+  let touchX = null;
+  document.addEventListener('touchstart', e => touchX = e.touches[0].clientX);
+  document.addEventListener('touchend', e => { if (touchX === null) return; const dx = e.changedTouches[0].clientX - touchX; if (Math.abs(dx) > 50) show(i + (dx < 0 ? 1 : -1)); touchX = null; });
+  // live figures from the API when served next to it
+  fetch('/api/health').then(r => r.json()).then(h => { if (h.registrations) document.getElementById('n-reg').dataset.count = h.registrations; }).catch(() => {});
+  show(i);
+</script>
+</body>
+</html>
