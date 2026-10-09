@@ -61,7 +61,7 @@ Findings to carry into Step 3:
 Exit test: `tests/test_parsers.py` on fixture files; `scripts/validate_data.py` on exported CSVs;
 row counts reported in `docs/SOURCES.md`.
 
-## Step 3 — Normalisation + matching
+## Step 3 — Normalisation + matching ✅ (2026-10-10)
 
 - EPPO mapping via starter CSVs (crop, pest) with multilingual aliases; unmapped → `to_verify`.
 - Product identity across countries via `product_name_mapping.csv` + `active_entity_mapping.csv`
@@ -71,7 +71,7 @@ row counts reported in `docs/SOURCES.md`.
 Exit test: `tests/test_matching.py`; the three pilot products resolve to one `product_id` each
 across CA / US / FR; PRESTOP ↔ LALSTOP G46 WG is a `sister_product_candidate`.
 
-## Step 4 — API (openapi.yaml contract)
+## Step 4 — API (openapi.yaml contract) ✅ (2026-10-10)
 
 - FastAPI implementing `/health`, `/products`, `/products/{id}/registrations`, `/compare`, `/ask`.
 - `/ask`: entity resolution → tool calls (predefined SQL) → answer from rows only; returns
@@ -82,7 +82,7 @@ across CA / US / FR; PRESTOP ↔ LALSTOP G46 WG is a `sister_product_candidate`.
 Exit test: `tests/test_api.py`, `tests/test_gold.py` (T01–T05); `scripts/build_submission.py`
 → evaluator 70/70.
 
-## Step 5 — UI (Streamlit workbench, thin client of the API)
+## Step 5 — UI (Streamlit workbench, thin client of the API) ✅ (2026-10-10)
 
 - Comparison table (product × country × use) with per-cell status badge + source link + date.
 - Detail panel: original vs normalized values, evidence excerpt, confidence.
@@ -91,7 +91,7 @@ Exit test: `tests/test_api.py`, `tests/test_gold.py` (T01–T05); `scripts/build
 
 Exit test: manual run-through of T01–T05 in the UI; screenshots in `docs/demo/`.
 
-## Step 6 — M365 interoperability
+## Step 6 — M365 interoperability ✅ documented (2026-10-10, no tenant for a live demo)
 
 - Export `schema/openapi.yaml` (served at `/openapi.json`) → Power Platform custom connector.
 - Copilot Studio agent with one action calling `/ask`; or Power Automate flow consuming `/export.csv`
@@ -99,7 +99,7 @@ Exit test: manual run-through of T01–T05 in the UI; screenshots in `docs/demo/
 
 Exit test: one question answered in Copilot Studio with the same evidence as the UI.
 
-## Step 7 — Label PDF extraction (AI) — first "nice to have" inside MVP
+## Step 7 — Label PDF extraction (AI) ✅ (2026-10-10, runs on the server where the key lives; see docs/EVAL.md)
 
 - For CA and US, dose lives only in label PDFs. `extract/label_llm.py`: PDF → text (PyMuPDF) →
   LLM with strict JSON schema → `uses` rows with `extraction_method=llm`, `confidence`,
@@ -108,12 +108,12 @@ Exit test: one question answered in Copilot Studio with the same evidence as the
 
 Exit test: 20 hand-checked fields vs PDF; precision reported in `docs/EVAL.md`.
 
-## Step 8 — Packaging
+## Step 8 — Packaging ✅ (2026-10-10, deployed on 37.187.176.97 with docker compose; infra/README.md)
 
 - `infra/docker-compose.yml` (api, ui, postgres) for the team server.
 - README quickstart verified on a clean machine. Known limitations + RA validation procedure
   + path to production written (cahier §15 deliverables).
 
-## Bonus (only if all above are green)
+## Bonus ✅
 
-Change detection (`change_log`), expiry alerts, choropleth map, competitor footprint.
+Change detection (`change_log`, `GET /changes`), expiry alerts (`GET /expiring`), choropleth map (UI *Carte*), competitor footprint (`/active-entities/{species}/registrations`).

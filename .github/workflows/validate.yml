@@ -1,4 +1,4 @@
-name: validate-starter
+name: validate
 on: [push, pull_request]
 jobs:
   validate:
@@ -6,6 +6,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with: {python-version: '3.11'}
+        with: {python-version: '3.12'}
       - run: python scripts/validate_data.py
       - run: python scripts/evaluate_submission.py examples/sample_submission.json
+      - run: pip install -r requirements.txt
+      - run: python -m pytest -q tests          # offline: fixtures + mock transport; real-data tests skip without a database
+        env: {PYTHONUTF8: "1"}

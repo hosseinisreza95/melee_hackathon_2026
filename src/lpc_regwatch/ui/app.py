@@ -75,6 +75,14 @@ ordered = PILOTS + sorted([p["productId"] for p in products if p["productId"] no
 st.sidebar.markdown("---")
 st.sidebar.caption("Produits pilotes : LALSTOP CONTANS WG · LALSTOP G46 WG · LALGUARD M52 OD")
 st.sidebar.caption("Sources : Santé Canada PPID · US EPA PPLS · ANSES E-Phy · MAPA AGROFIT")
+with st.sidebar.expander("Limites connues"):
+    for line in ["4 sources : un produit absent est « non trouvé dans la source », jamais « non homologué ».",
+                 "Dose CA/US : uniquement via l'étiquette PDF (extraction IA, à vérifier).",
+                 "Codes EPPO : candidats `to_verify` ; Brésil : produits actifs seulement, sans dates.",
+                 "Hypothèses « produit sœur » : à confirmer par Regulatory Affairs.",
+                 "Prototype sans authentification ; design Entra ID documenté."]:
+        st.markdown(f"- {line}")
+    st.caption("Détails : docs/LIMITATIONS.md")
 
 
 def product_picker(key: str) -> str:
