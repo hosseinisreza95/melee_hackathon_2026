@@ -1,0 +1,10 @@
+source_id,official_name,country_or_region,base_url,access_method,data_format,license_name,access_and_reuse_limits,manual_validation_required,notes
+EU-EPPO,EPPO Global Database,Europe,https://gd.eppo.int/,api/web,Structured services; HTML,EPPO Open Data Licence - confirm terms,Registration may be required,true,Codes and taxonomy
+FR-EPHY,ANSES E-Phy Open Data,FR,https://www.data.gouv.fr/datasets/donnees-ouvertes-du-catalogue-e-phy-des-produits-phytopharmaceutiques-matieres-fertilisantes-et-supports-de-culture-adjuvants-produits-mixtes-et-melanges,download,CSV; XML; ZIP,Licence Ouverte,Data not legally binding; official decisions prevail,false,Preferred France source
+DE-BVL,BVL PSM API,DE,https://psm-api.bvl.bund.de/,api,JSON,Datenlizenz Deutschland Namensnennung 2.0 - validate attribution,Rate limits/versioning not documented,true,Test endpoints
+BE-FYTOWEB,Fytoweb Data,BE,https://fytoweb.be/en/data,sftp,JSON,CC BY 4.0,Registration and foreign IP authorization may be required,true,Prepare permitted fallback
+CA-PPID,Health Canada PPID,CA,https://open.canada.ca/data/dataset/e10b0d6e-04ac-4014-a64a-666c3874bbe0,api/download,CSV; PDF guide,Open Government Licence - Canada,Informational; official label authoritative,false,English/French
+US-EPA-PPLS,US EPA PPLS API,US,https://www.epa.gov/pesticide-labels/pesticide-product-label-system-ppls-application-program-interface-api,api,JSON; PDF links,Confirm applicable terms,Quotas/SLA not specified,true,Historical/partial label amendments possible
+BR-AGROFIT,Embrapa AgroAPI AGROFIT,BR,https://www.portal.agroapi.cnptia.embrapa.br/api-docs/agrofit/v1,api,JSON,To confirm,"Account, plan, quota and reuse rights to confirm",true,Do not bundle restricted data
+UY-DGSA,MGAP/DGSA product consultation,UY,https://www.mgap.gub.uy/profit/productosweb.aspx,web,HTML; labels,To confirm,No public official API confirmed,true,Prefer organizer extract
+MX-COFEPRIS-TBD,COFEPRIS source to validate,MX,,manual_extract,,To confirm,Stable official source must be validated,true,Placeholder

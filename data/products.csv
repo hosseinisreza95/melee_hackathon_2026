@@ -1,0 +1,5 @@
+product_id,commercial_name,active_entity_original,active_entity_normalized,formulation_code,is_synthetic,validation_status
+P-LPC-CONTANS,LALSTOP CONTANS WG,Coniothyrium minitans,Coniothyrium minitans,WG,false,to_verify
+P-LPC-G46,LALSTOP G46 WG,,,WG,false,to_verify
+P-LPC-M52,LALGUARD M52 OD,,,OD,false,to_verify
+P-DEMO-COMP-01,DEMO COMPETITOR PRODUCT 01,,,,true,to_verify

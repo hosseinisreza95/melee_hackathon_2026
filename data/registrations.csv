@@ -1,0 +1,2 @@
+registration_id,product_id,country_code,authority_name,registration_number,status_original,status_normalized,approval_date,expiration_date,source_id,source_record_url,collected_at,validation_status,is_synthetic
+R-DEMO-001,P-LPC-CONTANS,FR,ANSES,,,unknown,,,FR-EPHY,https://ephy.anses.fr/,2026-09-09T00:00:00Z,to_verify,true
