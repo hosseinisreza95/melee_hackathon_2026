@@ -29,6 +29,8 @@ README sans clé personnelle, aucune donnée inventée, valeur originale conserv
 | Extraction IA des étiquettes (dose CA/US) | ✅ 74 lignes acceptées / 11 rejetées, extrait vérifié mot pour mot | `extract/label_llm.py`, `docs/EVAL.md` |
 | Interface (comparaison, carte, question, revue, veille, sources) | ✅ client léger de l'API | `src/lpc_regwatch/ui/app.py` |
 | Microsoft 365 | ✅ connecteur Swagger 2.0 généré + flux Power Automate + action Copilot Studio + design Entra ID (documenté, pas de tenant) | `m365/` |
+| Modèle cible Dataverse (« qui fait foi ») | ✅ 8 tables `lpc_*` exportées (zip CSV, Excel, JSON), validées automatiquement contre `dataverse_tables.xlsx` | `src/lpc_regwatch/dataverse.py`, `docs/DATAVERSE_MAPPING.md` |
+| Registre interne LPC (liste SharePoint) | ✅ structure reçue, normalisation + rapprochement avec les sources officielles, échantillon fictif, page UI et API d'upload | `src/lpc_regwatch/registry/`, `schema/registre_interne_colonnes_LPC.md` |
 | Déploiement production | ✅ Docker Compose (PostgreSQL, API, UI, Caddy), cron quotidien, pare-feu, secrets hors Git | `infra/`, serveur 37.187.176.97 |
 | Tests | ✅ 59 tests verts en local **et** dans le conteneur de production (PostgreSQL + fichiers officiels réels) | `tests/` |
 | Évaluateur de l'organisateur | ✅ 70 / 70 (local et pipeline serveur) | `scripts/build_submission.py` |
@@ -46,8 +48,14 @@ Nous avons envoyé six questions à LPC ; leurs réponses du 10 octobre ont chan
    canadien et le dossier EPA portent littéralement le nom « LALSTOP G46 WG ». **Nous avons défait la fusion** : la relation devient
    `related_product`, le produit reste distinct, ses enregistrements s'affichent **à côté** de G46 avec la preuve. Les réponses de LPC sont
    stockées comme **données** (`data/lpc_curated_relations.csv`), appliquées en dernier, visibles dans l'API avec leur preuve.
-3. Un connecteur prêt à importer avec sa documentation suffit pour M365 ; le registre interne est une liste SharePoint (colonnes à venir) ;
-   le kit ne contient aucun piège ; `12522-00001-F-1-WG` est un code d'essai, pas un numéro d'homologation.
+3. Un connecteur prêt à importer avec sa documentation suffit pour M365 ; le kit ne contient aucun piège ; `12522-00001-F-1-WG` est un code d'essai.
+4. **Deux fichiers ajoutés au kit le 10/10** : la structure du registre interne (liste SharePoint, 22 colonnes « avec leurs imperfections ») et
+   `dataverse_tables.xlsx`, le modèle cible qui fait foi. Nous exportons la base dans ce modèle (8 tables, validées colonne par colonne contre le
+   classeur) et nous rapprochons un export du registre avec les sources officielles : pays en toutes lettres → ISO, « 12/31/2999 » → sans échéance,
+   « No registration number » → vide + drapeau, statut commercial séparé du statut réglementaire, actifs en texte libre → espèce + souche,
+   « Crops / Target / Application rate » gardé comme marketing et jamais transformé en usages. Chaque ligne sort avec l'enregistrement officiel
+   trouvé (par numéro, sinon par nom), les accords, les écarts et la preuve. Deux manques du modèle cible signalés à LPC : `registration_holder`
+   et la relation `related_product`.
 
 ## 4. Chronologie des étapes
 
@@ -80,6 +88,7 @@ Nous avons envoyé six questions à LPC ; leurs réponses du 10 octobre ont chan
 | 12 | **Un coéquipier a supprimé** `.gitignore`, `requirements.txt`, `.env.example` depuis une base ancienne (commit « remove »). | Fusion en restaurant ces fichiers ; `.gitattributes` pour les fins de ligne (scripts shell du serveur). | Sans `.gitignore`, le `.env` aurait pu partir dans Git. |
 | 13 | **Serveur de l'équipe** : anciens conteneurs de test (n8n, bot Telegram, etc.). | Tout supprimé à la demande ; `.env` anciens sauvegardés dans `/home/ubuntu/old-deploy-backup-20261009/` ; pare-feu (22/80/443), swap 2 Go, Docker Compose v5, cron. | Production propre, reproductible depuis `infra/README.md`. |
 | 14 | **Codes EPPO** : le kit en fournit 50 ; les sources utilisent des libellés groupés (« Cucurbitacées à peau comestible », « Thrips »). | Correspondance **exacte uniquement** (noms, alias multilingues, libellés observés) ; jamais de code espèce depuis un genre ; tout reste `to_verify`. ~23 % des usages codés. | Un code faux est pire qu'aucun code. |
+| 15 | **Registre interne LPC « avec ses imperfections »** : un numéro officiel peut appartenir à un autre produit que celui du registre (PRESTOP WG lié à G46 dans l'échantillon), dates conventionnelles, statuts mélangés. | Rapprochement en deux clés (numéro puis nom) ; chaque écart typé (`product_identity`, `status`, `expiration_date`, `active_entity`, `holder`) avec la preuve officielle ; rien n'est corrigé automatiquement. | Le registre est la vérité commerciale de LPC, la source officielle est la vérité réglementaire : on montre les deux côte à côte. |
 
 ## 6. Comment c'est construit (une page)
 

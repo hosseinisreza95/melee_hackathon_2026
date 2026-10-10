@@ -17,3 +17,4 @@ psycopg[binary]
 # Dev / test
 pytest
 pyyaml             # tests read schema/openapi.yaml
+python-multipart   # file upload on POST /registry/reconcile

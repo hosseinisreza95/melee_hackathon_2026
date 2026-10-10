@@ -27,7 +27,8 @@ def strain_of(active: str | None) -> str | None:
     if not m:
         return None
     s = re.sub(r"\s+", " ", m.group(1)).strip(" *.:")
-    s = re.split(r"\s+\d+\s*%|\s+\(|\s+\d{6,}|\s+UFC|\s+CFU", s)[0].strip(" *.:")
+    # cut the strain before any concentration wording: '5.3% w/w', '1x10^9 UFC/g', '32%', '900000000 UFC/g', '(...)'
+    s = re.split(r"\s+(?=\d+(?:[.,]\d+)?\s*(?:%|x\s*10|×|UFC|CFU|g\b|g/|mg\b|ml\b|l\b|w/w|w/v))|\s+\(|\s+\d{6,}|\s+UFC|\s+CFU", s, flags=re.I)[0].strip(" *.:")
     return s[:40] or None
 
 

@@ -1,0 +1,9 @@
+registry_status_original,status_normalized,notes
+Registered,active,LPC internal registry wording
+Pending,pending,
+Not applicable,unknown,product sold without registration or outside PPP scope; not a regulatory status
+Not Applicable,unknown,
+Cancelled,withdrawn,regulatory cancellation (not the commercial Status column)
+Withdrawn,withdrawn,
+Expired,expired,
+Refused,withdrawn,

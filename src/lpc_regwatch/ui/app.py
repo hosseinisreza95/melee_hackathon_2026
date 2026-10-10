@@ -68,7 +68,7 @@ except Exception as e:  # noqa: BLE001
 st.sidebar.title("🌱 LPC Regulatory Watch")
 st.sidebar.caption(f"API {API} · v{health.get('version')} · {health.get('registrations')} enregistrements · "
                    f"IA {'activée (' + str(health.get('aiProvider')) + ')' if health.get('aiEnabled') else 'désactivée (réponses déterministes)'}")
-page = st.sidebar.radio("Vue", ["Comparaison", "Carte", "Question", "Produits sœurs & revue", "Veille (changements, échéances)", "Sources & qualité"])
+page = st.sidebar.radio("Vue", ["Comparaison", "Carte", "Question", "Produits sœurs & revue", "Veille (changements, échéances)", "Registre interne LPC", "Sources & qualité"])
 products = api_get("/products", {"limit": 500})["items"]
 prod_label = {p["productId"]: f"{p['commercialName']}  ({', '.join(p['countries']) or 'aucun pays'})" for p in products}
 ordered = PILOTS + sorted([p["productId"] for p in products if p["productId"] not in PILOTS], key=lambda i: prod_label[i])
@@ -357,6 +357,54 @@ elif page == "Veille (changements, échéances)":
     else:
         st.info("Aucun changement : il faut au moins deux collectes de la même source.")
     disclaimer_box(None)
+
+elif page == "Registre interne LPC":
+    st.title("Rapprochement du registre interne LPC avec les sources officielles")
+    st.caption("LPC a partagé la **structure** de sa liste SharePoint (pas les données). Chargez un export CSV/XLSX de cette liste, ou utilisez l'échantillon "
+               "fictif (`is_synthetic=true`). Chaque ligne est normalisée (pays → ISO, « 12/31/2999 » → sans échéance, statut commercial séparé du statut réglementaire, "
+               "actifs en texte libre → espèce + souche) puis rapprochée d'un enregistrement officiel par numéro, sinon par nom. Les écarts sont signalés, jamais corrigés.")
+    up = st.file_uploader("Export de la liste SharePoint (CSV ou XLSX)", type=["csv", "xlsx"])
+    if up is not None:
+        r = httpx.post(f"{API}/registry/reconcile", files={"file": (up.name, up.getvalue())}, timeout=300)
+        if r.status_code != 200:
+            st.error(r.text)
+            st.stop()
+        rep = r.json()
+    else:
+        rep = api_get("/registry/reconcile/sample")
+        st.info("Échantillon fictif chargé (11 lignes, is_synthetic=true). Déposez un fichier pour rapprocher vos propres lignes.")
+    c = rep["counts"]
+    k1, k2, k3, k4, k5 = st.columns(5)
+    k1.metric("Lignes", rep["total"]); k2.metric("Trouvées par n°", c["matched_by_number"]); k3.metric("Trouvées par nom", c["matched_by_name"])
+    k4.metric("Non trouvées dans la source", c["not_found_in_source"]); k5.metric("Écarts à examiner", c["discrepancies"])
+    table = []
+    for x in rep["rows"]:
+        disc = [f"{cmp['field']}: registre « {cmp['registry']} » vs officiel « {cmp['official']} »" for cmp in x["comparison"] if cmp["verdict"] == "discrepancy"]
+        off = x["official"] or {}
+        table.append({"#": x["row"], "Titre (registre)": x["title"], "Pays": f"{x['country_original']} → {x['country_code'] or '?'}",
+                      "N° (registre)": x["registration_number_original"], "Statut registre": f"{x['status_original']} → {x['status_normalized']}",
+                      "Échéance registre": x["expiration_date"] or ("sans échéance (2999)" if "no_expiry_convention" in x["flags"] else x["expiration_date_original"] or "—"),
+                      "Rapprochement": x["match"], "Produit officiel": off.get("productName") or "—", "N° officiel": off.get("registrationNumber") or "—",
+                      "Statut officiel": off.get("statusNormalized") or "—", "Échéance officielle": off.get("expirationDate") or "—",
+                      "Écarts": "; ".join(disc) or "—", "Drapeaux": ", ".join(x["flags"]) or "—",
+                      "Source": (x["evidence"] or {}).get("sourceId") or "—", "Collecté le": fmt_dt((x["evidence"] or {}).get("collectedAt")), "URL": (x["evidence"] or {}).get("sourceUrl")})
+    st.dataframe(pd.DataFrame(table), hide_index=True, use_container_width=True, column_config={"URL": st.column_config.LinkColumn("URL", display_text="source")})
+    with st.expander("Lignes normalisées (valeurs originales conservées) et détail des comparaisons"):
+        st.json(rep["rows"])
+    warnings_box(rep["warnings"])
+    st.markdown("---")
+    st.markdown("**Modèle cible Dataverse** (`schema/dataverse_tables.xlsx`) : la base peut être exportée dans cette structure.")
+    v = api_get("/export/dataverse-validation")
+    st.caption(f"Validation de l'export contre le classeur : {'✅ conforme' if v['ok'] else '⚠️ écarts : ' + ', '.join(v['errors'])} · "
+               + " · ".join(f"{t} {i['rows']} lignes" for t, i in v["tables"].items()))
+    e1, e2 = st.columns(2)
+    with e1:
+        st.download_button("⬇️ Export Dataverse (zip de CSV, un par table)", data=httpx.get(f"{API}/export/dataverse.zip", timeout=300).content,
+                           file_name="lpc_dataverse_export.zip", mime="application/zip")
+    with e2:
+        st.download_button("⬇️ Export Dataverse (classeur Excel)", data=httpx.get(f"{API}/export/dataverse.xlsx", timeout=300).content,
+                           file_name="lpc_dataverse_export.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    disclaimer_box(rep["disclaimer"])
 
 elif page == "Sources & qualité":
     st.title("Sources officielles, licences et qualité des données")

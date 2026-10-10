@@ -11,7 +11,7 @@ import io
 import logging
 from typing import Iterator
 
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from sqlalchemy.orm import Session
@@ -266,6 +266,73 @@ def export_xlsx(productId: str | None = None, countries: str | None = None, s: S
     wb.save(out)
     return StreamingResponse(iter([out.getvalue()]), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                              headers={"Content-Disposition": f'attachment; filename="lpc_regwatch_{pid or "all"}.xlsx"'})
+
+
+# --------------------------------------------------------------------------- Dataverse target structure (schema/dataverse_tables.xlsx)
+@app.get("/export/dataverse.zip", tags=["m365"], summary="All tables in the LPC Dataverse target structure (one CSV per table, logical names lpc_*)")
+def export_dataverse_zip(s: Session = Depends(db)):
+    from ..dataverse import build_tables, zip_bytes
+
+    data = zip_bytes(build_tables(s))
+    return Response(content=data, media_type="application/zip", headers={"Content-Disposition": 'attachment; filename="lpc_dataverse_export.zip"'})
+
+
+@app.get("/export/dataverse.xlsx", tags=["m365"], summary="Same tables as one workbook (one sheet per Dataverse table)")
+def export_dataverse_xlsx(s: Session = Depends(db)):
+    from ..dataverse import build_tables, xlsx_bytes
+
+    return Response(content=xlsx_bytes(build_tables(s)), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    headers={"Content-Disposition": 'attachment; filename="lpc_dataverse_export.xlsx"'})
+
+
+@app.get("/export/dataverse/{table}", tags=["m365"], summary="One Dataverse table as JSON rows (lpc_product, lpc_registration, lpc_authorizeduse, ...)")
+def export_dataverse_table(table: str, limit: int = Query(1000, ge=1, le=20000), offset: int = Query(0, ge=0), s: Session = Depends(db)):
+    from ..dataverse import build_tables
+
+    tables = build_tables(s)
+    if table not in tables:
+        raise HTTPException(404, {"message": f"Unknown table '{table}'. Tables: {', '.join(tables)}", "disclaimer": DISCLAIMER})
+    rows = tables[table]
+    return {"table": table, "total": len(rows), "offset": offset, "items": rows[offset:offset + limit], "disclaimer": DISCLAIMER}
+
+
+@app.get("/export/dataverse-validation", tags=["m365"], summary="Check the export against schema/dataverse_tables.xlsx (columns, required, choices, lengths)")
+def export_dataverse_validation(s: Session = Depends(db)):
+    from ..dataverse import build_tables, validate_against_workbook
+
+    return validate_against_workbook(build_tables(s))
+
+
+# --------------------------------------------------------------------------- LPC internal registry reconciliation
+@app.get("/registry/sample", tags=["registry"], summary="Synthetic internal-registry rows (is_synthetic=true) in LPC's SharePoint column layout")
+def registry_sample():
+    from ..registry import normalize_registry_rows, sample_rows
+
+    return {"columns": list(sample_rows()[0].keys()), "rows": normalize_registry_rows(sample_rows()), "disclaimer": DISCLAIMER}
+
+
+@app.get("/registry/reconcile/sample", tags=["registry"], summary="Reconcile the synthetic registry sample with the official sources")
+def registry_reconcile_sample(s: Session = Depends(db)):
+    from ..registry import normalize_registry_rows, reconcile, sample_rows
+
+    return reconcile(s, normalize_registry_rows(sample_rows()))
+
+
+@app.post("/registry/reconcile", tags=["registry"], summary="Upload a CSV/XLSX export of the LPC registry list and reconcile it with the official sources")
+async def registry_reconcile(file: UploadFile = File(...), s: Session = Depends(db)):
+    from ..registry import normalize_registry_rows, read_registry_file, reconcile
+
+    data = await file.read()
+    if len(data) > 20_000_000:
+        raise HTTPException(413, "file too large (20 MB max)")
+    try:
+        rows = read_registry_file(data, file.filename or "registry.csv")
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(422, f"cannot read file: {type(e).__name__}") from e
+    missing = [c for c in ("Title", "Country", "Registration Status", "Registration Number") if rows and c not in rows[0]]
+    if missing:
+        raise HTTPException(422, f"missing registry columns: {missing}")
+    return reconcile(s, normalize_registry_rows(rows))
 
 
 @app.exception_handler(HTTPException)

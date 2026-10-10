@@ -15,6 +15,7 @@ it without ever overwriting the original wording, and answers product × country
 | Pilot products | LALSTOP CONTANS WG · LALSTOP G46 WG · LALGUARD M52 OD |
 | Team report (FR) | [docs/AVANCEMENT_FR.md](docs/AVANCEMENT_FR.md) — what was done, challenges, solutions, why · LPC answers: [docs/LPC_QA.md](docs/LPC_QA.md) |
 | Requirement matrix | [docs/SPEC.md](docs/SPEC.md) · plan [docs/PLAN.md](docs/PLAN.md) · sources [docs/SOURCES.md](docs/SOURCES.md) · limits [docs/LIMITATIONS.md](docs/LIMITATIONS.md) |
+| LPC target model & registry | [docs/DATAVERSE_MAPPING.md](docs/DATAVERSE_MAPPING.md) · [schema/registre_interne_colonnes_LPC.md](schema/registre_interne_colonnes_LPC.md) · `GET /export/dataverse.zip` · `POST /registry/reconcile` |
 
 ## Minimum success criteria → where
 
@@ -39,6 +40,7 @@ python scripts/parse.py --source all                 # canonical rows + data/*.c
 python scripts/normalize.py                          # EPPO / units / taxonomy / equivalences / sister hypotheses
 python scripts/extract_labels.py                     # optional: needs AI_API_KEY; reads the 6 pilot label PDFs
 python scripts/build_submission.py                   # output/submission.json → evaluator 70/70
+python scripts/export_dataverse.py                   # output/dataverse/*.csv in the LPC Dataverse model, validated against schema/dataverse_tables.xlsx
 python scripts/serve_api.py                          # http://localhost:8000/docs
 streamlit run src/lpc_regwatch/ui/app.py             # http://localhost:8501
 pytest -q                                            # 59 tests: schema, collectors (offline), parsers, normalisation, label gate, API, gold T01–T05 + jury-style questions, blind real-data checks

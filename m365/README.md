@@ -11,6 +11,7 @@ Microsoft 365 reaches it in three documented ways, from the simplest to the most
 | 1. Power Platform **custom connector** | `/compare`, `/products`, `/ask`, `/export.csv` as actions in Power Automate, Power Apps and Copilot Studio | `apiDefinition.swagger.json`, `apiProperties.json` |
 | 2. **Power Automate** flow → SharePoint / Excel | Weekly refresh of the comparison table into a SharePoint list or an Excel file in Teams; alert on `/changes` and `/expiring` | `power_automate_flow.md` |
 | 3. **Copilot Studio** agent action | Ask the question in Teams; the action calls `POST /ask`; the agent shows answer + evidence + warnings + disclaimer | `copilot_studio_action.md` |
+| 4. **Dataverse** target model | The eight `lpc_*` tables of `schema/dataverse_tables.xlsx` exported as CSV zip / Excel / JSON rows, validated against the workbook; LPC's SharePoint registry reconciled with official sources | `docs/DATAVERSE_MAPPING.md`, `GET /export/dataverse.zip`, `POST /registry/reconcile` |
 
 ## 1. Custom connector (Power Platform)
 

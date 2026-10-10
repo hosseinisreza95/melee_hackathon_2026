@@ -14,4 +14,5 @@ log "normalize";      python scripts/normalize.py
 log "extract_labels"; python scripts/extract_labels.py ${LABEL_ARGS:-} || log "label extraction failed (non-blocking)"
 log "normalize(2)";   python scripts/normalize.py          # re-map crops/targets of AI-extracted rows and re-export
 log "submission";     python scripts/build_submission.py
+log "dataverse";      python scripts/export_dataverse.py
 log "done"
