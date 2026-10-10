@@ -23,28 +23,59 @@ STATUS_BADGE = {"active": "🟢 active", "expired": "🟠 expired", "withdrawn":
 
 st.set_page_config(page_title="LPC Regulatory Watch", page_icon="🌱", layout="wide")
 
-MAP_COLORS = {"homologué (actif)": "#1b7f3b", "produit lié seulement": "#8bc34a", "retiré / expiré": "#c62828", "en attente": "#f9a825",
-              "non trouvé dans la source": "#b0bec5", "source non connectée": "#eceff1"}
+MAP_COLORS = {"homologué (actif)": "#39ff8a", "produit lié seulement": "#4fd8ff", "retiré / expiré": "#ff4d7a", "en attente": "#ffd166",
+              "non trouvé dans la source": "#3b4f47", "source non connectée": "#1c2823"}
 MAP_ORDER = list(MAP_COLORS)
+CENTROIDS = {"CA": (56.1, -106.3), "US": (39.8, -98.6), "FR": (46.6, 2.2), "BR": (-14.2, -51.9), "DE": (51.2, 10.4), "BE": (50.5, 4.5), "MX": (23.6, -102.5),
+             "UY": (-32.5, -55.8), "ES": (40.4, -3.7), "IT": (42.5, 12.5), "NL": (52.1, 5.3), "GB": (54.0, -2.0), "PL": (52.0, 19.0)}
 
 
-def status_map(df: pd.DataFrame, title: str, key: str, height: int = 520):
-    """World choropleth with a fixed legend; returns the ISO-3 code of the clicked country (or None)."""
-    hover = {c: True for c in df.columns if c not in ("iso3", "Pays", "Statut")}
-    hover["iso3"] = False
-    fig = px.choropleth(df, locations="iso3", color="Statut", hover_name="Pays", hover_data=hover, color_discrete_map=MAP_COLORS,
-                        category_orders={"Statut": MAP_ORDER}, projection="natural earth", title=title)
-    fig.update_geos(showland=True, landcolor="#e6ebe7", showcountries=True, countrycolor="#9fb0a8", showcoastlines=False, showocean=True, oceancolor="#d3e4ec",
-                    showlakes=False, showframe=False, bgcolor="#f3f6f4", lataxis_range=[-58, 82], projection_scale=1.05)
-    fig.update_traces(marker_line_width=0.7, marker_line_color="#37474f")
-    fig.update_layout(margin=dict(l=0, r=0, t=44 if title else 8, b=0), legend_title="Statut", legend_orientation="h", legend_y=-0.02, height=height,
-                      paper_bgcolor="#f3f6f4", plot_bgcolor="#f3f6f4", font_color="#263238", clickmode="event+select",
-                      hoverlabel=dict(bgcolor="white", font_color="#263238"))
-    ev = st.plotly_chart(fig, use_container_width=True, key=key, on_select="rerun", selection_mode="points", theme=None)
+def status_map(df: pd.DataFrame, title: str, key: str, height: int = 540, size_col: str | None = None):
+    """Dark neon world map: glowing country fills + pulsing halo markers sized by `size_col`. Returns the ISO-3 of the
+    clicked country (map polygon or halo marker) or None."""
+    import plotly.graph_objects as go
+
+    fig = go.Figure()
+    for status in MAP_ORDER:  # one trace per status so the legend is stable and clickable
+        part = df[df["Statut"] == status]
+        if part.empty:
+            continue
+        hover = "<b>%{customdata[0]}</b><br>" + "<br>".join(f"{c}: %{{customdata[{i + 1}]}}" for i, c in enumerate([c for c in df.columns if c not in ("iso3", "Pays", "Statut")]))
+        custom = part[["Pays"] + [c for c in df.columns if c not in ("iso3", "Pays", "Statut")]].values
+        fig.add_trace(go.Choropleth(locations=part["iso3"], z=[1] * len(part), colorscale=[[0, MAP_COLORS[status]], [1, MAP_COLORS[status]]], showscale=False,
+                                    marker_line_color="#0b1410", marker_line_width=0.8, name=status, legendgroup=status, showlegend=True,
+                                    customdata=custom, hovertemplate=hover + "<extra></extra>", marker_opacity=0.92 if status in MAP_ORDER[:4] else 0.55))
+    # neon halos on countries that carry data (two layers: wide translucent glow + bright core)
+    glow = df[df["Statut"].isin(MAP_ORDER[:4]) & df["iso3"].map(lambda i: i in {v for v in ISO3.values()})]
+    if not glow.empty:
+        iso_to_cc = {v: k for k, v in ISO3.items()}
+        lats = [CENTROIDS[iso_to_cc[i]][0] for i in glow["iso3"]]
+        lons = [CENTROIDS[iso_to_cc[i]][1] for i in glow["iso3"]]
+        vals = glow[size_col] if size_col and size_col in glow else pd.Series([1] * len(glow), index=glow.index)
+        sizes = 22 + 26 * (vals / max(1, vals.max())) ** 0.5
+        colors = [MAP_COLORS[s] for s in glow["Statut"]]
+        fig.add_trace(go.Scattergeo(lat=lats, lon=lons, mode="markers", marker=dict(size=sizes * 2.2, color=colors, opacity=0.18, line_width=0),
+                                    hoverinfo="skip", showlegend=False, locations=None))
+        fig.add_trace(go.Scattergeo(lat=lats, lon=lons, mode="markers+text", marker=dict(size=sizes, color=colors, opacity=0.95, line=dict(width=2, color="#0b1410")),
+                                    text=[str(int(v)) if size_col else "" for v in vals], textfont=dict(color="#0b1410", size=12, family="Segoe UI, Arial"),
+                                    textposition="middle center", customdata=list(glow["iso3"]), hovertemplate="<b>%{text}</b><extra></extra>" if size_col else "<extra></extra>",
+                                    showlegend=False, name="halo"))
+    fig.update_geos(showland=True, landcolor="#16221c", showcountries=True, countrycolor="#24352d", showcoastlines=False, showocean=True, oceancolor="#0b1410",
+                    showlakes=False, showframe=False, bgcolor="#0b1410", lataxis_range=[-58, 82], projection_type="natural earth", projection_scale=1.08)
+    fig.update_layout(margin=dict(l=0, r=0, t=44 if title else 6, b=0), height=height, title=title, paper_bgcolor="#0b1410", plot_bgcolor="#0b1410",
+                      font=dict(color="#dfe8e2", family="Segoe UI, Arial"), legend=dict(orientation="h", y=0.01, x=0.5, xanchor="center", bgcolor="rgba(11,20,16,.6)",
+                      bordercolor="#24352d", borderwidth=1, font=dict(size=12)), clickmode="event+select", dragmode=False,
+                      hoverlabel=dict(bgcolor="#10201a", bordercolor="#39ff8a", font=dict(color="#eef5f0", size=12)))
+    ev = st.plotly_chart(fig, use_container_width=True, key=key, on_select="rerun", selection_mode="points", theme=None,
+                         config={"displayModeBar": False, "scrollZoom": False})
     try:
         pts = ev.selection.points  # type: ignore[attr-defined]
-        if pts:
-            return pts[0].get("location")
+        for pt in pts or []:
+            loc = pt.get("location") or pt.get("customdata")
+            if isinstance(loc, list):
+                loc = loc[0]
+            if loc in set(ISO3.values()):
+                return loc
     except Exception:  # noqa: BLE001
         pass
     return None
@@ -185,12 +216,17 @@ if page == "Vue d'ensemble":
                      "Usages": c["usesCount"], "Expirent bientôt": c["expiringSoon"], "Source": c["sourceId"] or "aucune", "Collecté le": fmt_dt(c["collectedAt"]),
                      "Liste": (", ".join(prods[:6]) + (" …" if len(prods) > 6 else "")) or "—"})
     df = pd.DataFrame(rows)
-    st.caption("Survolez un pays pour les chiffres ; cliquez-le (ou choisissez-le sous la carte) pour le détail. Couleurs : vert = au moins une homologation active dans le périmètre · rouge = seulement des retraits · "
+    st.caption("Survolez un pays pour les chiffres ; cliquez un pays ou un halo, ou choisissez-le dans les pastilles sous la carte. Couleurs : vert = au moins une homologation active dans le périmètre · rouge = seulement des retraits · "
                "gris = source officielle collectée mais aucun produit du périmètre (≠ non homologué) · blanc cassé = marché sans source connectée dans ce prototype.")
-    clicked = status_map(df, "", "ov_map", 560)
+    df["Enregistrements"] = df["Actifs"] + df["Retirés"] + df["En attente"]
+    clicked = status_map(df, "", "ov_map", 580, size_col="Enregistrements")
     opts = list(df["iso3"])
-    sel_iso = st.selectbox("Détail du pays", opts, index=opts.index(clicked) if clicked in opts else 0,
-                           format_func=lambda i: f"{df.set_index('iso3').loc[i, 'Pays']} — {df.set_index('iso3').loc[i, 'Statut']}", key="ov_sel")
+    if clicked in opts:
+        st.session_state["ov_pick"] = clicked
+    labels = {i: f"{df.set_index('iso3').loc[i, 'Pays']} · {int(df.set_index('iso3').loc[i, 'Enregistrements'])}" for i in opts}
+    default = st.session_state.get("ov_pick", opts[0])
+    picked = st.pills("Pays", opts, format_func=lambda i: labels[i], selection_mode="single", default=default if default in opts else opts[0], key="ov_pills")
+    sel_iso = picked or default
     cc = next(k for k, v in ISO3.items() if v == sel_iso)
     c = next(x for x in ov["countries"] if x["countryCode"] == cc)
     st.markdown(f"### {c['countryName']} ({cc}) — {c['sourceId'] or 'aucune source connectée'}" + (f" · collecté {fmt_dt(c['collectedAt'])}" if c["collectedAt"] else ""))
@@ -241,7 +277,8 @@ elif page == "Comparaison":
                           "Expire": ", ".join(r["expirationDate"] or "—" for r in regs) or "—", "Usages": sum(r["usesCount"] for r in regs),
                           "Produits liés": ", ".join(f"{rp['commercialName']} {r['registrationNumber']}" for rp, r in rel_by_cc.get(cc, [])) or "—",
                           "Source": cov["sourceId"] or "aucune", "Collecté le": fmt_dt(cov["collectedAt"])})
-        status_map(pd.DataFrame(mrows), "", "cmp_map", 430)
+        mdf = pd.DataFrame(mrows)
+        status_map(mdf, "", "cmp_map", 440, size_col="Usages")
         cols = st.columns(len(countries))
         for c, cc in zip(cols, countries):
             cov = next(x for x in data["coverage"] if x["countryCode"] == cc)
