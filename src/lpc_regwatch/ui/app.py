@@ -16,11 +16,50 @@ import streamlit as st
 API = os.getenv("API_BASE_URL", "http://localhost:8000").rstrip("/")
 PILOTS = ["P-LPC-CONTANS", "P-LPC-G46", "P-LPC-M52"]
 ALL_COUNTRIES = ["CA", "US", "FR", "BR", "DE", "BE", "MX", "UY"]
-COUNTRY_LABEL = {"CA": "Canada", "US": "États-Unis", "FR": "France", "BR": "Brésil", "DE": "Allemagne", "BE": "Belgique", "MX": "Mexique", "UY": "Uruguay"}
-ISO3 = {"CA": "CAN", "US": "USA", "FR": "FRA", "BR": "BRA", "DE": "DEU", "BE": "BEL", "MX": "MEX", "UY": "URY"}
+COUNTRY_LABEL = {"CA": "Canada", "US": "États-Unis", "FR": "France", "BR": "Brésil", "DE": "Allemagne", "BE": "Belgique", "MX": "Mexique", "UY": "Uruguay",
+                 "ES": "Espagne", "IT": "Italie", "NL": "Pays-Bas", "GB": "Royaume-Uni", "PL": "Pologne"}
+ISO3 = {"CA": "CAN", "US": "USA", "FR": "FRA", "BR": "BRA", "DE": "DEU", "BE": "BEL", "MX": "MEX", "UY": "URY", "ES": "ESP", "IT": "ITA", "NL": "NLD", "GB": "GBR", "PL": "POL"}
 STATUS_BADGE = {"active": "🟢 active", "expired": "🟠 expired", "withdrawn": "🔴 withdrawn", "pending": "🟡 pending", "unknown": "⚪ unknown"}
 
 st.set_page_config(page_title="LPC Regulatory Watch", page_icon="🌱", layout="wide")
+
+MAP_COLORS = {"homologué (actif)": "#1b7f3b", "produit lié seulement": "#8bc34a", "retiré / expiré": "#c62828", "en attente": "#f9a825",
+              "non trouvé dans la source": "#b0bec5", "source non connectée": "#eceff1"}
+MAP_ORDER = list(MAP_COLORS)
+
+
+def status_map(df: pd.DataFrame, title: str, key: str, height: int = 520):
+    """World choropleth with a fixed legend; returns the ISO-3 code of the clicked country (or None)."""
+    hover = {c: True for c in df.columns if c not in ("iso3", "Pays", "Statut")}
+    hover["iso3"] = False
+    fig = px.choropleth(df, locations="iso3", color="Statut", hover_name="Pays", hover_data=hover, color_discrete_map=MAP_COLORS,
+                        category_orders={"Statut": MAP_ORDER}, projection="natural earth", title=title)
+    fig.update_geos(showland=True, landcolor="#e6ebe7", showcountries=True, countrycolor="#9fb0a8", showcoastlines=False, showocean=True, oceancolor="#d3e4ec",
+                    showlakes=False, showframe=False, bgcolor="#f3f6f4", lataxis_range=[-58, 82], projection_scale=1.05)
+    fig.update_traces(marker_line_width=0.7, marker_line_color="#37474f")
+    fig.update_layout(margin=dict(l=0, r=0, t=44 if title else 8, b=0), legend_title="Statut", legend_orientation="h", legend_y=-0.02, height=height,
+                      paper_bgcolor="#f3f6f4", plot_bgcolor="#f3f6f4", font_color="#263238", clickmode="event+select",
+                      hoverlabel=dict(bgcolor="white", font_color="#263238"))
+    ev = st.plotly_chart(fig, use_container_width=True, key=key, on_select="rerun", selection_mode="points", theme=None)
+    try:
+        pts = ev.selection.points  # type: ignore[attr-defined]
+        if pts:
+            return pts[0].get("location")
+    except Exception:  # noqa: BLE001
+        pass
+    return None
+
+
+def map_status(active: int, withdrawn: int, expired: int, pending: int, coverage: str, related: int = 0) -> str:
+    if active:
+        return "homologué (actif)"
+    if withdrawn or expired:
+        return "retiré / expiré"
+    if pending:
+        return "en attente"
+    if related:
+        return "produit lié seulement"
+    return "non trouvé dans la source" if coverage == "not_found_in_source" else ("source non connectée" if coverage == "source_not_collected" else "non trouvé dans la source")
 
 
 @st.cache_data(ttl=120, show_spinner=False)
@@ -68,7 +107,7 @@ except Exception as e:  # noqa: BLE001
 st.sidebar.title("🌱 LPC Regulatory Watch")
 st.sidebar.caption(f"API {API} · v{health.get('version')} · {health.get('registrations')} enregistrements · "
                    f"IA {'activée (' + str(health.get('aiProvider')) + ')' if health.get('aiEnabled') else 'désactivée (réponses déterministes)'}")
-page = st.sidebar.radio("Vue", ["Comparaison", "Carte", "Question", "Produits sœurs & revue", "Veille (changements, échéances)", "Registre interne LPC", "Sources & qualité"])
+page = st.sidebar.radio("Vue", ["Vue d'ensemble", "Comparaison", "Carte", "Question", "Produits sœurs & revue", "Veille (changements, échéances)", "Registre interne LPC", "Sources & qualité"])
 products = api_get("/products", {"limit": 500})["items"]
 prod_label = {p["productId"]: f"{p['commercialName']}  ({', '.join(p['countries']) or 'aucun pays'})" for p in products}
 ordered = PILOTS + sorted([p["productId"] for p in products if p["productId"] not in PILOTS], key=lambda i: prod_label[i])
@@ -115,7 +154,61 @@ def uses_table(reg: dict) -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------------------------- pages
-if page == "Comparaison":
+if page == "Vue d'ensemble":
+    st.title("Vue d'ensemble des homologations")
+    c1, c2, c3 = st.columns([2, 2, 1])
+    with c1:
+        scope_label = st.radio("Périmètre", ["Produits pilotes LPC", "Tous les produits Lallemand", "Tous les produits de la base", "Un produit"], horizontal=True)
+    scope = {"Produits pilotes LPC": "pilots", "Tous les produits Lallemand": "lallemand", "Tous les produits de la base": "all", "Un produit": "product"}[scope_label]
+    params = {"scope": scope}
+    with c2:
+        if scope == "product":
+            params["productId"] = product_picker("ov")
+    with c3:
+        params["months"] = st.number_input("Échéances (mois)", 1, 60, 12)
+    ov = api_get("/overview", params)
+    if "__404__" in ov:
+        st.error(ov["__404__"]["message"])
+        st.stop()
+    t = ov["totals"]
+    k = st.columns(6)
+    k[0].metric("Sources officielles", t["sourcesConnected"]); k[1].metric("Pays avec homologation", t["countriesFound"]); k[2].metric("Produits", t["products"])
+    k[3].metric("Enregistrements", t["registrations"]); k[4].metric("dont actifs", t["active"]); k[5].metric(f"Expirent < {ov['months']} mois", t["expiringSoon"])
+    rows = []
+    for c in ov["countries"]:
+        if c["countryCode"] not in ISO3:
+            continue
+        prods = sorted({r["productName"] for r in c["registrations"]})
+        rows.append({"iso3": ISO3[c["countryCode"]], "Pays": c["countryName"],
+                     "Statut": map_status(c["active"], c["withdrawn"], c["expired"], c["pending"], c["coverage"]),
+                     "Actifs": c["active"], "Retirés": c["withdrawn"] + c["expired"], "En attente": c["pending"], "Produits": c["products"],
+                     "Usages": c["usesCount"], "Expirent bientôt": c["expiringSoon"], "Source": c["sourceId"] or "aucune", "Collecté le": fmt_dt(c["collectedAt"]),
+                     "Liste": (", ".join(prods[:6]) + (" …" if len(prods) > 6 else "")) or "—"})
+    df = pd.DataFrame(rows)
+    st.caption("Survolez un pays pour les chiffres ; cliquez-le (ou choisissez-le sous la carte) pour le détail. Couleurs : vert = au moins une homologation active dans le périmètre · rouge = seulement des retraits · "
+               "gris = source officielle collectée mais aucun produit du périmètre (≠ non homologué) · blanc cassé = marché sans source connectée dans ce prototype.")
+    clicked = status_map(df, "", "ov_map", 560)
+    opts = list(df["iso3"])
+    sel_iso = st.selectbox("Détail du pays", opts, index=opts.index(clicked) if clicked in opts else 0,
+                           format_func=lambda i: f"{df.set_index('iso3').loc[i, 'Pays']} — {df.set_index('iso3').loc[i, 'Statut']}", key="ov_sel")
+    cc = next(k for k, v in ISO3.items() if v == sel_iso)
+    c = next(x for x in ov["countries"] if x["countryCode"] == cc)
+    st.markdown(f"### {c['countryName']} ({cc}) — {c['sourceId'] or 'aucune source connectée'}" + (f" · collecté {fmt_dt(c['collectedAt'])}" if c["collectedAt"] else ""))
+    if c["registrations"]:
+        st.dataframe(pd.DataFrame([{"Produit": r["productName"], "N°": r["registrationNumber"], "Statut": STATUS_BADGE.get(r["statusNormalized"], r["statusNormalized"]),
+                                    "Statut (original)": r["statusOriginal"], "Expire": r["expirationDate"] or "—", "Titulaire": r["holder"], "Usages": r["usesCount"],
+                                    "Micro-organisme": r["activeEntityNormalized"], "Validation": r["validationStatus"], "Source": r["sourceId"],
+                                    "Collecté le": fmt_dt(r["collectedAt"]), "URL": r["sourceUrl"]} for r in c["registrations"]]),
+                     hide_index=True, use_container_width=True, column_config={"URL": st.column_config.LinkColumn("URL", display_text="source")})
+    elif c["coverage"] == "not_found_in_source":
+        st.info(f"Aucun produit du périmètre dans {c['sourceId']} au {fmt_dt(c['collectedAt'])}. Ce n'est pas une preuve d'absence d'homologation.")
+    else:
+        st.warning("Aucune source officielle connectée pour ce marché dans le prototype : rien ne peut être affirmé.")
+    with st.expander("Tableau de tous les pays"):
+        st.dataframe(df.drop(columns=["iso3"]), hide_index=True, use_container_width=True)
+    disclaimer_box(ov["disclaimer"])
+
+elif page == "Comparaison":
     st.title("Comparaison produit × pays × usage")
     col1, col2 = st.columns([2, 2])
     with col1:
@@ -128,10 +221,28 @@ if page == "Comparaison":
             st.error(data["__404__"]["message"])
             st.stop()
         st.subheader(data.get("commercialName") or pid)
-        cols = st.columns(len(countries))
         regs_by_cc: dict[str, list] = {}
         for r in data["registrations"]:
             regs_by_cc.setdefault(r["countryCode"], []).append(r)
+        rel_by_cc: dict[str, list] = {}
+        for rp in data.get("relatedProducts", []):
+            for r in rp["registrations"]:
+                rel_by_cc.setdefault(r["countryCode"], []).append((rp, r))
+        mrows = []
+        for cov in data["coverage"]:
+            cc = cov["countryCode"]
+            if cc not in ISO3:
+                continue
+            regs = regs_by_cc.get(cc, [])
+            st_ = map_status(sum(r["statusNormalized"] == "active" for r in regs), sum(r["statusNormalized"] == "withdrawn" for r in regs),
+                             sum(r["statusNormalized"] == "expired" for r in regs), sum(r["statusNormalized"] == "pending" for r in regs), cov["coverage"], len(rel_by_cc.get(cc, [])))
+            mrows.append({"iso3": ISO3[cc], "Pays": COUNTRY_LABEL.get(cc, cc), "Statut": st_,
+                          "N°": ", ".join(f"{r['registrationNumber']} ({r['statusOriginal']})" for r in regs) or "—",
+                          "Expire": ", ".join(r["expirationDate"] or "—" for r in regs) or "—", "Usages": sum(r["usesCount"] for r in regs),
+                          "Produits liés": ", ".join(f"{rp['commercialName']} {r['registrationNumber']}" for rp, r in rel_by_cc.get(cc, [])) or "—",
+                          "Source": cov["sourceId"] or "aucune", "Collecté le": fmt_dt(cov["collectedAt"])})
+        status_map(pd.DataFrame(mrows), "", "cmp_map", 430)
+        cols = st.columns(len(countries))
         for c, cc in zip(cols, countries):
             cov = next(x for x in data["coverage"] if x["countryCode"] == cc)
             with c:

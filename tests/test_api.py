@@ -132,3 +132,15 @@ def test_active_entity_endpoint_distinguishes_strains(api_client):
     assert "Clonostachys rosea J1446" in strains and "Clonostachys rosea CPQBA 040-11 DRM 07" in strains
     on_tomato = api_client.get("/active-entities/Coniothyrium minitans/registrations", params={"crop": "tomato"}).json()
     assert [x["countryCode"] for x in on_tomato["items"]] == ["CA"]
+
+
+def test_overview_is_map_ready_and_distinguishes_coverage(api_client):
+    d = api_client.get("/overview", params={"scope": "pilots"}).json()
+    by = {c["countryCode"]: c for c in d["countries"]}
+    assert by["FR"]["coverage"] == "found" and by["FR"]["active"] >= 3 and by["FR"]["registrations"][0]["sourceUrl"].startswith("http")
+    assert by["BR"]["coverage"] == "not_found_in_source" and by["BR"]["sourceId"] == "BR-AGROFIT" and by["BR"]["collectedAt"]
+    assert by["DE"]["coverage"] == "source_not_collected" and by["DE"]["sourceId"] is None
+    assert d["totals"]["sourcesConnected"] == 4 and d["disclaimer"]
+    p = api_client.get("/overview", params={"scope": "product", "productId": "PRESTOP"}).json()
+    assert {c["countryCode"] for c in p["countries"] if c["coverage"] == "found"} == {"CA", "US"}
+    assert api_client.get("/overview", params={"scope": "product", "productId": "NOPE"}).status_code == 404

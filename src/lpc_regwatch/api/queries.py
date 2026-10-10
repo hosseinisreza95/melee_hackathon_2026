@@ -287,6 +287,59 @@ def data_quality(session: Session, product_id: str) -> dict:
     return {"productId": product_id, "registrations": issues, "warnings": quality_warnings(regs), "disclaimer": DISCLAIMER}
 
 
+PILOT_IDS = ("P-LPC-CONTANS", "P-LPC-G46", "P-LPC-M52")
+
+
+def overview(session: Session, scope: str = "pilots", product_id: str | None = None, months: int = 12) -> dict:
+    """Map-ready overview: one row per country with counts by normalised status and the list of registrations in scope.
+    scope = pilots | lallemand | all | product (with product_id). Countries with a connected source but no row are
+    'not_found_in_source'; others are 'source_not_collected' (only the connected ones are listed, plus the requested product's)."""
+    q = session.query(Registration).options(selectinload(Registration.product))
+    if scope == "product" and product_id:
+        q = q.filter(Registration.product_id == product_id)
+    elif scope == "pilots":
+        q = q.filter(Registration.product_id.in_(PILOT_IDS))
+    elif scope == "lallemand":
+        q = q.filter(Registration.holder_original.ilike("%DANSTAR%") | Registration.holder_original.ilike("%LALLEMAND%"))
+    regs = q.order_by(Registration.country_code, Registration.product_id).all()
+    today = dt.date.today()
+    limit = today + dt.timedelta(days=int(months * 30.44))
+    by_cc: dict[str, dict] = {}
+    for r in regs:
+        d = by_cc.setdefault(r.country_code, {"countryCode": r.country_code, "countryName": COUNTRY_NAMES.get(r.country_code, r.country_code),
+                                              "sourceId": COUNTRY_SOURCES.get(r.country_code), "coverage": "found", "active": 0, "withdrawn": 0,
+                                              "expired": 0, "pending": 0, "unknown": 0, "products": 0, "usesCount": 0, "expiringSoon": 0,
+                                              "collectedAt": None, "registrations": []})
+        d[r.status_normalized.value] += 1
+        d["usesCount"] += len(r.uses)
+        exp = r.expiration_date.date() if r.expiration_date else None
+        if exp and today <= exp <= limit and r.status_normalized == RegStatus.active:
+            d["expiringSoon"] += 1
+        ca = _utc(r.collected_at)
+        d["collectedAt"] = max(d["collectedAt"], ca) if d["collectedAt"] else ca
+        d["registrations"].append({"registrationId": r.registration_id, "productId": r.product_id, "productName": r.product.commercial_name,
+                                   "registrationNumber": r.registration_number, "statusOriginal": r.status_original, "statusNormalized": r.status_normalized.value,
+                                   "expirationDate": _date(r.expiration_date), "holder": r.holder_original, "usesCount": len(r.uses),
+                                   "activeEntityNormalized": r.product.active_entity_normalized, "sourceId": r.source_id, "sourceUrl": r.source_record_url,
+                                   "collectedAt": ca, "validationStatus": r.validation_status.value})
+    for d in by_cc.values():
+        d["products"] = len({x["productId"] for x in d["registrations"]})
+    for cc, src in COUNTRY_SOURCES.items():
+        if cc not in by_cc:
+            by_cc[cc] = {"countryCode": cc, "countryName": COUNTRY_NAMES.get(cc, cc), "sourceId": src, "coverage": "not_found_in_source", "active": 0,
+                         "withdrawn": 0, "expired": 0, "pending": 0, "unknown": 0, "products": 0, "usesCount": 0, "expiringSoon": 0,
+                         "collectedAt": source_collected_at(session, src), "registrations": []}
+    for cc in ("DE", "BE", "MX", "UY", "ES", "IT", "NL", "GB", "PL"):
+        by_cc.setdefault(cc, {"countryCode": cc, "countryName": COUNTRY_NAMES.get(cc, cc), "sourceId": None, "coverage": "source_not_collected", "active": 0,
+                              "withdrawn": 0, "expired": 0, "pending": 0, "unknown": 0, "products": 0, "usesCount": 0, "expiringSoon": 0,
+                              "collectedAt": None, "registrations": []})
+    rows = sorted(by_cc.values(), key=lambda d: (-d["active"], d["countryCode"]))
+    totals = {"registrations": len(regs), "active": sum(d["active"] for d in rows), "countriesFound": sum(1 for d in rows if d["coverage"] == "found"),
+              "sourcesConnected": len(COUNTRY_SOURCES), "expiringSoon": sum(d["expiringSoon"] for d in rows),
+              "products": len({r.product_id for r in regs})}
+    return {"scope": scope, "productId": product_id, "months": months, "countries": rows, "totals": totals, "disclaimer": DISCLAIMER}
+
+
 def sources_summary(session: Session) -> list[dict]:
     out = []
     for s in session.query(Source).order_by(Source.source_id):

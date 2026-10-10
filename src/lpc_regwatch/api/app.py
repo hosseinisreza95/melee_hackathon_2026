@@ -164,6 +164,18 @@ def changes_(limit: int = Query(200, ge=1, le=2000), s: Session = Depends(db)):
     return Q.changes(s, limit)
 
 
+@app.get("/overview", tags=["extensions"], summary="Map-ready overview per country: counts by status, registrations in scope, coverage")
+def overview_(scope: str = Query("pilots", pattern="^(pilots|lallemand|all|product)$"), productId: str | None = None,
+              months: int = Query(12, ge=1, le=120), s: Session = Depends(db)):
+    pid = None
+    if scope == "product":
+        p = Q.resolve_product(s, productId or "")
+        if p is None:
+            raise HTTPException(404, {"message": f"Unknown product '{productId}'. This is not proof of no registration.", "disclaimer": DISCLAIMER})
+        pid = p.product_id
+    return Q.overview(s, scope, pid, months)
+
+
 @app.get("/sources", tags=["extensions"], summary="Registered official sources, licences, limits and last collection")
 def sources(s: Session = Depends(db)):
     return {"items": Q.sources_summary(s), "disclaimer": DISCLAIMER}
