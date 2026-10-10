@@ -99,6 +99,11 @@ st.markdown(f"""
   [class*="st-key-chat_sugg_"] [data-testid="stButtonGroup"] button {{ white-space:normal; text-align:left; line-height:1.25; }}
   .st-key-chat_box [data-testid="stChatMessage"] {{ padding:.6rem .7rem; }}
   .st-key-chat_box [data-testid="stChatMessage"] p {{ font-size:.92rem; }}
+  @media (max-width: 1100px) {{
+    .st-key-home_kpis [data-testid="stColumn"] {{ flex:1 1 30% !important; min-width:30% !important; }}
+    .st-key-home_cols [data-testid="stHorizontalBlock"] {{ flex-wrap:wrap; }}
+    .st-key-home_cols [data-testid="stColumn"] {{ flex:1 1 100% !important; min-width:100% !important; }}
+  }}
   .ccard {{ border:1px solid #d7d9db; border-radius:8px; padding:12px 14px; background:#fff; min-height:150px; }}
   .ccard h4 {{ margin:0 0 6px; font-size:1rem; color:{INK}; }}
   .ccard .m {{ color:#5b6770; font-size:.82rem; }}
@@ -378,7 +383,7 @@ def chat_panel(cc: str | None):
     """Conversational assistant: every turn goes through POST /ask with the previous `context` (follow-ups keep the thread)."""
     lang = st.session_state["lang"]
     st.session_state.setdefault("chat", [])
-    h1, h2 = st.columns([5, 1])
+    h1, h2 = st.columns([3.6, 1.2])
     h1.caption(t("chat.caption"))
     if h2.button(t("chat.clear"), key="chat_clear", use_container_width=True):
         st.session_state["chat"], st.session_state["chat_ctx"], st.session_state["chat_pending"] = [], None, None
@@ -446,7 +451,8 @@ if page == "page.home":
         st.error(ov["__404__"]["message"])
         st.stop()
     tt = ov["totals"]
-    k = st.columns(6)
+    with st.container(key="home_kpis"):
+        k = st.columns(6)
     for col, (v, lbl) in zip(k, [(tt["sourcesConnected"], t("ov.k.sources")), (tt["countriesFound"], t("ov.k.countries")), (tt["products"], t("products")),
                                   (tt["registrations"], t("registrations")), (tt["active"], t("ov.k.active")), (tt["expiringSoon"], t("ov.k.expiring", m=ov["months"]))]):
         col.markdown(f'<div class="kpi"><div class="v">{v}</div><div class="l" title="{lbl}">{lbl}</div></div>', unsafe_allow_html=True)
@@ -463,7 +469,8 @@ if page == "page.home":
                      t("source"): c["sourceId"] or t("none"), t("collected"): fmt_dt(c["collectedAt"]),
                      t("ov.col.list"): (", ".join(prods[:6]) + (" …" if len(prods) > 6 else "")) or "—"})
     df = pd.DataFrame(rows)
-    left, right = st.columns([1.15, 1], gap="medium")
+    with st.container(key="home_cols"):
+        left, right = st.columns([1.15, 1], gap="medium")
     with left:
         clicked = status_map(df, "ov_map", 500, size_col=t("registrations"))
         st.caption(t("ov.caption"))
