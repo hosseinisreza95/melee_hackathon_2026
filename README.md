@@ -62,7 +62,7 @@ Try: `POST /ask {"question": "Dans quels pays LALSTOP CONTANS WG est-il homologu
 ```
 src/lpc_regwatch/   collectors/ parsers/ normalize/ matching.py loader.py extract/ api/ ui/ llm/ db/ config.py pilots.py
 scripts/            init_db.py collect.py parse.py normalize.py extract_labels.py build_submission.py serve_api.py
-                    export_m365_connector.py pipeline.sh validate_data.py evaluate_submission.py probe/
+                    export_m365_connector.py pipeline.sh validate_data.py evaluate_submission.py
 data/               starter mappings (EPPO, names, active entities) + observed aliases + exported canonical CSVs
 docs/               SPEC, PLAN, SOURCES, DATA_MODEL, ARCHITECTURE, RA_VALIDATION_PROCEDURE, LIMITATIONS, EVAL, AVANCEMENT_FR
 m365/               apiDefinition.swagger.json, apiProperties.json, README, Power Automate flow, Copilot Studio action

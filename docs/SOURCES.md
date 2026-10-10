@@ -1,8 +1,7 @@
 # SOURCES — verified access report (2026-10-09)
 
-Each source below was visited and tested with the probe scripts in `scripts/probe/`.
-Raw probe downloads and their `.meta.json` (url, collected_at, sha256) are in `data/raw/probe/`
-(git-ignored). "Pilot hit" = LALSTOP CONTANS WG, LALSTOP G46 WG / PRESTOP, LALGUARD M52 OD found.
+Each source below was visited and tested before the collectors were written (the one-off probe scripts were
+removed once `src/lpc_regwatch/collectors/` superseded them; every verified URL is recorded here and in `data/source_registry.csv`). "Pilot hit" = LALSTOP CONTANS WG, LALSTOP G46 WG / PRESTOP, LALGUARD M52 OD found.
 
 ## Summary
 

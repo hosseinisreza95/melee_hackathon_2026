@@ -10,7 +10,7 @@ MUST rows are done.
 - `docs/SPEC.md` written: every requirement → component → test.
 - `docs/SOURCES.md` written: each source visited, download method verified, fields listed.
 - Database schema created (`src/lpc_regwatch/db/models.py`, `scripts/init_db.py`).
-- Probe scripts kept in `scripts/probe/` as evidence of how access was verified.
+- Access verification recorded in `docs/SOURCES.md` and `data/source_registry.csv` (one-off probe scripts removed after Step 1).
 
 Exit test: `python scripts/validate_data.py` passes; `python scripts/init_db.py` creates
 `data/lpc_regwatch.sqlite`; `pytest tests/test_db.py` green.
