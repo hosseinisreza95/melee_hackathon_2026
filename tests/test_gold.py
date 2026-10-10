@@ -70,7 +70,8 @@ def test_T04_sister_products_are_hypotheses(api_client):
     related = [f for f in al if f["relationshipType"] == "related_product"]
     assert {f["aliasName"] for f in related} == {"PRESTOP WG", "LALFRESH S"}  # LPC: distinct products, never merged
     assert "hypoth" in d["answer"].lower() or "à confirmer" in d["answer"].lower()
-    assert "sister_product_candidate, confiance 0.8, statut to_verify" in d["answer"]  # hypothesis shown with its status, not as a fact
+    assert "sister_product_candidate · to_verify · confiance 0.8" in d["answer"]  # hypothesis shown with its status, not as a fact
+    assert d["structured"]["headline"] and len(d["structured"]["items"]) >= 3 and d["structured"]["caveats"]
     assert any("hypotheses" in w for w in d["warnings"])
 
 

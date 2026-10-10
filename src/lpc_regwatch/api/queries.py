@@ -333,6 +333,9 @@ def overview(session: Session, scope: str = "pilots", product_id: str | None = N
         by_cc.setdefault(cc, {"countryCode": cc, "countryName": COUNTRY_NAMES.get(cc, cc), "sourceId": None, "coverage": "source_not_collected", "active": 0,
                               "withdrawn": 0, "expired": 0, "pending": 0, "unknown": 0, "products": 0, "usesCount": 0, "expiringSoon": 0,
                               "collectedAt": None, "registrations": []})
+    totals_in_store = dict(session.query(Registration.country_code, func.count()).group_by(Registration.country_code))
+    for d in by_cc.values():
+        d["totalInStore"] = int(totals_in_store.get(d["countryCode"], 0))  # any product: 'not found' must never read as 'no data'
     rows = sorted(by_cc.values(), key=lambda d: (-d["active"], d["countryCode"]))
     totals = {"registrations": len(regs), "active": sum(d["active"] for d in rows), "countriesFound": sum(1 for d in rows if d["coverage"] == "found"),
               "sourcesConnected": len(COUNTRY_SOURCES), "expiringSoon": sum(d["expiringSoon"] for d in rows),

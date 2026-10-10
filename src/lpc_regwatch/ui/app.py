@@ -3,10 +3,12 @@
 Why: cahier §16 forbids logic locked in the UI; everything shown comes from the same endpoints that
 Power Platform / Copilot Studio would call. API base URL from env API_BASE_URL.
 Visual identity: Lallemand Plant Care (slate #36434b, Lallemand red #e30327, light greys) via .streamlit/config.toml.
+Languages: French, English, Portuguese (ui/i18n.py); every string goes through `t()` so a language switch cannot break a page.
 """
 from __future__ import annotations
 
 import os
+import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -15,11 +17,12 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # `streamlit run src/lpc_regwatch/ui/app.py` without PYTHONPATH
+from lpc_regwatch.ui.i18n import COUNTRY_NAMES, EXAMPLES, LANGS, tr  # noqa: E402
+
 API = os.getenv("API_BASE_URL", "http://localhost:8000").rstrip("/")
 PILOTS = ["P-LPC-CONTANS", "P-LPC-G46", "P-LPC-M52"]
 ALL_COUNTRIES = ["CA", "US", "FR", "BR", "DE", "BE", "MX", "UY"]
-COUNTRY_LABEL = {"CA": "Canada", "US": "États-Unis", "FR": "France", "BR": "Brésil", "DE": "Allemagne", "BE": "Belgique", "MX": "Mexique", "UY": "Uruguay",
-                 "ES": "Espagne", "IT": "Italie", "NL": "Pays-Bas", "GB": "Royaume-Uni", "PL": "Pologne"}
 ISO3 = {"CA": "CAN", "US": "USA", "FR": "FRA", "BR": "BRA", "DE": "DEU", "BE": "BEL", "MX": "MEX", "UY": "URY", "ES": "ESP", "IT": "ITA", "NL": "NLD", "GB": "GBR", "PL": "POL"}
 ISO3_TO_CC = {v: k for k, v in ISO3.items()}
 CENTROIDS = {"CA": (56.1, -106.3), "US": (39.8, -98.6), "FR": (46.6, 2.2), "BR": (-14.2, -51.9), "DE": (51.2, 10.4), "BE": (50.5, 4.5), "MX": (23.6, -102.5),
@@ -28,13 +31,24 @@ CENTROIDS = {"CA": (56.1, -106.3), "US": (39.8, -98.6), "FR": (46.6, 2.2), "BR":
 # brand palette (lallemandplantcare.com): slate, Lallemand red, greys; map accents chosen to read on slate
 SLATE, SLATE_DARK, RED, GREY, GREY_LIGHT, INK = "#36434b", "#2b363d", "#e30327", "#9ba1a5", "#ebeced", "#212529"
 STATUS_COLOR = {"active": "#2fd27a", "expired": "#f0a21f", "withdrawn": RED, "pending": "#f5c842", "unknown": GREY}
-STATUS_LABEL = {"active": "actif", "expired": "expiré", "withdrawn": "retiré", "pending": "en attente", "unknown": "inconnu"}
-MAP_COLORS = {"homologué (actif)": "#2fd27a", "produit lié seulement": "#38c6ff", "retiré / expiré": RED, "en attente": "#f5c842",
-              "non trouvé dans la source": "#5e6b72", "source non connectée": "#434f56"}
-MAP_ORDER = list(MAP_COLORS)
+MAP_KEYS = ["m.active", "m.related", "m.withdrawn", "m.pending", "m.notfound", "m.nosource"]
+MAP_COLORS = {"m.active": "#2fd27a", "m.related": "#38c6ff", "m.withdrawn": RED, "m.pending": "#f5c842", "m.notfound": "#5e6b72", "m.nosource": "#434f56"}
 ASSETS = Path(__file__).parent / "assets"
+PAGES = ["page.overview", "page.compare", "page.map", "page.ask", "page.sisters", "page.watch", "page.registry", "page.sources"]
 
 st.set_page_config(page_title="LPC Regulatory Watch", page_icon=str(ASSETS / "lallemand_logo.svg"), layout="wide", initial_sidebar_state="expanded")
+
+if "lang" not in st.session_state:
+    st.session_state["lang"] = "fr"
+
+
+def t(key: str, **fmt) -> str:
+    return tr(st.session_state.get("lang", "fr"), key, **fmt)
+
+
+def cname(cc: str) -> str:
+    return COUNTRY_NAMES.get(st.session_state.get("lang", "fr"), COUNTRY_NAMES["fr"]).get(cc, cc)
+
 
 st.markdown(f"""
 <style>
@@ -42,7 +56,9 @@ st.markdown(f"""
   section[data-testid="stSidebar"] .block-container {{ padding-top: 1.2rem; }}
   section[data-testid="stSidebar"] [data-testid="stRadio"] label p {{ font-size: 0.95rem; }}
   section[data-testid="stSidebar"] [data-testid="stRadio"] > div {{ gap: 0.15rem; }}
-  .lpc-brand {{ display:flex; align-items:center; gap:12px; margin-bottom:6px; }}
+  .lpc-logo {{ width:170px; margin:0 0 6px -4px; }}
+  .lpc-logo svg {{ width:100%; height:auto; display:block; }}
+  .lpc-brand {{ display:flex; align-items:center; gap:12px; margin-bottom:10px; }}
   .lpc-brand .t1 {{ font-size:1.05rem; font-weight:700; letter-spacing:.02em; color:#fff; line-height:1.1; }}
   .lpc-brand .t2 {{ font-size:.78rem; color:#c9d0d4; letter-spacing:.12em; text-transform:uppercase; }}
   .lpc-card {{ background:{SLATE_DARK}; border:1px solid #4a575f; border-radius:8px; padding:10px 12px; margin:8px 0 12px; font-size:.82rem; color:#dfe4e7; }}
@@ -91,49 +107,53 @@ def fmt_dt(s: str | None) -> str:
         return s
 
 
+def st_label(status: str) -> str:
+    return t(f"st.{status}") if status in STATUS_COLOR else status
+
+
 def badge(status: str) -> str:
-    return f'<span class="badge" style="background:{STATUS_COLOR.get(status, GREY)}">{STATUS_LABEL.get(status, status)}</span>'
+    return f'<span class="badge" style="background:{STATUS_COLOR.get(status, GREY)}">{st_label(status)}</span>'
 
 
-def disclaimer_box(text: str | None):
-    st.markdown(f'<div class="disclaimer">{text or "Ce prototype n’est pas une source réglementaire officielle. Validation Regulatory Affairs requise. Aucun résultat ≠ absence d’homologation."}</div>',
-                unsafe_allow_html=True)
+def disclaimer_box(text: str | None = None):
+    st.markdown(f'<div class="disclaimer">{t("disclaimer")}</div>', unsafe_allow_html=True)
 
 
 def warnings_box(warnings: list[str]):
     if warnings:
-        with st.expander(f"{len(warnings)} avertissement(s) — données manquantes ou incertaines", expanded=False):
+        with st.expander(t("warnings.n", n=len(warnings)), expanded=False):
             for w in warnings:
                 st.markdown(f'<div class="warn">• {w}</div>', unsafe_allow_html=True)
 
 
 def map_status(active: int, withdrawn: int, expired: int, pending: int, coverage: str, related: int = 0) -> str:
     if active:
-        return "homologué (actif)"
+        return "m.active"
     if withdrawn or expired:
-        return "retiré / expiré"
+        return "m.withdrawn"
     if pending:
-        return "en attente"
+        return "m.pending"
     if related:
-        return "produit lié seulement"
-    return "source non connectée" if coverage == "source_not_collected" else "non trouvé dans la source"
+        return "m.related"
+    return "m.nosource" if coverage == "source_not_collected" else "m.notfound"
 
 
 def status_map(df: pd.DataFrame, key: str, height: int = 540, size_col: str | None = None) -> str | None:
     """Slate world map in the brand palette: coloured country fills + halo markers sized by `size_col`.
-    Returns the ISO-3 code of the clicked country (polygon or halo) or None."""
+    `df["Statut"]` holds map status KEYS (m.*); labels are translated at render time. Returns the clicked ISO-3 or None."""
     fig = go.Figure()
-    extra_cols = [c for c in df.columns if c not in ("iso3", "Pays", "Statut")]
-    for status in MAP_ORDER:
-        part = df[df["Statut"] == status]
+    label_col = t("country")
+    extra_cols = [c for c in df.columns if c not in ("iso3", label_col, "Statut")]
+    for skey in MAP_KEYS:
+        part = df[df["Statut"] == skey]
         if part.empty:
             continue
         hover = "<b>%{customdata[0]}</b><br>" + "<br>".join(f"{c}: %{{customdata[{i + 1}]}}" for i, c in enumerate(extra_cols))
-        fig.add_trace(go.Choropleth(locations=part["iso3"], z=[1] * len(part), colorscale=[[0, MAP_COLORS[status]], [1, MAP_COLORS[status]]], showscale=False,
-                                    marker_line_color=SLATE_DARK, marker_line_width=0.9, name=status, showlegend=True,
-                                    customdata=part[["Pays"] + extra_cols].values, hovertemplate=hover + "<extra></extra>",
-                                    marker_opacity=0.95 if status in MAP_ORDER[:4] else 0.7))
-    glow = df[df["Statut"].isin(MAP_ORDER[:4])]
+        fig.add_trace(go.Choropleth(locations=part["iso3"], z=[1] * len(part), colorscale=[[0, MAP_COLORS[skey]], [1, MAP_COLORS[skey]]], showscale=False,
+                                    marker_line_color=SLATE_DARK, marker_line_width=0.9, name=t(skey), showlegend=True,
+                                    customdata=part[[label_col] + extra_cols].values, hovertemplate=hover + "<extra></extra>",
+                                    marker_opacity=0.95 if skey in MAP_KEYS[:4] else 0.7))
+    glow = df[df["Statut"].isin(MAP_KEYS[:4])]
     if not glow.empty:
         lats = [CENTROIDS[ISO3_TO_CC[i]][0] for i in glow["iso3"]]
         lons = [CENTROIDS[ISO3_TO_CC[i]][1] for i in glow["iso3"]]
@@ -166,17 +186,18 @@ def status_map(df: pd.DataFrame, key: str, height: int = 540, size_col: str | No
     return None
 
 
-def country_picker(df: pd.DataFrame, clicked: str | None, key: str, label_col: str = "Enregistrements") -> str:
+def country_picker(df: pd.DataFrame, clicked: str | None, key: str, size_col: str) -> str:
     """Country pills under a map; a map click overrides the pills (widget state is updated before rendering)."""
     opts = list(df["iso3"])
-    labels = {i: f"{df.set_index('iso3').loc[i, 'Pays']} · {int(df.set_index('iso3').loc[i, label_col])}" if label_col in df else df.set_index("iso3").loc[i, "Pays"] for i in opts}
+    idx = df.set_index("iso3")
+    labels = {i: f"{idx.loc[i, t('country')]} · {int(idx.loc[i, size_col])}" if size_col in df else str(idx.loc[i, t("country")]) for i in opts}
     state_key = f"{key}_pills"
     if clicked in opts and st.session_state.get(f"{key}_last_click") != clicked:
         st.session_state[state_key] = clicked
         st.session_state[f"{key}_last_click"] = clicked
     if st.session_state.get(state_key) not in opts:
         st.session_state[state_key] = opts[0]
-    picked = st.pills("Pays", opts, format_func=lambda i: labels[i], selection_mode="single", key=state_key, label_visibility="collapsed")
+    picked = st.pills(t("country"), opts, format_func=lambda i: labels[i], selection_mode="single", key=state_key, label_visibility="collapsed")
     return picked or st.session_state.get(f"{key}_last_click") or opts[0]
 
 
@@ -184,134 +205,138 @@ def country_picker(df: pd.DataFrame, clicked: str | None, key: str, label_col: s
 try:
     health = api_get("/health")
 except Exception as e:  # noqa: BLE001
-    st.error(f"API injoignable sur {API} : {e}")
+    st.error(t("api.down", api=API, err=e))
     st.stop()
 
 with st.sidebar:
     logo = (ASSETS / "lallemand_logo.svg").read_text(encoding="utf-8") if (ASSETS / "lallemand_logo.svg").exists() else ""
-    st.markdown(f'<div class="lpc-brand"><div style="width:96px">{logo}</div><div><div class="t1">Regulatory Watch</div><div class="t2">Plant Care · prototype</div></div></div>',
+    st.markdown(f'<div class="lpc-logo">{logo}</div><div class="lpc-brand"><div><div class="t1">Regulatory Watch</div><div class="t2">{t("app.subtitle")}</div></div></div>',
                 unsafe_allow_html=True)
-    ai_txt = f'<span class="ok">activée</span> · {health.get("aiProvider")}' if health.get("aiEnabled") else '<span class="off">désactivée</span> · réponses déterministes'
-    st.markdown(f'<div class="lpc-card"><b>{health.get("registrations")}</b> enregistrements · v{health.get("version")}<br>IA : {ai_txt}<br>'
-                f'Dernière collecte : {fmt_dt(health.get("lastSnapshotAt"))}</div>', unsafe_allow_html=True)
-    st.markdown('<div class="lpc-section">Navigation</div>', unsafe_allow_html=True)
-    page = st.radio("Vue", ["Vue d'ensemble", "Comparaison", "Carte", "Question", "Produits sœurs & revue", "Veille (changements, échéances)",
-                            "Registre interne LPC", "Sources & qualité"], label_visibility="collapsed")
-    st.markdown('<div class="lpc-section">Produits pilotes</div><ul class="lpc-list"><li>LALSTOP CONTANS WG</li><li>LALSTOP G46 WG</li><li>LALGUARD M52 OD</li></ul>',
+    st.markdown(f'<div class="lpc-section">{t("sb.lang")}</div>', unsafe_allow_html=True)
+    lang_pick = st.segmented_control(t("sb.lang"), list(LANGS), format_func=lambda k: LANGS[k], default=st.session_state["lang"], key="lang_ctl", label_visibility="collapsed")
+    if lang_pick and lang_pick != st.session_state["lang"]:
+        st.session_state["lang"] = lang_pick
+        st.rerun()
+    ai_txt = f'<span class="ok">{t("sb.ai_on")}</span> · {health.get("aiProvider")}' if health.get("aiEnabled") else f'<span class="off">{t("sb.ai_off")}</span>'
+    st.markdown(f'<div class="lpc-card"><b>{health.get("registrations")}</b> {t("sb.records")} · v{health.get("version")}<br>{t("sb.ai")} : {ai_txt}<br>'
+                f'{t("sb.last")} : {fmt_dt(health.get("lastSnapshotAt"))}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="lpc-section">{t("sb.nav")}</div>', unsafe_allow_html=True)
+    page = st.radio(t("sb.nav"), PAGES, format_func=t, label_visibility="collapsed", key="page")
+    with st.expander(t("sb.about")):
+        st.markdown(f'<div class="lpc-section">{t("sb.pilots")}</div><ul class="lpc-list"><li>LALSTOP CONTANS WG</li><li>LALSTOP G46 WG</li><li>LALGUARD M52 OD</li></ul>'
+                    f'<div class="lpc-section">{t("sb.sources")}</div><ul class="lpc-list"><li>Santé Canada — PPID</li><li>US EPA — PPLS</li><li>ANSES — E-Phy</li><li>MAPA — AGROFIT</li></ul>'
+                    f'<div class="lpc-section">{t("sb.limits")}</div>', unsafe_allow_html=True)
+        for k in ("sb.lim1", "sb.lim2", "sb.lim3", "sb.lim4", "sb.lim5"):
+            st.markdown(f"- {t(k)}")
+    st.markdown(f'<ul class="lpc-list" style="margin-top:10px"><li><a href="{API}/docs" target="_blank">{t("sb.api_docs")}</a></li><li><a href="/pitch/" target="_blank">{t("sb.pitch")}</a></li></ul>',
                 unsafe_allow_html=True)
-    st.markdown('<div class="lpc-section">Sources officielles</div><ul class="lpc-list"><li>Santé Canada — PPID</li><li>US EPA — PPLS</li><li>ANSES — E-Phy</li><li>MAPA — AGROFIT</li></ul>',
-                unsafe_allow_html=True)
-    with st.expander("Limites connues"):
-        for line in ["4 sources : un produit absent est « non trouvé dans la source », jamais « non homologué ».",
-                     "Dose CA/US : uniquement via l'étiquette PDF (extraction IA, à vérifier).",
-                     "Codes EPPO : candidats to_verify ; Brésil : produits actifs seulement, sans dates.",
-                     "Hypothèses « produit sœur » : à confirmer par Regulatory Affairs.",
-                     "Prototype sans authentification ; design Entra ID documenté."]:
-            st.markdown(f"- {line}")
-    st.markdown('<div class="lpc-section">Liens</div>', unsafe_allow_html=True)
-    st.markdown(f'<ul class="lpc-list"><li><a href="{API}/docs" target="_blank">Documentation API</a></li><li><a href="/pitch/" target="_blank">Présentation</a></li></ul>', unsafe_allow_html=True)
 
 products = api_get("/products", {"limit": 500})["items"]
-prod_label = {p["productId"]: f"{p['commercialName']}  ({', '.join(p['countries']) or 'aucun pays'})" for p in products}
+prod_label = {p["productId"]: f"{p['commercialName']}  ({', '.join(p['countries']) or t('no_country')})" for p in products}
 ordered = PILOTS + sorted([p["productId"] for p in products if p["productId"] not in PILOTS], key=lambda i: prod_label[i])
+LINK = {"URL": st.column_config.LinkColumn("URL", display_text=t("source").lower())}
 
 
 def product_picker(key: str) -> str:
-    q = st.text_input("Rechercher un produit (nom, alias, micro-organisme)", key=f"q_{key}", placeholder="ex. CONTANS, PRESTOP, Clonostachys rosea")
+    q = st.text_input(t("search"), key=f"q_{key}", placeholder=t("search.ph"))
     if q:
         res = api_get("/products", {"q": q, "limit": 50})
         if not res["items"]:
             st.warning(res["warnings"][0])
-            return st.selectbox("Produit", ordered, format_func=lambda i: prod_label.get(i, i), key=f"sel_{key}")
+            return st.selectbox(t("product"), ordered, format_func=lambda i: prod_label.get(i, i), key=f"sel_{key}")
         opts = [p["productId"] for p in res["items"]]
-        return st.selectbox("Produit", opts, format_func=lambda i: f"{prod_label.get(i, i)}  · trouvé via {next(p['matchedOn'] for p in res['items'] if p['productId'] == i)}", key=f"sel_{key}")
-    return st.selectbox("Produit", ordered, format_func=lambda i: prod_label.get(i, i), key=f"sel_{key}")
+        return st.selectbox(t("product"), opts, format_func=lambda i: f"{prod_label.get(i, i)}  · {t('found_via')} {next(p['matchedOn'] for p in res['items'] if p['productId'] == i)}",
+                            key=f"sel_{key}")
+    return st.selectbox(t("product"), ordered, format_func=lambda i: prod_label.get(i, i), key=f"sel_{key}")
 
 
 def uses_table(reg: dict) -> pd.DataFrame:
     rows = []
     for u in reg["uses"]:
         rows.append({
-            "Pays": reg["countryCode"], "N°": reg["registrationNumber"],
-            "Culture (original)": u["cropOriginal"], "Culture (normalisée)": u["cropNormalized"], "EPPO culture": f"{u['eppoCropCode'] or '—'} [{u['eppoCropStatus']}]",
-            "Cible (original)": u["targetOriginal"], "Cible (normalisée)": u["targetNormalized"], "EPPO cible": u["eppoTargetCode"] or "—",
-            "Dose": f"{u['doseValue']} {u['doseUnitOriginal']}" if u["doseValue"] is not None else "— (non structurée)",
-            "Dose normalisée": f"{u['doseValueNormalized']} {u['doseUnitNormalized']}" if u["doseValueNormalized"] is not None else "—",
-            "DAR (j)": u["phiDays"], "Max appl.": u["maxApplications"], "BBCH": f"{u['growthStageMin'] or ''}-{u['growthStageMax'] or ''}" if u["growthStageMin"] or u["growthStageMax"] else "",
-            "Appariement": u["pairing"], "Extraction": u["evidence"]["extractionMethod"], "Confiance": u["evidence"]["confidence"],
-            "Validation": u["evidence"]["validationStatus"], "Restrictions (original)": (u["restrictionsOriginal"] or "")[:200],
-            "Source": u["evidence"]["sourceId"], "Collecté le": fmt_dt(u["evidence"]["collectedAt"]), "URL": u["evidence"]["sourceUrl"],
+            t("country"): reg["countryCode"], t("number"): reg["registrationNumber"],
+            t("u.crop_o"): u["cropOriginal"], t("u.crop_n"): u["cropNormalized"], t("u.eppo_crop"): f"{u['eppoCropCode'] or '—'} [{u['eppoCropStatus']}]",
+            t("u.target_o"): u["targetOriginal"], t("u.target_n"): u["targetNormalized"], t("u.eppo_target"): u["eppoTargetCode"] or "—",
+            t("u.dose"): f"{u['doseValue']} {u['doseUnitOriginal']}" if u["doseValue"] is not None else t("u.dose_missing"),
+            t("u.dose_n"): f"{u['doseValueNormalized']} {u['doseUnitNormalized']}" if u["doseValueNormalized"] is not None else "—",
+            t("u.phi"): u["phiDays"], t("u.maxapp"): u["maxApplications"],
+            "BBCH": f"{u['growthStageMin'] or ''}-{u['growthStageMax'] or ''}" if u["growthStageMin"] or u["growthStageMax"] else "",
+            t("cmp.pairing"): u["pairing"], t("cmp.extraction"): u["evidence"]["extractionMethod"], t("cmp.conf"): u["evidence"]["confidence"],
+            t("validation"): u["evidence"]["validationStatus"], t("u.restr"): (u["restrictionsOriginal"] or "")[:200],
+            t("source"): u["evidence"]["sourceId"], t("collected"): fmt_dt(u["evidence"]["collectedAt"]), "URL": u["evidence"]["sourceUrl"],
         })
     return pd.DataFrame(rows)
 
 
 def country_detail_table(regs: list[dict]) -> pd.DataFrame:
-    return pd.DataFrame([{"Produit": r["productName"], "N°": r["registrationNumber"], "Statut": STATUS_LABEL.get(r["statusNormalized"], r["statusNormalized"]),
-                          "Statut (original)": r["statusOriginal"], "Expire": r["expirationDate"] or "—", "Titulaire": r["holder"], "Usages": r["usesCount"],
-                          "Micro-organisme": r["activeEntityNormalized"], "Validation": r["validationStatus"], "Source": r["sourceId"],
-                          "Collecté le": fmt_dt(r["collectedAt"]), "URL": r["sourceUrl"]} for r in regs])
+    return pd.DataFrame([{t("product"): r["productName"], t("number"): r["registrationNumber"], t("status"): st_label(r["statusNormalized"]),
+                          t("status_orig"): r["statusOriginal"], t("expires"): r["expirationDate"] or "—", t("holder"): r["holder"], t("uses"): r["usesCount"],
+                          t("microorganism"): r["activeEntityNormalized"], t("validation"): r["validationStatus"], t("source"): r["sourceId"],
+                          t("collected"): fmt_dt(r["collectedAt"]), "URL": r["sourceUrl"]} for r in regs])
 
-
-LINK = {"URL": st.column_config.LinkColumn("URL", display_text="source")}
 
 # ---------------------------------------------------------------------------------- pages
-if page == "Vue d'ensemble":
-    st.title("Vue d'ensemble des homologations")
+if page == "page.overview":
+    st.title(t("ov.title"))
     c1, c2, c3 = st.columns([2.2, 2, 1])
+    scope_keys = ["ov.scope.pilots", "ov.scope.lallemand", "ov.scope.all", "ov.scope.product"]
     with c1:
-        scope_label = st.radio("Périmètre", ["Produits pilotes LPC", "Tous les produits Lallemand", "Tous les produits de la base", "Un produit"], horizontal=True)
-    scope = {"Produits pilotes LPC": "pilots", "Tous les produits Lallemand": "lallemand", "Tous les produits de la base": "all", "Un produit": "product"}[scope_label]
+        scope_key = st.radio(t("ov.scope"), scope_keys, format_func=t, horizontal=True, key="ov_scope")
+    scope = {"ov.scope.pilots": "pilots", "ov.scope.lallemand": "lallemand", "ov.scope.all": "all", "ov.scope.product": "product"}[scope_key]
     params = {"scope": scope}
     with c2:
         if scope == "product":
             params["productId"] = product_picker("ov")
     with c3:
-        params["months"] = st.number_input("Échéances (mois)", 1, 60, 12)
+        params["months"] = st.number_input(t("ov.months"), 1, 60, 12)
     ov = api_get("/overview", params)
     if "__404__" in ov:
         st.error(ov["__404__"]["message"])
         st.stop()
-    t = ov["totals"]
+    tt = ov["totals"]
     k = st.columns(6)
-    for col, (v, l) in zip(k, [(t["sourcesConnected"], "Sources officielles"), (t["countriesFound"], "Pays avec homologation"), (t["products"], "Produits"),
-                                (t["registrations"], "Enregistrements"), (t["active"], "dont actifs"), (t["expiringSoon"], f"Expirent < {ov['months']} mois")]):
-        col.markdown(f'<div class="kpi"><div class="v">{v}</div><div class="l">{l}</div></div>', unsafe_allow_html=True)
+    for col, (v, lbl) in zip(k, [(tt["sourcesConnected"], t("ov.k.sources")), (tt["countriesFound"], t("ov.k.countries")), (tt["products"], t("products")),
+                                  (tt["registrations"], t("registrations")), (tt["active"], t("ov.k.active")), (tt["expiringSoon"], t("ov.k.expiring", m=ov["months"]))]):
+        col.markdown(f'<div class="kpi"><div class="v">{v}</div><div class="l">{lbl}</div></div>', unsafe_allow_html=True)
     rows = []
     for c in ov["countries"]:
         if c["countryCode"] not in ISO3:
             continue
         prods = sorted({r["productName"] for r in c["registrations"]})
-        rows.append({"iso3": ISO3[c["countryCode"]], "Pays": c["countryName"], "Statut": map_status(c["active"], c["withdrawn"], c["expired"], c["pending"], c["coverage"]),
-                     "Enregistrements": c["active"] + c["withdrawn"] + c["expired"] + c["pending"] + c["unknown"], "Actifs": c["active"], "Retirés": c["withdrawn"] + c["expired"],
-                     "En attente": c["pending"], "Produits": c["products"], "Usages": c["usesCount"], "Expirent bientôt": c["expiringSoon"],
-                     "Source": c["sourceId"] or "aucune", "Collecté le": fmt_dt(c["collectedAt"]),
-                     "Liste": (", ".join(prods[:6]) + (" …" if len(prods) > 6 else "")) or "—"})
+        rows.append({"iso3": ISO3[c["countryCode"]], t("country"): cname(c["countryCode"]),
+                     "Statut": map_status(c["active"], c["withdrawn"], c["expired"], c["pending"], c["coverage"]),
+                     t("registrations"): c["active"] + c["withdrawn"] + c["expired"] + c["pending"] + c["unknown"], t("ov.col.actives"): c["active"],
+                     t("ov.col.withdrawn"): c["withdrawn"] + c["expired"], t("ov.col.pending"): c["pending"], t("products"): c["products"], t("uses"): c["usesCount"],
+                     t("ov.col.expiring"): c["expiringSoon"], t("m.other_in_store"): c.get("totalInStore", 0),
+                     t("source"): c["sourceId"] or t("none"), t("collected"): fmt_dt(c["collectedAt"]),
+                     t("ov.col.list"): (", ".join(prods[:6]) + (" …" if len(prods) > 6 else "")) or "—"})
     df = pd.DataFrame(rows)
-    st.caption("Survolez un pays pour les chiffres ; cliquez un pays ou un halo, ou choisissez-le dans les pastilles sous la carte. "
-               "Vert = au moins une homologation active dans le périmètre · rouge = seulement des retraits · gris = source officielle collectée mais aucun produit "
-               "du périmètre (≠ non homologué) · gris foncé = marché sans source connectée dans ce prototype.")
-    clicked = status_map(df, "ov_map", 580, size_col="Enregistrements")
-    sel_iso = country_picker(df, clicked, "ov")
+    clicked = status_map(df, "ov_map", 580, size_col=t("registrations"))
+    st.caption(t("ov.caption"))
+    sel_iso = country_picker(df, clicked, "ov", t("registrations"))
     cc = ISO3_TO_CC[sel_iso]
     c = next(x for x in ov["countries"] if x["countryCode"] == cc)
-    st.markdown(f"### {c['countryName']} ({cc}) — {c['sourceId'] or 'aucune source connectée'}" + (f" · collecté {fmt_dt(c['collectedAt'])}" if c["collectedAt"] else ""))
+    st.markdown(f"### {cname(cc)} ({cc}) — {c['sourceId'] or t('none_country')}" + (f" · {t('collected').lower()} {fmt_dt(c['collectedAt'])}" if c["collectedAt"] else ""))
     if c["registrations"]:
         st.dataframe(country_detail_table(c["registrations"]), hide_index=True, use_container_width=True, column_config=LINK)
     elif c["coverage"] == "not_found_in_source":
-        st.info(f"Aucun produit du périmètre dans {c['sourceId']} au {fmt_dt(c['collectedAt'])}. Ce n'est pas une preuve d'absence d'homologation.")
+        st.info(t("ov.notfound", src=c["sourceId"], at=fmt_dt(c["collectedAt"]), n=c.get("totalInStore", 0)))
     else:
-        st.warning("Aucune source officielle connectée pour ce marché dans le prototype : rien ne peut être affirmé.")
-    with st.expander("Tableau de tous les pays"):
-        st.dataframe(df.drop(columns=["iso3"]), hide_index=True, use_container_width=True)
+        st.warning(t("ov.nosource"))
+    with st.expander(t("ov.table")):
+        view = df.drop(columns=["iso3"]).copy()
+        view["Statut"] = view["Statut"].map(t)
+        view = view.rename(columns={"Statut": t("status")})
+        st.dataframe(view, hide_index=True, use_container_width=True)
     disclaimer_box(ov["disclaimer"])
 
-elif page == "Comparaison":
-    st.title("Comparaison produit × pays × usage")
+elif page == "page.compare":
+    st.title(t("cmp.title"))
     col1, col2 = st.columns([2, 2])
     with col1:
         pid = product_picker("cmp")
     with col2:
-        countries = st.multiselect("Pays", ALL_COUNTRIES, default=["CA", "US", "FR", "BR"], format_func=lambda c: f"{COUNTRY_LABEL.get(c, c)} ({c})")
+        countries = st.multiselect(t("countries"), ALL_COUNTRIES, default=["CA", "US", "FR", "BR"], format_func=lambda c: f"{cname(c)} ({c})")
     if pid and countries:
         data = api_get("/compare", {"productId": pid, "countries": ",".join(countries)})
         if "__404__" in data:
@@ -331,16 +356,16 @@ elif page == "Comparaison":
             if cc not in ISO3:
                 continue
             regs = regs_by_cc.get(cc, [])
-            mrows.append({"iso3": ISO3[cc], "Pays": COUNTRY_LABEL.get(cc, cc),
+            mrows.append({"iso3": ISO3[cc], t("country"): cname(cc),
                           "Statut": map_status(sum(r["statusNormalized"] == "active" for r in regs), sum(r["statusNormalized"] == "withdrawn" for r in regs),
                                                sum(r["statusNormalized"] == "expired" for r in regs), sum(r["statusNormalized"] == "pending" for r in regs),
                                                cov["coverage"], len(rel_by_cc.get(cc, []))),
-                          "N°": ", ".join(f"{r['registrationNumber']} ({r['statusOriginal']})" for r in regs) or "—",
-                          "Expire": ", ".join(r["expirationDate"] or "—" for r in regs) or "—", "Usages": sum(r["usesCount"] for r in regs),
-                          "Produits liés": ", ".join(f"{rp['commercialName']} {r['registrationNumber']}" for rp, r in rel_by_cc.get(cc, [])) or "—",
-                          "Source": cov["sourceId"] or "aucune", "Collecté le": fmt_dt(cov["collectedAt"])})
+                          t("number"): ", ".join(f"{r['registrationNumber']} ({r['statusOriginal']})" for r in regs) or "—",
+                          t("expires"): ", ".join(r["expirationDate"] or "—" for r in regs) or "—", t("uses"): sum(r["usesCount"] for r in regs),
+                          t("cmp.related_short"): ", ".join(f"{rp['commercialName']} {r['registrationNumber']}" for rp, r in rel_by_cc.get(cc, [])) or "—",
+                          t("source"): cov["sourceId"] or t("none"), t("collected"): fmt_dt(cov["collectedAt"])})
         mdf = pd.DataFrame(mrows)
-        clicked = status_map(mdf, "cmp_map", 440, size_col="Usages")
+        clicked = status_map(mdf, "cmp_map", 440, size_col=t("uses"))
         focus = ISO3_TO_CC.get(clicked) if clicked else None
         cols = st.columns(len(countries))
         for c, cc in zip(cols, countries):
@@ -350,78 +375,76 @@ elif page == "Comparaison":
                 if cov["coverage"] == "found":
                     inner = ""
                     for r in regs_by_cc.get(cc, []):
-                        inner += (f'{badge(r["statusNormalized"])} <b>n° {r["registrationNumber"]}</b><div class="m">« {r["statusOriginal"]} » · {r["usesCount"]} usages · '
-                                  f'expire {r["expirationDate"] or "—"}<br><a href="{r["evidence"]["sourceUrl"]}" target="_blank">{r["evidence"]["sourceId"]}</a> · '
+                        inner += (f'{badge(r["statusNormalized"])} <b>{t("number")} {r["registrationNumber"]}</b><div class="m">« {r["statusOriginal"]} » · {r["usesCount"]} {t("uses").lower()} · '
+                                  f'{t("expires").lower()} {r["expirationDate"] or "—"}<br><a href="{r["evidence"]["sourceUrl"]}" target="_blank">{r["evidence"]["sourceId"]}</a> · '
                                   f'{fmt_dt(r["evidence"]["collectedAt"])}<br><code>{r["evidence"]["validationStatus"]}</code></div>')
                 elif cov["coverage"] == "not_found_in_source":
-                    inner = (f'<span class="badge" style="background:{GREY}">non trouvé dans {cov["sourceId"]}</span><div class="m">collecté {fmt_dt(cov["collectedAt"])}'
-                             f'<br>≠ absence d’homologation</div>')
+                    inner = (f'<span class="badge" style="background:{GREY}">{t("cmp.not_in", src=cov["sourceId"])}</span><div class="m">{t("collected").lower()} '
+                             f'{fmt_dt(cov["collectedAt"])}<br>{t("cmp.neq")}</div>')
                     if rel_by_cc.get(cc):
-                        inner += '<div class="m">Produits liés : ' + ", ".join(f"{rp['commercialName']} ({r['registrationNumber']})" for rp, r in rel_by_cc[cc]) + "</div>"
+                        inner += f'<div class="m">{t("cmp.related_short")} : ' + ", ".join(f"{rp['commercialName']} ({r['registrationNumber']})" for rp, r in rel_by_cc[cc]) + "</div>"
                 else:
-                    inner = f'<span class="badge" style="background:{SLATE}">source non connectée</span><div class="m">inconnu, pas « non homologué »</div>'
-                st.markdown(f'<div class="ccard" style="{border}"><h4>{COUNTRY_LABEL.get(cc, cc)} ({cc})</h4>{inner}</div>', unsafe_allow_html=True)
+                    inner = f'<span class="badge" style="background:{SLATE}">{t("m.nosource")}</span><div class="m">{t("cmp.unknown_not_absent")}</div>'
+                st.markdown(f'<div class="ccard" style="{border}"><h4>{cname(cc)} ({cc})</h4>{inner}</div>', unsafe_allow_html=True)
         warnings_box(data["warnings"])
         if data.get("relatedProducts"):
-            st.markdown("### Produits liés (produits distincts — jamais fusionnés)")
-            st.caption("related_product et confirmed_sister_product = affirmés par LPC ou par un nom officiel sur le même enregistrement · "
-                       "related_formulation = même souche, autre formulation · sister_product_candidate = hypothèse à confirmer.")
+            st.markdown(f"### {t('cmp.related_h')}")
+            st.caption(t("cmp.related_cap"))
             rel_rows = []
             for rp in data["relatedProducts"]:
                 for r in rp["registrations"] or [None]:
-                    rel_rows.append({"Produit lié": rp["commercialName"], "Relation": rp["relationship"], "Statut de revue": rp["reviewStatus"], "Confiance": rp["confidence"],
-                                     "Pays": r["countryCode"] if r else "—", "N°": r["registrationNumber"] if r else "—",
-                                     "Statut": STATUS_LABEL.get(r["statusNormalized"], r["statusNormalized"]) if r else "aucun enregistrement dans les pays choisis",
-                                     "Expire": (r["expirationDate"] or "—") if r else "—", "Source": r["evidence"]["sourceId"] if r else "—",
-                                     "Collecté le": fmt_dt(r["evidence"]["collectedAt"]) if r else "—", "URL": r["evidence"]["sourceUrl"] if r else None,
-                                     "Preuve de la relation": rp["evidence"]})
+                    rel_rows.append({t("cmp.related_col"): rp["commercialName"], t("cmp.relation"): rp["relationship"], t("cmp.review"): rp["reviewStatus"],
+                                     t("cmp.conf"): rp["confidence"], t("country"): r["countryCode"] if r else "—", t("number"): r["registrationNumber"] if r else "—",
+                                     t("status"): st_label(r["statusNormalized"]) if r else t("cmp.rel_none"),
+                                     t("expires"): (r["expirationDate"] or "—") if r else "—", t("source"): r["evidence"]["sourceId"] if r else "—",
+                                     t("collected"): fmt_dt(r["evidence"]["collectedAt"]) if r else "—", "URL": r["evidence"]["sourceUrl"] if r else None,
+                                     t("cmp.rel_evidence"): rp["evidence"]})
             st.dataframe(pd.DataFrame(rel_rows), hide_index=True, use_container_width=True, column_config=LINK)
-        st.markdown("### Usages autorisés (valeur originale · valeur normalisée · preuve)")
+        st.markdown(f"### {t('cmp.uses_h')}")
         frames = [uses_table(r) for r in data["registrations"] if r["uses"]]
         if frames:
             df = pd.concat(frames, ignore_index=True)
             f1, f2, f3 = st.columns(3)
             with f1:
-                crop_f = st.text_input("Filtrer culture", "")
+                crop_f = st.text_input(t("cmp.filter_crop"), "")
             with f2:
-                pairing_f = st.multiselect("Appariement", sorted(df["Appariement"].unique()), default=sorted(df["Appariement"].unique()))
+                pairing_f = st.multiselect(t("cmp.pairing"), sorted(df[t("cmp.pairing")].unique()), default=sorted(df[t("cmp.pairing")].unique()))
             with f3:
-                extr_f = st.multiselect("Extraction", sorted(df["Extraction"].unique()), default=sorted(df["Extraction"].unique()))
-            view = df[df["Appariement"].isin(pairing_f) & df["Extraction"].isin(extr_f)]
+                extr_f = st.multiselect(t("cmp.extraction"), sorted(df[t("cmp.extraction")].unique()), default=sorted(df[t("cmp.extraction")].unique()))
+            view = df[df[t("cmp.pairing")].isin(pairing_f) & df[t("cmp.extraction")].isin(extr_f)]
             if crop_f:
-                m = view["Culture (original)"].fillna("").str.contains(crop_f, case=False) | view["Culture (normalisée)"].fillna("").str.contains(crop_f, case=False)
+                m = view[t("u.crop_o")].fillna("").str.contains(crop_f, case=False) | view[t("u.crop_n")].fillna("").str.contains(crop_f, case=False)
                 view = view[m]
-            st.caption(f"{len(view)} lignes · source_paired = couple culture/cible affirmé par la source · unpaired_lists = listes indépendantes (CA/US) · "
-                       "llm_paired = extrait de l'étiquette par IA, à vérifier")
+            st.caption(t("cmp.rows_cap", n=len(view)))
             st.dataframe(view, use_container_width=True, hide_index=True, column_config=LINK)
         else:
-            st.info("Aucun usage structuré pour cette sélection.")
-        st.markdown("### Détail des enregistrements")
+            st.info(t("cmp.no_uses"))
+        st.markdown(f"### {t('cmp.detail_h')}")
         for r in data["registrations"]:
             with st.expander(f"{r['countryCode']} · {r['registrationNumber']} · {r['statusOriginal']} → {r['statusNormalized']}"):
                 a, b = st.columns(2)
                 with a:
-                    st.markdown("**Valeurs originales (source)**")
+                    st.markdown(f"**{t('cmp.originals')}**")
                     st.json({"statusOriginal": r["statusOriginal"], "holderOriginal": r["holderOriginal"], "activeEntityOriginal": r["activeEntityOriginal"],
                              "formulationOriginal": r["formulationOriginal"], "approvalDate": r["approvalDate"], "expirationDate": r["expirationDate"]})
                 with b:
-                    st.markdown("**Preuve**")
+                    st.markdown(f"**{t('cmp.evidence')}**")
                     st.json(r["evidence"])
         ex1, ex2 = st.columns(2)
         with ex1:
-            st.download_button("Export CSV (cette sélection)", data=httpx.get(f"{API}/export.csv", params={"productId": pid, "countries": ",".join(countries)}, timeout=120).content,
+            st.download_button(t("cmp.export_csv"), data=httpx.get(f"{API}/export.csv", params={"productId": pid, "countries": ",".join(countries)}, timeout=120).content,
                                file_name=f"{pid}_{'_'.join(countries)}.csv", mime="text/csv")
         with ex2:
-            st.download_button("Export Excel (cette sélection)", data=httpx.get(f"{API}/export.xlsx", params={"productId": pid, "countries": ",".join(countries)}, timeout=120).content,
+            st.download_button(t("cmp.export_xlsx"), data=httpx.get(f"{API}/export.xlsx", params={"productId": pid, "countries": ",".join(countries)}, timeout=120).content,
                                file_name=f"{pid}_{'_'.join(countries)}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         disclaimer_box(data["disclaimer"])
 
-elif page == "Carte":
-    st.title("Carte des homologations")
-    mode = st.radio("Vue", ["Un produit (et ses produits liés)", "Empreinte d'un micro-organisme (tous produits)"], horizontal=True)
+elif page == "page.map":
+    st.title(t("map.title"))
+    mode = st.radio(t("map.mode"), ["map.mode.product", "map.mode.species"], format_func=t, horizontal=True, key="map_mode")
     rows, warnings = [], []
     detail: dict[str, list] = {}
-    if mode.startswith("Un produit"):
+    if mode == "map.mode.product":
         pid = product_picker("map")
         data = api_get("/compare", {"productId": pid, "countries": ",".join(ALL_COUNTRIES)})
         if "__404__" in data:
@@ -438,19 +461,19 @@ elif page == "Carte":
             rel = related_by_cc.get(cc, [])
             status = map_status(sum(r["statusNormalized"] == "active" for r in regs), sum(r["statusNormalized"] == "withdrawn" for r in regs),
                                 sum(r["statusNormalized"] == "expired" for r in regs), sum(r["statusNormalized"] == "pending" for r in regs), c["coverage"], len(rel))
-            rows.append({"iso3": ISO3[cc], "Pays": COUNTRY_LABEL.get(cc, cc), "Statut": status, "Enregistrements": len(regs) + len(rel),
-                         "N°": "; ".join(f"{r['registrationNumber']} ({r['statusOriginal']}, expire {r['expirationDate'] or '—'})" for r in regs) or "—",
-                         "Produits liés": "; ".join(f"{rp['commercialName']} {r['registrationNumber']} ({rp['relationship']})" for rp, r in rel) or "—",
-                         "Usages": sum(r["usesCount"] for r in regs), "Source": c["sourceId"] or "—", "Collecté le": fmt_dt(c["collectedAt"])})
+            rows.append({"iso3": ISO3[cc], t("country"): cname(cc), "Statut": status, t("registrations"): len(regs) + len(rel),
+                         t("number"): "; ".join(f"{r['registrationNumber']} ({r['statusOriginal']}, {t('expires').lower()} {r['expirationDate'] or '—'})" for r in regs) or "—",
+                         t("cmp.related_short"): "; ".join(f"{rp['commercialName']} {r['registrationNumber']} ({rp['relationship']})" for rp, r in rel) or "—",
+                         t("uses"): sum(r["usesCount"] for r in regs), t("source"): c["sourceId"] or "—", t("collected"): fmt_dt(c["collectedAt"])})
             detail[ISO3[cc]] = [{"productName": data.get("commercialName"), **r, "holder": r["holderOriginal"], "activeEntityNormalized": None,
                                  "sourceId": r["evidence"]["sourceId"], "sourceUrl": r["evidence"]["sourceUrl"], "collectedAt": r["evidence"]["collectedAt"],
                                  "validationStatus": r["evidence"]["validationStatus"]} for r in regs] + \
-                               [{"productName": f"{rp['commercialName']} (produit lié : {rp['relationship']})", **r, "holder": r["holderOriginal"], "activeEntityNormalized": None,
-                                 "sourceId": r["evidence"]["sourceId"], "sourceUrl": r["evidence"]["sourceUrl"], "collectedAt": r["evidence"]["collectedAt"],
-                                 "validationStatus": r["evidence"]["validationStatus"]} for rp, r in rel]
+                               [{"productName": f"{rp['commercialName']} ({t('map.related_tag')} : {rp['relationship']})", **r, "holder": r["holderOriginal"],
+                                 "activeEntityNormalized": None, "sourceId": r["evidence"]["sourceId"], "sourceUrl": r["evidence"]["sourceUrl"],
+                                 "collectedAt": r["evidence"]["collectedAt"], "validationStatus": r["evidence"]["validationStatus"]} for rp, r in rel]
     else:
-        species = st.text_input("Micro-organisme (genre espèce)", "Clonostachys rosea")
-        crop = st.text_input("Culture (optionnel, mot de la culture tel qu'écrit ou normalisé)", "")
+        species = st.text_input(t("map.species"), "Clonostachys rosea")
+        crop = st.text_input(t("map.crop"), "")
         data = api_get(f"/active-entities/{species}/registrations", {"crop": crop} if crop else None)
         warnings = data["warnings"]
         by_cc: dict[str, list] = {}
@@ -462,113 +485,117 @@ elif page == "Carte":
             status = map_status(sum(r["statusNormalized"] == "active" for r in regs), sum(r["statusNormalized"] == "withdrawn" for r in regs),
                                 sum(r["statusNormalized"] == "expired" for r in regs), sum(r["statusNormalized"] == "pending" for r in regs),
                                 "not_found_in_source" if cc in covered else "source_not_collected")
-            rows.append({"iso3": ISO3[cc], "Pays": COUNTRY_LABEL.get(cc, cc), "Statut": status, "Enregistrements": len(regs), "Produits": len({r["productId"] for r in regs}),
-                         "Souches": "; ".join(sorted({(r["activeEntityNormalized"] or "").replace(species, "").strip() or "—" for r in regs})) or "—"})
+            rows.append({"iso3": ISO3[cc], t("country"): cname(cc), "Statut": status, t("registrations"): len(regs), t("products"): len({r["productId"] for r in regs}),
+                         t("map.strains"): "; ".join(sorted({(r["activeEntityNormalized"] or "").replace(species, "").strip() or "—" for r in regs})) or "—"})
             detail[ISO3[cc]] = [{**r, "holder": r["holderOriginal"], "sourceId": r["evidence"]["sourceId"], "sourceUrl": r["evidence"]["sourceUrl"],
                                  "collectedAt": r["evidence"]["collectedAt"], "validationStatus": r["evidence"]["validationStatus"]} for r in regs]
     df = pd.DataFrame(rows)
-    clicked = status_map(df, "carte_map", 560, size_col="Enregistrements")
-    sel = country_picker(df, clicked, "carte")
-    st.markdown(f"#### {df.set_index('iso3').loc[sel, 'Pays']}")
+    clicked = status_map(df, "carte_map", 560, size_col=t("registrations"))
+    sel = country_picker(df, clicked, "carte", t("registrations"))
+    st.markdown(f"#### {df.set_index('iso3').loc[sel, t('country')]}")
     if detail.get(sel):
         st.dataframe(country_detail_table(detail[sel]), hide_index=True, use_container_width=True, column_config=LINK)
     else:
-        st.info(df.set_index("iso3").loc[sel, "Statut"].capitalize() + " — rien à afficher pour ce pays dans ce périmètre.")
+        st.info(t(df.set_index("iso3").loc[sel, "Statut"]).capitalize() + " — " + t("map.nothing"))
     warnings_box(warnings)
-    disclaimer_box(None)
+    disclaimer_box()
 
-elif page == "Question":
-    st.title("Question en langage naturel")
-    st.caption("L'agent répond uniquement à partir des lignes de la base (sources officielles). Chaque réponse cite ses preuves ; "
-               "l'IA ne fait que reformuler et un garde-fou rejette tout chiffre ou pays absent des faits.")
-    examples = ["Dans quels pays LALSTOP CONTANS WG est-il homologué ?", "Comparer les usages de LALGUARD M52 OD entre la France et le Canada.",
-                "Quels champs sont incertains pour LALSTOP G46 WG ?", "Quels produits pourraient être des produits sœurs de LALSTOP G46 WG ?",
-                "Donne la source officielle de chaque donnée pour LALSTOP CONTANS WG.", "Quels produits contenant Clonostachys rosea sont homologués sur la fraise ?",
-                "Quelles autorisations expirent dans les 12 prochains mois ?", "LALSTOP CONTANS WG est-il homologué au Brésil ?"]
-    ex = st.selectbox("Exemples", [""] + examples)
-    q = st.text_area("Votre question", value=ex, height=80)
-    lang = st.radio("Langue de réponse", ["fr", "en"], horizontal=True)
-    if st.button("Interroger", type="primary") and q.strip():
-        with st.spinner("Recherche dans les sources collectées…"):
-            ans = api_post("/ask", {"question": q, "language": lang})
-        st.markdown("#### Réponse")
-        st.text(ans["answer"])
-        st.caption(f"intention : {ans['intent']} · outils : {', '.join(ans['toolsUsed']) or '—'} · formulation : {ans['model'] or 'déterministe (sans IA)'}")
-        warnings_box(ans["warnings"])
-        st.markdown(f"#### Preuves ({len(ans['evidence'])})")
-        if ans["evidence"]:
-            ev = pd.DataFrame([{"Source": e["sourceId"], "URL": e["sourceUrl"], "Collecté le": fmt_dt(e["collectedAt"]), "Validation": e["validationStatus"],
-                                "Extraction": e.get("extractionMethod"), "Extrait": (e.get("excerpt") or "")[:160]} for e in ans["evidence"]])
-            st.dataframe(ev, hide_index=True, use_container_width=True, column_config={"URL": st.column_config.LinkColumn("URL", display_text="ouvrir")})
-        else:
-            st.info("Aucune preuve : aucune donnée des sources collectées ne répond à la question. Absence de résultat ≠ absence d'homologation.")
-        with st.expander("Faits structurés utilisés par la réponse"):
+elif page == "page.ask":
+    st.title(t("ask.title"))
+    st.caption(t("ask.caption"))
+    lang = st.session_state["lang"]
+    ex = st.selectbox(t("ask.examples"), [""] + EXAMPLES.get(lang, EXAMPLES["fr"]))
+    q = st.text_area(t("ask.q"), value=ex, height=80)
+    ans_lang = st.radio(t("ask.lang"), list(LANGS), format_func=lambda k: LANGS[k], index=list(LANGS).index(lang), horizontal=True)
+    if st.button(t("ask.go"), type="primary") and q.strip():
+        with st.spinner(t("ask.spinner")):
+            ans = api_post("/ask", {"question": q, "language": ans_lang})
+        sa = ans.get("structured") or {}
+        st.markdown(f"#### {sa.get('headline') or t('ask.answer')}")
+        items = sa.get("items") or []
+        if items:
+            cols_map = [("country", t("country")), ("product", t("product")), ("registrationNumber", t("number")), ("status", t("status")), ("statusOriginal", t("status_orig")),
+                        ("expiry", t("expires")), ("relationship", t("ask.item.relationship")), ("detail", t("ask.item.detail")), ("sourceId", t("source")), ("collectedAt", t("collected"))]
+            rows = [{lbl: (st_label(it[k]) if k == "status" and it.get(k) in STATUS_COLOR else it.get(k)) for k, lbl in cols_map if any(x.get(k) for x in items)} for it in items]
+            st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
+        for cv in sa.get("caveats") or []:
+            st.markdown(f'<div class="warn">• {cv}</div>', unsafe_allow_html=True)
+        st.caption(t("ask.meta", intent=ans["intent"], tools=", ".join(ans["toolsUsed"]) or "—", model=ans["model"] or t("ask.det")))
+        other = [w for w in ans["warnings"] if w not in (sa.get("caveats") or [])]
+        warnings_box(other)
+        with st.expander(t("ask.evidence", n=len(ans["evidence"]))):
+            if ans["evidence"]:
+                ev = pd.DataFrame([{t("source"): e["sourceId"], "URL": e["sourceUrl"], t("collected"): fmt_dt(e["collectedAt"]), t("validation"): e["validationStatus"],
+                                    t("cmp.extraction"): e.get("extractionMethod"), t("ask.excerpt"): (e.get("excerpt") or "")[:160]} for e in ans["evidence"]])
+                st.dataframe(ev, hide_index=True, use_container_width=True, column_config={"URL": st.column_config.LinkColumn("URL", display_text=t("ask.open"))})
+            else:
+                st.info(t("ask.no_evidence"))
+        with st.expander(t("ask.facts")):
             st.json(ans["facts"])
-        disclaimer_box(ans["disclaimer"])
+    disclaimer_box()
 
-elif page == "Produits sœurs & revue":
-    st.title("Noms équivalents, historiques et hypothèses « produit sœur »")
+elif page == "page.sisters":
+    st.title(t("sis.title"))
     pid = product_picker("sis")
     al = api_get(f"/products/{pid}/aliases")
     if "__404__" in al:
         st.error(al["__404__"]["message"])
         st.stop()
     if not al:
-        st.info("Aucun alias ni hypothèse pour ce produit.")
+        st.info(t("sis.none"))
     else:
-        df = pd.DataFrame([{"Nom": a["aliasName"], "Relation": a["relationshipType"], "Pays": a["countryCode"] or "—", "Confiance": a["confidence"],
-                            "Statut de revue": a["reviewStatus"], "Preuve": a["evidence"], "URL": a["sourceRecordUrl"], "id": a["aliasId"]} for a in al])
-        st.caption("alternate_name / historical_name = fait officiel (même enregistrement) · related_product / confirmed_sister_product = affirmés par LPC · "
-                   "sister_product_candidate = hypothèse à confirmer · related_formulation = même souche, autre formulation. La confiance est celle de la machine, pas une validation réglementaire.")
+        df = pd.DataFrame([{t("sis.name"): a["aliasName"], t("cmp.relation"): a["relationshipType"], t("country"): a["countryCode"] or "—", t("cmp.conf"): a["confidence"],
+                            t("cmp.review"): a["reviewStatus"], t("sis.evidence"): a["evidence"], "URL": a["sourceRecordUrl"], "id": a["aliasId"]} for a in al])
+        st.caption(t("sis.caption"))
         st.dataframe(df.drop(columns=["id"]), hide_index=True, use_container_width=True, column_config=LINK)
-        st.markdown("### Revue Regulatory Affairs")
-        st.caption("Chaque changement de statut est journalisé (qui, quand, pourquoi) et visible dans /review/log.")
+        st.markdown(f"### {t('sis.review_h')}")
+        st.caption(t("sis.review_cap"))
         c1, c2, c3, c4 = st.columns([3, 2, 2, 3])
+        idx = df.set_index("id")
         with c1:
-            target = st.selectbox("Hypothèse / alias", df["id"], format_func=lambda i: f"{df.set_index('id').loc[i, 'Nom']} ({df.set_index('id').loc[i, 'Relation']}, {df.set_index('id').loc[i, 'Statut de revue']})")
+            target = st.selectbox(t("sis.target"), df["id"], format_func=lambda i: f"{idx.loc[i, t('sis.name')]} ({idx.loc[i, t('cmp.relation')]}, {idx.loc[i, t('cmp.review')]})")
         with c2:
-            new = st.selectbox("Nouveau statut", ["validated", "rejected", "to_verify", "obsolete"])
+            new = st.selectbox(t("sis.new"), ["validated", "rejected", "to_verify", "obsolete"])
         with c3:
-            reviewer = st.text_input("Relecteur", "")
+            reviewer = st.text_input(t("sis.reviewer"), "")
         with c4:
-            note = st.text_input("Justification", "")
-        if st.button("Enregistrer la décision", disabled=not reviewer):
+            note = st.text_input(t("sis.note"), "")
+        if st.button(t("sis.save"), disabled=not reviewer):
             res = api_post("/review", {"entityType": "alias", "entityId": target, "newStatus": new, "reviewer": reviewer, "note": note})
-            st.success(f"{res['entityId']} : {res['oldStatus']} → {res['newStatus']} (par {res['reviewer']})")
+            st.success(t("sis.saved", id=res["entityId"], old=res["oldStatus"], new=res["newStatus"], who=res["reviewer"]))
             api_get.clear()
         log = api_get("/review/log", {"limit": 50})
         if log:
-            st.markdown("#### Journal de revue")
+            st.markdown(f"#### {t('sis.log')}")
             st.dataframe(pd.DataFrame(log), hide_index=True, use_container_width=True)
-    disclaimer_box(None)
+    disclaimer_box()
 
-elif page == "Veille (changements, échéances)":
-    st.title("Veille : changements détectés et échéances")
-    months = st.slider("Horizon des échéances (mois)", 1, 60, 12)
+elif page == "page.watch":
+    st.title(t("watch.title"))
+    months = st.slider(t("watch.horizon"), 1, 60, 12)
     exp = api_get("/expiring", {"months": months})
-    st.markdown(f"### Autorisations expirant dans les {months} mois ({len(exp['items'])})")
+    st.markdown(f"### {t('watch.exp_h', m=months, n=len(exp['items']))}")
     if exp["items"]:
-        st.dataframe(pd.DataFrame([{"Produit": r["productName"], "Pays": r["countryCode"], "N°": r["registrationNumber"], "Expire le": r["expirationDate"],
-                                    "Jours restants": r["daysLeft"], "Statut": STATUS_LABEL.get(r["statusNormalized"], r["statusNormalized"]), "Source": r["evidence"]["sourceId"],
-                                    "URL": r["evidence"]["sourceUrl"], "Collecté le": fmt_dt(r["evidence"]["collectedAt"])} for r in exp["items"]]),
+        st.dataframe(pd.DataFrame([{t("product"): r["productName"], t("country"): r["countryCode"], t("number"): r["registrationNumber"], t("watch.expires_on"): r["expirationDate"],
+                                    t("watch.days_left"): r["daysLeft"], t("status"): st_label(r["statusNormalized"]), t("source"): r["evidence"]["sourceId"],
+                                    "URL": r["evidence"]["sourceUrl"], t("collected"): fmt_dt(r["evidence"]["collectedAt"])} for r in exp["items"]]),
                      hide_index=True, use_container_width=True, column_config=LINK)
     warnings_box(exp["warnings"])
     ch = api_get("/changes", {"limit": 300})
-    st.markdown(f"### Changements entre collectes ({len(ch)})")
-    st.caption("Comparaison champ par champ entre deux collectes d'une même source. Une ligne disparue de la source est marquée « plus listée », jamais « retirée ».")
+    st.markdown(f"### {t('watch.changes_h', n=len(ch))}")
+    st.caption(t("watch.changes_cap"))
     if ch:
-        st.dataframe(pd.DataFrame([{"Détecté le": fmt_dt(c["detectedAt"]), "Entité": c["entityId"], "Champ": c["field"], "Avant": c["oldValue"], "Après": c["newValue"],
-                                    "Snapshot": f"{c['fromSnapshotId'] or '—'} → {c['toSnapshotId']}"} for c in ch]), hide_index=True, use_container_width=True)
+        st.dataframe(pd.DataFrame([{t("watch.detected"): fmt_dt(c["detectedAt"]), t("watch.entity"): c["entityId"], t("watch.field"): c["field"], t("watch.before"): c["oldValue"],
+                                    t("watch.after"): c["newValue"], "Snapshot": f"{c['fromSnapshotId'] or '—'} → {c['toSnapshotId']}"} for c in ch]),
+                     hide_index=True, use_container_width=True)
     else:
-        st.info("Aucun changement : il faut au moins deux collectes de la même source.")
-    disclaimer_box(None)
+        st.info(t("watch.no_changes"))
+    disclaimer_box()
 
-elif page == "Registre interne LPC":
-    st.title("Rapprochement du registre interne LPC avec les sources officielles")
-    st.caption("LPC a partagé la structure de sa liste SharePoint (pas les données). Chargez un export CSV/XLSX de cette liste, ou utilisez l'échantillon "
-               "fictif (is_synthetic=true). Chaque ligne est normalisée (pays → ISO, « 12/31/2999 » → sans échéance, statut commercial séparé du statut réglementaire, "
-               "actifs en texte libre → espèce + souche) puis rapprochée d'un enregistrement officiel par numéro, sinon par nom. Les écarts sont signalés, jamais corrigés.")
-    up = st.file_uploader("Export de la liste SharePoint (CSV ou XLSX)", type=["csv", "xlsx"])
+elif page == "page.registry":
+    st.title(t("reg.title"))
+    st.caption(t("reg.caption"))
+    up = st.file_uploader(t("reg.upload"), type=["csv", "xlsx"])
     if up is not None:
         r = httpx.post(f"{API}/registry/reconcile", files={"file": (up.name, up.getvalue())}, timeout=300)
         if r.status_code != 200:
@@ -577,55 +604,54 @@ elif page == "Registre interne LPC":
         rep = r.json()
     else:
         rep = api_get("/registry/reconcile/sample")
-        st.info("Échantillon fictif chargé (11 lignes, is_synthetic=true). Déposez un fichier pour rapprocher vos propres lignes.")
+        st.info(t("reg.sample"))
     c = rep["counts"]
     k1, k2, k3, k4, k5 = st.columns(5)
-    k1.metric("Lignes", rep["total"]); k2.metric("Trouvées par n°", c["matched_by_number"]); k3.metric("Trouvées par nom", c["matched_by_name"])
-    k4.metric("Non trouvées dans la source", c["not_found_in_source"]); k5.metric("Écarts à examiner", c["discrepancies"])
+    k1.metric(t("reg.rows"), rep["total"]); k2.metric(t("reg.by_number"), c["matched_by_number"]); k3.metric(t("reg.by_name"), c["matched_by_name"])
+    k4.metric(t("reg.not_found"), c["not_found_in_source"]); k5.metric(t("reg.disc"), c["discrepancies"])
     table = []
     for x in rep["rows"]:
-        disc = [f"{cmp['field']}: registre « {cmp['registry']} » vs officiel « {cmp['official']} »" for cmp in x["comparison"] if cmp["verdict"] == "discrepancy"]
+        disc = [t("reg.disc_fmt", f=cmp["field"], r=cmp["registry"], o=cmp["official"]) for cmp in x["comparison"] if cmp["verdict"] == "discrepancy"]
         off = x["official"] or {}
-        table.append({"#": x["row"], "Titre (registre)": x["title"], "Pays": f"{x['country_original']} → {x['country_code'] or '?'}",
-                      "N° (registre)": x["registration_number_original"], "Statut registre": f"{x['status_original']} → {x['status_normalized']}",
-                      "Échéance registre": x["expiration_date"] or ("sans échéance (2999)" if "no_expiry_convention" in x["flags"] else x["expiration_date_original"] or "—"),
-                      "Rapprochement": x["match"], "Produit officiel": off.get("productName") or "—", "N° officiel": off.get("registrationNumber") or "—",
-                      "Statut officiel": off.get("statusNormalized") or "—", "Échéance officielle": off.get("expirationDate") or "—",
-                      "Écarts": "; ".join(disc) or "—", "Drapeaux": ", ".join(x["flags"]) or "—",
-                      "Source": (x["evidence"] or {}).get("sourceId") or "—", "Collecté le": fmt_dt((x["evidence"] or {}).get("collectedAt")), "URL": (x["evidence"] or {}).get("sourceUrl")})
+        table.append({"#": x["row"], t("reg.title_col"): x["title"], t("country"): f"{x['country_original']} → {x['country_code'] or '?'}",
+                      t("reg.num_col"): x["registration_number_original"], t("reg.status_col"): f"{x['status_original']} → {x['status_normalized']}",
+                      t("reg.exp_col"): x["expiration_date"] or (t("reg.noexp") if "no_expiry_convention" in x["flags"] else x["expiration_date_original"] or "—"),
+                      t("reg.match"): x["match"], t("reg.off_product"): off.get("productName") or "—", t("reg.off_num"): off.get("registrationNumber") or "—",
+                      t("reg.off_status"): off.get("statusNormalized") or "—", t("reg.off_exp"): off.get("expirationDate") or "—",
+                      t("reg.disc_col"): "; ".join(disc) or "—", t("reg.flags"): ", ".join(x["flags"]) or "—",
+                      t("source"): (x["evidence"] or {}).get("sourceId") or "—", t("collected"): fmt_dt((x["evidence"] or {}).get("collectedAt")), "URL": (x["evidence"] or {}).get("sourceUrl")})
     st.dataframe(pd.DataFrame(table), hide_index=True, use_container_width=True, column_config=LINK)
-    with st.expander("Lignes normalisées (valeurs originales conservées) et détail des comparaisons"):
+    with st.expander(t("reg.raw")):
         st.json(rep["rows"])
     warnings_box(rep["warnings"])
     st.markdown("---")
-    st.markdown("**Modèle cible Dataverse** (schema/dataverse_tables.xlsx) : la base peut être exportée dans cette structure.")
+    st.markdown(t("reg.dv_h"))
     v = api_get("/export/dataverse-validation")
-    st.caption(f"Validation de l'export contre le classeur : {'conforme' if v['ok'] else 'écarts : ' + ', '.join(v['errors'])} · "
-               + " · ".join(f"{t} {i['rows']} lignes" for t, i in v["tables"].items()))
+    res = t("reg.dv_ok") if v["ok"] else t("reg.dv_bad", t=", ".join(v["errors"]))
+    st.caption(t("reg.dv_val", res=res, tables=" · ".join(f"{tb} {i['rows']} {t('reg.dv_rows')}" for tb, i in v["tables"].items())))
     e1, e2 = st.columns(2)
     with e1:
-        st.download_button("Export Dataverse (zip de CSV, un par table)", data=httpx.get(f"{API}/export/dataverse.zip", timeout=300).content,
-                           file_name="lpc_dataverse_export.zip", mime="application/zip")
+        st.download_button(t("reg.dv_zip"), data=httpx.get(f"{API}/export/dataverse.zip", timeout=300).content, file_name="lpc_dataverse_export.zip", mime="application/zip")
     with e2:
-        st.download_button("Export Dataverse (classeur Excel)", data=httpx.get(f"{API}/export/dataverse.xlsx", timeout=300).content,
-                           file_name="lpc_dataverse_export.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        st.download_button(t("reg.dv_xlsx"), data=httpx.get(f"{API}/export/dataverse.xlsx", timeout=300).content, file_name="lpc_dataverse_export.xlsx",
+                           mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     disclaimer_box(rep["disclaimer"])
 
-elif page == "Sources & qualité":
-    st.title("Sources officielles, licences et qualité des données")
+elif page == "page.sources":
+    st.title(t("src.title"))
     src = api_get("/sources")
-    df = pd.DataFrame([{"Source": s["sourceId"], "Nom officiel": s["officialName"], "Région": s["countryOrRegion"], "Accès": s["accessMethod"], "Format": s["dataFormat"],
-                        "Licence": s["licenseName"], "Limites": s["accessAndReuseLimits"], "Enregistrements": s["registrations"], "Dernière collecte": fmt_dt(s["lastCollectedAt"]),
-                        "URL": s["baseUrl"]} for s in src["items"]])
-    st.dataframe(df, hide_index=True, use_container_width=True, column_config={"URL": st.column_config.LinkColumn("URL", display_text="ouvrir")})
-    st.markdown("### Champs manquants ou incertains par produit")
+    df = pd.DataFrame([{t("source"): s["sourceId"], t("src.name"): s["officialName"], t("src.region"): s["countryOrRegion"], t("src.access"): s["accessMethod"],
+                        t("src.format"): s["dataFormat"], t("src.licence"): s["licenseName"], t("src.limits"): s["accessAndReuseLimits"], t("registrations"): s["registrations"],
+                        t("src.last"): fmt_dt(s["lastCollectedAt"]), "URL": s["baseUrl"]} for s in src["items"]])
+    st.dataframe(df, hide_index=True, use_container_width=True, column_config={"URL": st.column_config.LinkColumn("URL", display_text=t("ask.open"))})
+    st.markdown(f"### {t('src.quality_h')}")
     pid = product_picker("dq")
     dq = api_get(f"/products/{pid}/quality")
     if "__404__" not in dq:
-        st.dataframe(pd.DataFrame([{"Enregistrement": i["registrationId"], "Pays": i["countryCode"], "Statut": i["statusNormalized"], "Validation": i["validationStatus"],
-                                    "Appariement": ", ".join(i["pairing"]), "Manquant / incertain": "; ".join(i["missingOrUncertain"]) or "—"} for i in dq["registrations"]]),
-                     hide_index=True, use_container_width=True)
+        st.dataframe(pd.DataFrame([{t("src.registration"): i["registrationId"], t("country"): i["countryCode"], t("status"): st_label(i["statusNormalized"]),
+                                    t("validation"): i["validationStatus"], t("cmp.pairing"): ", ".join(i["pairing"]), t("src.missing"): "; ".join(i["missingOrUncertain"]) or "—"}
+                                   for i in dq["registrations"]]), hide_index=True, use_container_width=True)
         warnings_box(dq["warnings"])
-    st.markdown("### Export complet")
-    st.download_button("Toute la base (CSV)", data=httpx.get(f"{API}/export.csv", timeout=180).content, file_name="lpc_regwatch_all.csv", mime="text/csv")
+    st.markdown(f"### {t('src.export_h')}")
+    st.download_button(t("src.export_all"), data=httpx.get(f"{API}/export.csv", timeout=180).content, file_name="lpc_regwatch_all.csv", mime="text/csv")
     disclaimer_box(src["disclaimer"])

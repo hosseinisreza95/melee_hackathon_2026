@@ -43,7 +43,7 @@ python scripts/build_submission.py                   # output/submission.json �
 python scripts/export_dataverse.py                   # output/dataverse/*.csv in the LPC Dataverse model, validated against schema/dataverse_tables.xlsx
 python scripts/serve_api.py                          # http://localhost:8000/docs
 streamlit run src/lpc_regwatch/ui/app.py             # http://localhost:8501
-pytest -q                                            # 59 tests: schema, collectors (offline), parsers, normalisation, label gate, API, gold T01–T05 + jury-style questions, blind real-data checks
+pytest -q                                            # 90+ tests: schema, collectors (offline), parsers, normalisation, label gate, API, gold T01–T05 + jury-style questions, Dataverse/registry, headless UI in FR/EN/PT, blind real-data checks
 ```
 
 Docker (production-style stack: PostgreSQL + API + UI + Caddy, one public port): see [infra/README.md](infra/README.md).

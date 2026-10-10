@@ -138,6 +138,7 @@ class Answer(Camel):
     intent: str | None = None  # ext
     toolsUsed: list[str] = Field(default_factory=list)  # ext
     model: str | None = None  # ext: null when answered deterministically
+    structured: dict | None = None  # ext: {headline, items[], caveats[]} (answer_model.StructuredAnswer)
 
 
 class ReviewRequest(BaseModel):

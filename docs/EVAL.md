@@ -53,6 +53,13 @@ What the AI rows look like downstream: `pairing=llm_paired`, `extraction_method=
 
 ## 2. Grounded answers (`POST /ask`)
 
+Answer shape (since 2026-10-10 evening): a Pydantic `StructuredAnswer` — `headline` (one or two sentences that answer the question),
+`items` (only the rows that support it, only the fields that matter: country, number, status, expiry, a short detail such as
+"Fraisier → pourriture grise, 0.25 kg/ha") and up to four `caveats`. The deterministic builder produces it from the facts; when a
+key is configured the model receives the same facts plus the JSON schema and may only re-select and re-phrase; the grounding guard
+runs on the flattened text. The UI renders headline, a compact table and the caveats; evidence and raw facts stay in expanders.
+Languages: French, English, Portuguese (planner words, labels and the model's output language).
+
 - Deterministic path (no key): 100 % of the facts come from predefined queries; tests `tests/test_gold.py` (T01–T05 + adversarial +
   other products/countries/crops) pass offline.
 - LLM phrasing (gpt-5-mini on the server): the model receives only the facts and a deterministic draft. The grounding guard rejects any

@@ -23,24 +23,25 @@ from ..db.models import Product, ProductAlias
 from ..llm import LLMUnavailable, get_client
 from ..parsers.base import norm_name
 from . import queries as Q
+from .answer_model import SCHEMA as ANSWER_SCHEMA, AnswerItem, StructuredAnswer
 
 log = logging.getLogger(__name__)
 
 COUNTRY_WORDS = {
-    "CA": ["canada", "canadian", "canadien", "canadienne"], "US": ["usa", "united states", "u.s.", "etats-unis", "états-unis", "etats unis", "american", "américain", "epa"],
-    "FR": ["france", "french", "français", "francais", "française", "anses", "e-phy", "ephy"], "BR": ["brazil", "brésil", "bresil", "brazilian", "brésilien", "agrofit"],
+    "CA": ["canada", "canadian", "canadien", "canadienne", "canadá"], "US": ["usa", "united states", "u.s.", "etats-unis", "états-unis", "etats unis", "american", "américain", "epa", "estados unidos", "eua"],
+    "FR": ["france", "french", "français", "francais", "française", "anses", "e-phy", "ephy", "frança", "francês"], "BR": ["brazil", "brésil", "bresil", "brazilian", "brésilien", "agrofit", "brasil", "brasileiro"],
     "DE": ["germany", "allemagne", "german", "allemand"], "BE": ["belgium", "belgique"], "MX": ["mexico", "mexique"], "UY": ["uruguay"],
     "ES": ["spain", "espagne"], "IT": ["italy", "italie"], "NL": ["netherlands", "pays-bas"], "GB": ["united kingdom", "royaume-uni", "uk"],
 }
 INTENTS = {
-    "sister_product": [r"\bs[oœ]urs?\b", r"\bsister", r"jumeau", r"équivalent", r"equivalent", r"même produit", r"same product", r"candidat"],
+    "sister_product": [r"\bs[oœ]urs?\b", r"\bsister", r"jumeau", r"irmã", r"irmão", r"équivalent", r"equivalent", r"même produit", r"same product", r"candidat"],
     "data_quality": [r"incertain", r"uncertain", r"manquant", r"missing", r"absent", r"qualit", r"valid", r"confiance", r"confidence", r"fiab"],
     "expiry": [r"expir", r"échéance", r"echeance", r"renouvel", r"renew", r"fin de validité"],
     "source": [r"source", r"preuve", r"evidence", r"d'où", r"provenance", r"citation", r"url"],
     "changes": [r"chang", r"nouveaut", r"what's new", r"modif", r"diff"],
     "ingredient_search": [r"contenant", r"containing", r"contain", r"à base de", r"based on", r"microorganism", r"micro-organisme", r"souche", r"strain", r"espèce", r"species", r"same active", r"même (?:micro|substance|matière)"],
     "use_comparison": [r"compar", r"usages?", r"\buses?\b", r"dose", r"culture", r"crop", r"cible", r"target", r"restriction", r"différence", r"difference", r"label", r"étiquette", r"délai"],
-    "registration_lookup": [r"homologu", r"register", r"enregistr", r"autoris", r"approv", r"quels pays", r"which countr", r"où ", r"where", r"status", r"statut", r"licen"],
+    "registration_lookup": [r"homologu", r"register", r"enregistr", r"autoris", r"approv", r"quels pays", r"which countr", r"où ", r"where", r"status", r"statut", r"licen", r"registrad", r"quais países", r"onde"],
 }
 SPECIES_STATIC = ["Coniothyrium minitans", "Clonostachys rosea", "Gliocladium catenulatum", "Metarhizium brunneum", "Metarhizium anisopliae",
                   "Beauveria bassiana", "Trichoderma", "Bacillus", "Streptomyces", "Cordyceps javanica"]
@@ -240,70 +241,207 @@ def run_tools(session: Session, pl: Plan) -> tuple[list[dict], list[dict], list[
 
 
 # --------------------------------------------------------------------------- 3. template answer (always available)
+LBL = {
+    "fr": {"sisters": "Hypothèses de produits sœurs (à confirmer) : ", "none": "aucune", "official": "Noms officiels équivalents (même enregistrement) : ", "conf": "confiance",
+           "status_w": "statut", "vstatus": "statut de validation", "missing": "champs manquants/incertains", "expires": "expire le", "days": "jours", "no": "n°",
+           "uses": "usages", "source": "source", "collected": "collectée le", "validation": "validation", "related": "Produits liés (produits distincts, jamais fusionnés) :",
+           "uses_h": "Usages (extrait) :", "nodose": "dose non structurée", "phi": "DAR", "maxapp": "appl. max",
+           "nothing": "Aucune donnée trouvée dans les sources collectées pour cette question. Absence de résultat ≠ absence d'homologation."},
+    "en": {"sisters": "Sister-product hypotheses (to confirm): ", "none": "none", "official": "Official equivalent names (same registration): ", "conf": "confidence",
+           "status_w": "status", "vstatus": "validation status", "missing": "missing/uncertain", "expires": "expires on", "days": "days", "no": "no.",
+           "uses": "uses", "source": "source", "collected": "collected", "validation": "validation", "related": "Related products (distinct products, never merged):",
+           "uses_h": "Uses (excerpt):", "nodose": "dose not in structured source", "phi": "PHI", "maxapp": "max appl.",
+           "nothing": "No data found in the collected sources for this question. No result is not proof of no registration."},
+    "pt": {"sisters": "Hipóteses de produtos irmãos (a confirmar): ", "none": "nenhuma", "official": "Nomes oficiais equivalentes (mesmo registro): ", "conf": "confiança",
+           "status_w": "situação", "vstatus": "estado de validação", "missing": "campos ausentes/incertos", "expires": "expira em", "days": "dias", "no": "nº",
+           "uses": "usos", "source": "fonte", "collected": "coletada em", "validation": "validação", "related": "Produtos relacionados (produtos distintos, nunca fundidos):",
+           "uses_h": "Usos (extrato):", "nodose": "dose não estruturada na fonte", "phi": "carência", "maxapp": "aplic. máx.",
+           "nothing": "Nenhum dado encontrado nas fontes coletadas para esta pergunta. Ausência de resultado ≠ ausência de registro."},
+}
+
+
 def template_answer(pl: Plan, facts: list[dict], warnings: list[str], language: str) -> str:
-    fr = language.lower().startswith("fr")
+    lang = (language or "fr").lower()[:2]
+    L = LBL.get(lang, LBL["en"])
+    fr = lang == "fr"
     regs = [f for f in facts if f["type"] == "registration"]
     lines: list[str] = []
     if pl.intent == "sister_product":
         al = [f for f in facts if f["type"] == "alias"]
         cands = [a for a in al if a["relationshipType"] in ("sister_product_candidate", "related_formulation")]
         offi = [a for a in al if a["relationshipType"] in ("alternate_name", "historical_name")]
-        lines.append(("Hypothèses de produits sœurs (à confirmer) : " if fr else "Sister-product hypotheses (to confirm): ") + (", ".join(
-            f"{a['aliasName']} [{a['relationshipType']}, confiance {a['confidence']}, statut {a['reviewStatus']}]" for a in cands) or ("aucune" if fr else "none")))
+        lines.append(L["sisters"] + (", ".join(f"{a['aliasName']} [{a['relationshipType']}, {L['conf']} {a['confidence']}, {L['status_w']} {a['reviewStatus']}]" for a in cands) or L["none"]))
         if offi:
-            lines.append(("Noms officiels équivalents (même enregistrement) : " if fr else "Official equivalent names (same registration): ") + ", ".join(f"{a['aliasName']} ({a['countryCode'] or '-'})" for a in offi))
+            lines.append(L["official"] + ", ".join(f"{a['aliasName']} ({a['countryCode'] or '-'})" for a in offi))
     elif pl.intent == "data_quality":
         for f in facts:
             if f["type"] == "data_quality":
-                lines.append(f"{f['country']} {f['registrationId']}: {'statut de validation' if fr else 'validation status'} = {f['validationStatus']}; "
-                             f"{'champs manquants/incertains' if fr else 'missing/uncertain'} = {', '.join(f['missingOrUncertain']) or '-'}")
+                lines.append(f"{f['country']} {f['registrationId']}: {L['vstatus']} = {f['validationStatus']}; {L['missing']} = {', '.join(f['missingOrUncertain']) or '-'}")
     elif pl.intent == "expiry":
         for f in regs:
-            lines.append(f"{f['product']} — {f['country']} {f['registrationNumber']}: {'expire le' if fr else 'expires on'} {f['expirationDate']} ({f.get('daysLeft')} {'jours' if fr else 'days'}) — {f['sourceId']}")
+            lines.append(f"{f['product']} — {f['country']} {f['registrationNumber']}: {L['expires']} {f['expirationDate']} ({f.get('daysLeft')} {L['days']}) — {f['sourceId']}")
     elif pl.intent == "changes":
         for f in facts[:20]:
             lines.append(f"{f.get('entityId')}: {f.get('field')} {f.get('oldValue')!r} -> {f.get('newValue')!r} ({'snapshot' if fr else 'snapshot'} {f.get('fromSnapshotId')}->{f.get('toSnapshotId')})")
     else:
         for f in regs:
-            lines.append(f"{f['product']} — {Q.COUNTRY_NAMES.get(f['country'], f['country'])} ({f['country']}): {'n°' if fr else 'no.'} {f['registrationNumber']}, "
-                         f"{'statut' if fr else 'status'} {f['statusNormalized']} (« {f['statusOriginal']} »), "
-                         f"{f['usesCount']} {'usages' if fr else 'uses'}, {'source' if fr else 'source'} {f['sourceId']} "
-                         f"{'collectée le' if fr else 'collected'} {f['collectedAt'][:10]}, {'validation' if fr else 'validation'}: {f['validationStatus']}")
+            lines.append(f"{f['product']} — {Q.COUNTRY_NAMES.get(f['country'], f['country'])} ({f['country']}): {L['no']} {f['registrationNumber']}, "
+                         f"{L['status_w']} {f['statusNormalized']} (« {f['statusOriginal']} »), {f['usesCount']} {L['uses']}, {L['source']} {f['sourceId']} "
+                         f"{L['collected']} {f['collectedAt'][:10]}, {L['validation']}: {f['validationStatus']}")
         for f in facts:
             if f["type"] == "coverage":
                 lines.append(f"{f['product']} — {Q.COUNTRY_NAMES.get(f['country'], f['country'])} ({f['country']}): {f['note']}")
         rel = [f for f in facts if f["type"] == "related_registration"]
         if rel:
             lines.append("")
-            lines.append("Produits liés (produits distincts, jamais fusionnés) :" if fr else "Related products (distinct products, never merged):")
+            lines.append(L["related"])
             for f in rel:
                 lines.append(f"  {f['relatedProduct']} [{f['relationship']}, {f['reviewStatus']}] — {Q.COUNTRY_NAMES.get(f['country'], f['country'])} "
-                             f"({f['country']}): {'n°' if fr else 'no.'} {f['registrationNumber']}, {f['statusNormalized']} (« {f['statusOriginal']} »), "
-                             f"{f['sourceId']} {f['collectedAt'][:10]}")
+                             f"({f['country']}): {L['no']} {f['registrationNumber']}, {f['statusNormalized']} (« {f['statusOriginal']} »), {f['sourceId']} {f['collectedAt'][:10]}")
         uses = [f for f in facts if f["type"] == "use"]
         if uses:
             lines.append("")
-            lines.append("Usages (extrait) :" if fr else "Uses (excerpt):")
+            lines.append(L["uses_h"])
             for u in uses[:24]:
-                dose = f"{u['dose']} {u['doseUnit']}" if u.get("dose") is not None else ("dose non structurée" if fr else "dose not in structured source")
+                dose = f"{u['dose']} {u['doseUnit']}" if u.get("dose") is not None else L["nodose"]
                 lines.append(f"  {u['country']} {u['registrationNumber']}: {u.get('crop')} → {u.get('target')} | {dose}"
-                             + (f" | PHI {u['phiDays']} j" if u.get("phiDays") is not None else "") + (f" | max {u['maxApplications']} appl." if u.get("maxApplications") else "")
+                             + (f" | {L['phi']} {u['phiDays']} j" if u.get("phiDays") is not None else "") + (f" | {L['maxapp']} {u['maxApplications']}" if u.get("maxApplications") else "")
                              + (f" | {u['pairing']}" if u.get("pairing") and u["pairing"] != "source_paired" else ""))
     if not lines:
-        lines.append("Aucune donnée trouvée dans les sources collectées pour cette question. Absence de résultat ≠ absence d'homologation." if fr
-                     else "No data found in the collected sources for this question. No result is not proof of no registration.")
+        lines.append(L["nothing"])
     return "\n".join(lines)
 
 
+
+# --------------------------------------------------------------------------- 3b. structured answer (deterministic)
+def build_structured(pl: Plan, facts: list[dict], warnings: list[str], language: str) -> StructuredAnswer:
+    """Compact, question-shaped answer from the facts: one headline, only the relevant rows, short caveats."""
+    lang = (language or "fr").lower()[:2]
+    L = LBL.get(lang, LBL["en"])
+    H = HEAD.get(lang, HEAD["en"])
+    regs = [f for f in facts if f["type"] == "registration"]
+    cov = [f for f in facts if f["type"] == "coverage"]
+    rel = [f for f in facts if f["type"] == "related_registration"]
+    items: list[AnswerItem] = []
+    caveats: list[str] = []
+    name = regs[0]["product"] if regs else (cov[0]["product"] if cov else None)
+
+    def item_from_reg(f, detail=None):
+        return AnswerItem(country=f["country"], product=f.get("product"), registrationNumber=f.get("registrationNumber"), status=f.get("statusNormalized"),
+                          statusOriginal=f.get("statusOriginal"), expiry=f.get("expirationDate"), detail=detail, sourceId=f.get("sourceId"),
+                          collectedAt=(f.get("collectedAt") or "")[:10] or None)
+
+    if pl.intent == "sister_product":
+        al = [f for f in facts if f["type"] == "alias"]
+        cands = [a for a in al if a["relationshipType"] in ("sister_product_candidate", "related_formulation", "confirmed_sister_product", "related_product")]
+        for a in cands[:12]:
+            items.append(AnswerItem(product=a["aliasName"], country=a.get("countryCode"), relationship=f"{a['relationshipType']} · {a['reviewStatus']} · {L['conf']} {a['confidence']}",
+                                    detail=(a.get("evidence") or "")[:160] or None, sourceId=None))
+        n_conf = sum(1 for a in cands if a["reviewStatus"] == "validated")
+        headline = H["sisters"].format(product=al[0]["product"] if al else "", n=len(cands), nc=n_conf)
+        caveats.append(H["sisters_caveat"])
+    elif pl.intent == "data_quality":
+        dq = [f for f in facts if f["type"] == "data_quality"]
+        for f in dq:
+            items.append(AnswerItem(country=f["country"], product=f.get("product"), registrationNumber=f["registrationId"].split("-", 2)[-1], status=f["validationStatus"],
+                                    detail=", ".join(f["missingOrUncertain"]) or "—"))
+        headline = H["quality"].format(product=dq[0]["product"] if dq else "", n=len(dq))
+    elif pl.intent == "expiry":
+        for f in regs[:12]:
+            items.append(item_from_reg(f, detail=f"{f.get('daysLeft')} {L['days']}" if f.get("daysLeft") is not None else None))
+        headline = H["expiry"].format(n=len(regs), m=pl.months)
+    elif pl.intent == "changes":
+        ch = [f for f in facts if f["type"] == "change"]
+        for f in ch[:12]:
+            items.append(AnswerItem(registrationNumber=f.get("entityId"), detail=f"{f.get('field')}: {f.get('oldValue')} → {f.get('newValue')}", collectedAt=(f.get("detectedAt") or "")[:10]))
+        headline = H["changes"].format(n=len(ch))
+    elif pl.intent in ("ingredient_search",):
+        for f in regs[:12]:
+            uses = [u for u in facts if u["type"] == "use" and u.get("registrationNumber") == f["registrationNumber"]]
+            det = "; ".join(f"{u.get('crop')} → {u.get('target')}" + (f", {u['dose']} {u['doseUnit']}" if u.get("dose") is not None else "") for u in uses[:2]) or None
+            items.append(item_from_reg(f, detail=det))
+        headline = H["ingredient"].format(species=pl.species or "", crop=f" · {pl.crop}" if pl.crop else "", n=len(regs), nc=len({f["country"] for f in regs}))
+    else:  # registration_lookup, use_comparison, source
+        for f in regs[:12]:
+            if pl.intent == "use_comparison":
+                uses = [u for u in facts if u["type"] == "use" and u.get("registrationNumber") == f["registrationNumber"]
+                        and (u.get("target") or "").strip().upper() not in ("NO PEST", "")]
+                nodose_all = bool(uses) and all(u.get("dose") is None for u in uses)
+                short = lambda x, n=38: (x or "")[:n] + ("…" if x and len(x) > n else "")  # noqa: E731
+                det = "; ".join(f"{short(u.get('crop'))} → {short(u.get('target'), 30)}" + (f", {u['dose']} {u['doseUnit']}" if u.get("dose") is not None else "") for u in uses[:3])
+                det = (det + (f" … +{len(uses) - 3}" if len(uses) > 3 else "") + (f" · {L['nodose']}" if nodose_all else "")) or None
+            else:
+                det = f"{f.get('usesCount')} {L['uses']}" if f.get("usesCount") is not None else None
+            items.append(item_from_reg(f, detail=det))
+        for c in cov:
+            items.append(AnswerItem(country=c["country"], product=c.get("product"), status=c["coverage"], detail=H["cov_" + c["coverage"]], sourceId=None))
+        for r in rel[:6]:
+            items.append(AnswerItem(country=r["country"], product=r["relatedProduct"], registrationNumber=r.get("registrationNumber"), status=r.get("statusNormalized"),
+                                    statusOriginal=r.get("statusOriginal"), relationship=f"{r['relationship']} · {r['reviewStatus']}", sourceId=r.get("sourceId"),
+                                    collectedAt=(r.get("collectedAt") or "")[:10]))
+        found = sorted({f["country"] for f in regs})
+        not_found = sorted({c["country"] for c in cov if c["coverage"] == "not_found_in_source"})
+        no_src = sorted({c["country"] for c in cov if c["coverage"] == "source_not_collected"})
+        if regs:
+            headline = H["lookup"].format(product=name or "", countries=", ".join(found), n=len(regs))
+            if not_found:
+                headline += " " + H["lookup_nf"].format(countries=", ".join(not_found))
+            if no_src:
+                headline += " " + H["lookup_ns"].format(countries=", ".join(no_src))
+        elif cov:
+            headline = H["lookup_none"].format(product=name or "", nf=", ".join(not_found) or "—", ns=", ".join(no_src) or "—")
+        else:
+            headline = L["nothing"]
+        if pl.intent == "use_comparison" and regs:
+            headline = H["compare"].format(product=name or "", countries=", ".join(found), n=sum(f.get("usesCount") or 0 for f in regs))
+    for w in warnings:
+        if len(caveats) >= 4:
+            break
+        if any(k in w for k in ("not proof", "dose is not", "two independent lists", "AI model", "hypotheses", "no source connected")):
+            caveats.append(w)
+    return StructuredAnswer(headline=headline, items=items[:12], caveats=caveats[:4])
+
+
+HEAD = {
+    "fr": {"lookup": "{product} : {n} enregistrement(s) trouvé(s) dans les sources officielles collectées pour {countries}.",
+           "lookup_nf": "Non trouvé dans la source officielle de : {countries} (≠ non homologué).", "lookup_ns": "Aucune source connectée pour : {countries}.",
+           "lookup_none": "{product} : aucun enregistrement dans les sources collectées (non trouvé : {nf} ; source non connectée : {ns}). Ce n'est pas une preuve d'absence d'homologation.",
+           "compare": "{product} : usages comparés pour {countries} ({n} usages au total).", "sisters": "{product} : {n} produit(s) lié(s) ou sœur(s), dont {nc} confirmé(s) par LPC ; le reste est une hypothèse à confirmer.",
+           "sisters_caveat": "Les candidats sont des hypothèses tant qu'un relecteur ne les a pas validés.", "quality": "{product} : {n} enregistrement(s) ; champs manquants ou incertains listés par pays.",
+           "expiry": "{n} autorisation(s) active(s) expirent dans les {m} prochains mois (sources avec date : Canada, France).", "changes": "{n} changement(s) détecté(s) entre deux collectes.",
+           "ingredient": "{species}{crop} : {n} enregistrement(s) dans {nc} pays.",
+           "cov_not_found_in_source": "non trouvé dans la source officielle collectée — pas une preuve d'absence", "cov_source_not_collected": "aucune source officielle connectée — inconnu"},
+    "en": {"lookup": "{product}: {n} registration(s) found in the collected official sources for {countries}.",
+           "lookup_nf": "Not found in the official source of: {countries} (≠ not registered).", "lookup_ns": "No source connected for: {countries}.",
+           "lookup_none": "{product}: no registration in the collected sources (not found: {nf}; source not connected: {ns}). This is not proof of no registration.",
+           "compare": "{product}: uses compared for {countries} ({n} uses in total).", "sisters": "{product}: {n} related or sister product(s), {nc} confirmed by LPC; the rest are hypotheses to confirm.",
+           "sisters_caveat": "Candidates remain hypotheses until a reviewer validates them.", "quality": "{product}: {n} registration(s); missing or uncertain fields listed per country.",
+           "expiry": "{n} active authorisation(s) expire within the next {m} months (sources with dates: Canada, France).", "changes": "{n} change(s) detected between two collections.",
+           "ingredient": "{species}{crop}: {n} registration(s) in {nc} countries.",
+           "cov_not_found_in_source": "not found in the collected official source — not proof of absence", "cov_source_not_collected": "no official source connected — unknown"},
+    "pt": {"lookup": "{product}: {n} registro(s) encontrado(s) nas fontes oficiais coletadas para {countries}.",
+           "lookup_nf": "Não encontrado na fonte oficial de: {countries} (≠ não registrado).", "lookup_ns": "Nenhuma fonte conectada para: {countries}.",
+           "lookup_none": "{product}: nenhum registro nas fontes coletadas (não encontrado: {nf}; fonte não conectada: {ns}). Isto não prova ausência de registro.",
+           "compare": "{product}: usos comparados para {countries} ({n} usos no total).", "sisters": "{product}: {n} produto(s) relacionado(s) ou irmão(s), {nc} confirmado(s) pela LPC; o restante são hipóteses a confirmar.",
+           "sisters_caveat": "Os candidatos permanecem hipóteses até que um revisor os valide.", "quality": "{product}: {n} registro(s); campos ausentes ou incertos listados por país.",
+           "expiry": "{n} autorização(ões) ativa(s) vencem nos próximos {m} meses (fontes com data: Canadá, França).", "changes": "{n} mudança(s) detectada(s) entre duas coletas.",
+           "ingredient": "{species}{crop}: {n} registro(s) em {nc} países.",
+           "cov_not_found_in_source": "não encontrado na fonte oficial coletada — não prova ausência", "cov_source_not_collected": "nenhuma fonte oficial conectada — desconhecido"},
+}
+
 # --------------------------------------------------------------------------- 4. LLM phrasing + guard
-SYSTEM = """You are the answer writer of a regulatory-watch prototype for plant protection products.
-You receive FACTS (database rows from official sources) and WARNINGS. Write a concise answer in the requested language.
-Absolute rules:
-- Use ONLY the facts given. Never add a country, product, number, date, dose or status that is not in FACTS.
-- If facts are empty or do not answer the question, say so and say that no result is not proof of no registration.
-- Keep original wording in quotes when you cite a status or a dose; mention the source id and collection date for each registration.
-- Never present a sister-product candidate as a confirmed equivalent; say 'hypothesis' / 'à confirmer'.
-- Do not give advice on product use. Max 220 words. Plain text, no markdown tables."""
+SYSTEM = """You are the answer writer of a regulatory-watch prototype for plant protection products, used by Regulatory Affairs.
+You receive the QUESTION, FACTS (rows from official sources, already filtered) and WARNINGS, plus a DRAFT built deterministically.
+Return a JSON object matching the schema (headline, items, caveats) in the requested language.
+Rules:
+- headline: answer the question directly in one or two sentences. No row dump, no list of columns.
+- items: ONLY the rows that support the headline, and in each item ONLY the fields that matter for this question
+  (e.g. for 'in which countries' -> country, registrationNumber, status, expiry; for a use comparison -> crop → target, dose; for sister products -> relationship).
+  Keep product names, numbers, dates, statuses and doses exactly as written in FACTS. Max 12 items.
+- caveats: at most 4 short sentences from WARNINGS that the reader must know (dose not in structured source, unpaired lists, not proof of absence, hypothesis).
+- Never add a country, product, number, date, dose or status that is not in FACTS. If FACTS are empty, say that nothing was found and that this is not proof of no registration.
+- A sister-product candidate is a hypothesis unless its review status is 'validated'.
+- No advice on product use."""
 
 
 def _numbers(text: str) -> set[str]:
@@ -327,21 +465,24 @@ def guard(llm_text: str, facts: list[dict], warnings: list[str]) -> tuple[bool, 
 def ask(session: Session, question: str, language: str = "fr") -> dict:
     pl = plan(session, question)
     facts, evidence, warnings, tools = run_tools(session, pl)
-    text = template_answer(pl, facts, warnings, language)
+    structured = build_structured(pl, facts, warnings, language)
+    text = structured.to_text(language)
     model = None
     if settings.ai_enabled and facts:
         try:
             client = get_client()
             user = (f"QUESTION ({language}): {question}\n\nFACTS (JSON rows):\n{json.dumps(facts[:60], ensure_ascii=False, default=str)}\n\n"
-                    f"WARNINGS:\n- " + "\n- ".join(warnings[:12]) + f"\n\nDETERMINISTIC DRAFT (you may improve wording, not content):\n{text}")
-            resp = client.chat([{"role": "system", "content": SYSTEM}, {"role": "user", "content": user}], max_tokens=600)
-            cand = (resp.choices[0].message.content or "").strip()
-            ok, why = guard(cand, facts, warnings)
-            if ok and cand:
-                text, model = cand, client.model
+                    f"WARNINGS:\n- " + "\n- ".join(warnings[:12]) + f"\n\nDRAFT (same shape; improve selection and wording, never content):\n{structured.model_dump_json()}")
+            data = client.chat_json(SYSTEM, user, schema=ANSWER_SCHEMA, max_tokens=1200)
+            cand = StructuredAnswer.model_validate(data)
+            cand.items = cand.items[:12]
+            cand.caveats = cand.caveats[:4]
+            ok, why = guard(cand.to_text(language), facts, warnings)
+            if ok and cand.headline.strip():
+                structured, text, model = cand, cand.to_text(language), client.model
             else:
                 warnings.append(f"AI phrasing rejected by the grounding guard ({why}); deterministic answer shown instead.")
-        except LLMUnavailable as e:
+        except (LLMUnavailable, ValueError) as e:
             kind = str(e).split(":", 1)[0].strip() or "error"
             warnings.append(f"AI provider unavailable ({kind}); deterministic answer shown, built from the same facts.")
     # dedupe evidence by (source url, snapshot)
@@ -353,4 +494,5 @@ def ask(session: Session, question: str, language: str = "fr") -> dict:
             seen.add(k)
             ev.append(e)
     return {"answer": text, "evidence": ev[:50], "warnings": list(dict.fromkeys(warnings)), "disclaimer": DISCLAIMER,
-            "facts": facts[:200], "intent": pl.intent, "toolsUsed": list(dict.fromkeys(tools)), "model": model}
+            "facts": facts[:200], "intent": pl.intent, "toolsUsed": list(dict.fromkeys(tools)), "model": model,
+            "structured": structured.model_dump()}

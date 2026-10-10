@@ -36,7 +36,7 @@ class LLMClient:
         reasoning = self.model.startswith(("gpt-5", "o1", "o3", "o4"))  # reasoning models: fixed temperature, max_completion_tokens
         kw: dict[str, Any] = {"model": self.model, "messages": messages}
         if reasoning:
-            kw["max_completion_tokens"] = max(max_tokens * 4, 4000)  # reasoning tokens count against the limit
+            kw["max_completion_tokens"] = max(max_tokens * 8, 8000)  # reasoning tokens count against the limit
         else:
             kw["temperature"] = temperature
             kw["max_tokens"] = max_tokens
@@ -59,7 +59,10 @@ class LLMClient:
             rf = {"type": "json_schema", "json_schema": {"name": "answer", "schema": schema, "strict": False}}
         resp = self.chat([{"role": "system", "content": system}, {"role": "user", "content": user}],
                          response_format=rf, max_tokens=max_tokens)
-        txt = resp.choices[0].message.content or "{}"
+        choice = resp.choices[0]
+        txt = choice.message.content or ""
+        if not txt.strip():
+            raise LLMUnavailable(f"empty answer (finish_reason={getattr(choice, 'finish_reason', None)})")
         try:
             return json.loads(txt)
         except json.JSONDecodeError as e:
