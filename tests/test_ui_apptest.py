@@ -111,14 +111,15 @@ def test_chat_assistant_keeps_the_thread(ui_http):
     assert not at.exception, [str(e.value)[:300] for e in at.exception]
     th = at.session_state["threads"][0]
     assert [m["role"] for m in th["messages"]] == ["user", "assistant"] and th["ctx"]["productIds"] == ["P-LPC-G46"]
-    assert th["title"].startswith("LALSTOP G46 WG") and len(at.chat_message) == 2
+    assert th["title"].startswith("LALSTOP G46 WG") and len(at.chat_message) == 1  # the assistant turn; the user bubble is plain HTML
+    assert any('class="ubub"' in (m.value or "") for m in at.markdown)
     at.chat_input[0].set_value("Et en France ?").run()
     assert not at.exception, [str(e.value)[:300] for e in at.exception]
     ans = at.session_state["threads"][0]["messages"][-1]["ans"]
     assert ans["context"]["productIds"] == ["P-LPC-G46"] and ans["context"]["countries"] == ["FR"]
     assert ans["structured"]["caveats"][0].startswith("Contexte repris de la conversation : LALSTOP G46 WG")
     assert [f["registrationNumber"] for f in ans["facts"] if f["type"] == "registration"] == ["2230771"]
-    assert len(at.chat_message) == 4 and len(at.dataframe) >= 1
+    assert len(at.chat_message) == 2 and len(at.dataframe) >= 1
     sugg = [p for p in at.pills if p.key and p.key.startswith("chat_sugg_")]
     assert sugg and tr("fr", "chat.fu_uses") in list(sugg[0].options)  # follow-ups about the same product
     assert [b for b in at.sidebar.button if b.key and b.key.startswith("thread_")]  # the thread is listed
@@ -126,7 +127,7 @@ def test_chat_assistant_keeps_the_thread(ui_http):
     at.sidebar.button(key="tool_page.watch").click().run()
     assert not at.exception and at.title[0].value == tr("fr", "watch.title")
     at.button(key="back_chat").click().run()
-    assert not at.exception and at.session_state["page"] == "page.chat" and len(at.chat_message) == 4
+    assert not at.exception and at.session_state["page"] == "page.chat" and len(at.chat_message) == 2
     at.sidebar.button(key="logo_home").click().run()  # the logo returns to the landing page, the thread is kept
     assert not at.exception and at.session_state["page"] == "page.home" and len(at.session_state["threads"][0]["messages"]) == 4
     assert "prototype" not in " ".join(m.value for m in at.markdown).lower()

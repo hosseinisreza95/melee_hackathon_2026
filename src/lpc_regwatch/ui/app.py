@@ -8,6 +8,7 @@ Languages: French, English, Portuguese (ui/i18n.py); every string goes through `
 from __future__ import annotations
 
 import base64
+import html
 import os
 import sys
 import time
@@ -107,11 +108,8 @@ st.markdown(f"""
   section[data-testid="stSidebar"] [data-testid="stExpander"] summary {{ padding:.3rem 0; }}
   section[data-testid="stSidebar"] [data-testid="stExpander"] summary p {{ font-size:.78rem; letter-spacing:.12em; text-transform:uppercase; color:#6b767d; }}
   [data-testid="stChatMessage"] {{ background:transparent; padding:.25rem 0; gap:.5rem; }}
-  [data-testid="stChatMessageAvatarUser"] {{ display:none; }}
   [data-testid="stChatMessageAvatarCustom"] {{ background:{RED}; border:none; border-radius:50%; width:30px; height:30px; margin-top:2px; }}
   [data-testid="stChatMessageAvatarCustom"] span {{ color:#fff !important; font-size:18px; }}
-  [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) [data-testid="stChatMessageContent"] {{ margin:0 0 0 auto; flex:0 1 auto; width:auto; max-width:78%; background:#e7eaed; border-radius:18px 18px 4px 18px; padding:.6rem 1rem; }}
-  [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) [data-testid="stChatMessageContent"] p {{ margin:0; }}
   [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarCustom"]) [data-testid="stChatMessageContent"] {{ padding:.25rem 0 0; }}
   section.stMain h1.hero {{ margin-top:6vh; }}
   .chat-map-cap {{ text-align:center; color:#6b767d; font-size:.82rem; margin:-.2rem 0 1rem; }}
@@ -123,9 +121,16 @@ st.markdown(f"""
   .ans-sec-text {{ font-size:.95rem; color:{INK}; margin:0 0 .6rem; }}
   [data-testid="stChatMessage"] [data-testid="stDataFrame"] {{ margin:.3rem 0 .9rem; }}
   [data-testid="stChatMessage"] .warn {{ margin:.3rem 0; }}
-  [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {{ justify-content:flex-end; padding-right:0; width:100%; }}
+  .ubub-row {{ display:flex; justify-content:flex-end; margin:.4rem 0 1rem; }}
+  .ubub {{ max-width:78%; background:#e7eaed; color:{INK}; border-radius:18px 18px 4px 18px; padding:.6rem 1rem; font-size:1rem; line-height:1.45; white-space:pre-wrap; word-break:break-word; }}
+  [class*="st-key-tbl"] [data-testid="stPopover"] {{ display:flex; justify-content:flex-end; }}
+  [class*="st-key-tbl"] [data-testid="stPopoverButton"] {{ min-height:1.9rem; height:1.9rem; width:2.2rem; padding:0; border-radius:8px; color:{SLATE}; background:#fff; border:1px solid #d7d9db; }}
+  [class*="st-key-tbl"] [data-testid="stPopoverButton"] p, [class*="st-key-tbl"] [data-testid="stPopoverButton"] [aria-hidden="true"] {{ display:none; }}
+  [class*="st-key-tbl"] [data-testid="stPopoverButton"] [data-testid="stIconMaterial"] {{ font-size:1.25rem; color:{SLATE}; }}
+  [class*="st-key-tbl"] [data-testid="stPopoverButton"] > div {{ justify-content:center; width:100%; }}
+  [class*="st-key-tbl"] [data-testid="stHorizontalBlock"] {{ margin-bottom:-.6rem; }}
   section.stMain {{ background-image:url("{PATTERN_URI}"); background-repeat:repeat; background-size:480px 480px; }}
-  .st-key-logo_btn [data-testid="stButton"] button {{ background:url("{LOGO_URI}") no-repeat center / 160px auto; height:54px; width:100%; border:none; box-shadow:none; margin-top:0; }}
+  .st-key-logo_btn [data-testid="stButton"] button {{ background:url("{LOGO_URI}") no-repeat center / contain; height:72px; width:100%; border:none; box-shadow:none; margin:0; padding:0; }}
   .st-key-logo_btn [data-testid="stButton"] button:hover {{ background-color:transparent; opacity:.9; }}
   .st-key-logo_btn [data-testid="stButton"] button p {{ color:transparent; font-size:0; }}
   .st-key-tools [data-testid="stButton"] button, .st-key-rail [data-testid="stButton"] button {{ justify-content:flex-start; }}
@@ -362,6 +367,7 @@ def queue_question(q: str):
 
 
 st.session_state.setdefault("page", "page.home")
+st.session_state["_tbl_n"] = 0
 if st.session_state.pop("goto_chat", False):
     st.session_state["page"] = "page.chat"
 
@@ -493,17 +499,25 @@ FOLLOW_UPS = {"registration_lookup": ["chat.fu_uses", "chat.fu_sisters", "chat.f
               "ingredient_search": ["chat.fu_sources"]}
 
 
-def show_table(data, **kw):
-    """st.dataframe with a visible sort hint on every header (click a header to sort, the menu offers ascending / descending)."""
-    df = data.data if hasattr(data, "data") else data
-    cfg = dict(kw.pop("column_config", None) or {})
-    for c in df.columns:
-        if c in cfg and isinstance(cfg[c], dict):
-            if not str(cfg[c].get("label") or "").endswith("⇅"):
-                cfg[c]["label"] = f"{cfg[c].get('label') or c} ⇅"
-        elif c not in cfg:
-            cfg[c] = st.column_config.Column(label=f"{c} ⇅")
-    st.dataframe(data, column_config=cfg, **kw)
+def show_table(df: pd.DataFrame, style=None, **kw):
+    """st.dataframe with a right-aligned sort control (sliders icon) above it: column + order, applied before display.
+    `style` is an optional callable (DataFrame -> Styler) applied after sorting."""
+    n = st.session_state.get("_tbl_n", 0) + 1
+    st.session_state["_tbl_n"] = n
+    key = f"tbl{st.session_state['page']}_{n}"
+    cols = list(df.columns)
+    if cols and len(df) > 1:
+        with st.container(key=key):
+            _, right = st.columns([9, 1])
+            with right:
+                with st.popover("sort", icon=":material/instant_mix:"):
+                    col = st.selectbox(t("tbl.sort"), [None] + cols, format_func=lambda c: t("tbl.none") if c is None else str(c), key=f"{key}_col")
+                    order = st.radio(t("tbl.order"), ["asc", "desc"], format_func=lambda o: t("tbl." + o), horizontal=True, key=f"{key}_order")
+        if col:
+            series = df[col]
+            df = df.sort_values(col, ascending=(order == "asc"), kind="stable", na_position="last",
+                                key=(lambda x: x.astype(str).str.lower()) if series.dtype == object else None)
+    st.dataframe(style(df) if style else df, **kw)
 
 
 def answer_status(v: str | None) -> str | None:
@@ -565,7 +579,7 @@ def render_items(items: list[dict]):
         return
     df = answer_items_df(items)
     cfg = {t("ask.url"): st.column_config.LinkColumn(t("ask.url"), display_text=t("ask.open"))} if t("ask.url") in df.columns else None
-    show_table(style_status(df), hide_index=True, use_container_width=True, column_config=cfg)
+    show_table(df, style=style_status, hide_index=True, use_container_width=True, column_config=cfg)
 
 
 def render_answer(ans: dict, key: str, stream: bool = False):
@@ -640,8 +654,7 @@ def chat_page():
     else:
         for i, m in enumerate(msgs):
             if m["role"] == "user":
-                with st.chat_message("user"):
-                    st.markdown(m["content"])
+                st.markdown(f'<div class="ubub-row"><div class="ubub">{html.escape(m["content"])}</div></div>', unsafe_allow_html=True)
             else:
                 with st.chat_message("assistant", avatar=BOT_AVATAR):
                     if m.get("error"):
