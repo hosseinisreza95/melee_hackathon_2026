@@ -34,10 +34,9 @@ S: dict[str, dict[str, str]] = {
                 "pt": "Protótipo sem autenticação; desenho Entra ID documentado."},
     "api.down": {"fr": "API injoignable sur {api} : {err}", "en": "API unreachable at {api}: {err}", "pt": "API inacessível em {api}: {err}"},
     # ------------------------------------------------------------- pages
-    "page.overview": {"fr": "Vue d'ensemble", "en": "Overview", "pt": "Visão geral"},
+    "page.home": {"fr": "Assistant & vue d'ensemble", "en": "Assistant & overview", "pt": "Assistente & visão geral"},
     "page.compare": {"fr": "Comparaison", "en": "Comparison", "pt": "Comparação"},
     "page.map": {"fr": "Carte", "en": "Map", "pt": "Mapa"},
-    "page.ask": {"fr": "Question", "en": "Question", "pt": "Pergunta"},
     "page.sisters": {"fr": "Produits sœurs & revue", "en": "Sister products & review", "pt": "Produtos irmãos & revisão"},
     "page.watch": {"fr": "Veille (changements, échéances)", "en": "Watch (changes, expiries)", "pt": "Monitoramento (mudanças, vencimentos)"},
     "page.registry": {"fr": "Registre interne LPC", "en": "LPC internal registry", "pt": "Registro interno LPC"},
@@ -85,6 +84,25 @@ S: dict[str, dict[str, str]] = {
     "m.nosource": {"fr": "source non connectée", "en": "source not connected", "pt": "fonte não conectada"},
     "m.other_in_store": {"fr": "Autres produits dans la source", "en": "Other products in the source", "pt": "Outros produtos na fonte"},
     # ------------------------------------------------------------- overview
+    "home.title": {"fr": "Assistant réglementaire", "en": "Regulatory assistant", "pt": "Assistente regulatório"},
+    "chat.hello": {"fr": "Bonjour. Je réponds uniquement à partir des sources officielles collectées (Santé Canada, US EPA, ANSES E-Phy, MAPA AGROFIT), avec les preuves. Cliquez un pays sur la carte ou posez une question ; je garde le fil (« et en France ? », « et ses usages ? »).",
+                   "en": "Hello. I answer only from the collected official sources (Health Canada, US EPA, ANSES E-Phy, MAPA AGROFIT), with evidence. Click a country on the map or ask a question; I keep the thread ('and in France?', 'and its uses?').",
+                   "pt": "Olá. Respondo apenas a partir das fontes oficiais coletadas (Health Canada, US EPA, ANSES E-Phy, MAPA AGROFIT), com evidências. Clique num país no mapa ou faça uma pergunta; mantenho o fio da conversa (« e na França? », « e os seus usos? »)."},
+    "chat.caption": {"fr": "Réponses issues des seules sources officielles collectées, avec preuves ; le fil est conservé.",
+                     "en": "Answers from the collected official sources only, with evidence; the thread is kept.",
+                     "pt": "Respostas apenas das fontes oficiais coletadas, com evidências; o fio é mantido."},
+    "chat.placeholder": {"fr": "Posez une question (produit, pays, culture, micro-organisme)…", "en": "Ask a question (product, country, crop, micro-organism)…",
+                         "pt": "Faça uma pergunta (produto, país, cultura, microrganismo)…"},
+    "chat.clear": {"fr": "Effacer", "en": "Clear", "pt": "Limpar"},
+    "chat.suggest": {"fr": "Suggestions", "en": "Suggestions", "pt": "Sugestões"},
+    "chat.details": {"fr": "Preuves ({n}), avertissements et faits", "en": "Evidence ({n}), warnings and facts", "pt": "Evidências ({n}), avisos e fatos"},
+    "chat.sugg_country": {"fr": "Quels produits Lallemand sont homologués {cin} ?", "en": "Which Lallemand products are registered {cin}?", "pt": "Quais produtos Lallemand estão registrados {cin}?"},
+    "chat.sugg_country_pilot": {"fr": "LALSTOP CONTANS WG est-il homologué {cin} ?", "en": "Is LALSTOP CONTANS WG registered {cin}?", "pt": "O LALSTOP CONTANS WG está registrado {cin}?"},
+    "chat.fu_uses": {"fr": "Et ses usages autorisés ?", "en": "And its authorised uses?", "pt": "E os seus usos autorizados?"},
+    "chat.fu_sisters": {"fr": "Quels sont ses produits sœurs ?", "en": "What are its sister products?", "pt": "Quais são os seus produtos irmãos?"},
+    "chat.fu_sources": {"fr": "Donne la source de chaque donnée.", "en": "Give the source of each datum.", "pt": "Informe a fonte de cada dado."},
+    "chat.fu_quality": {"fr": "Quels champs sont incertains ?", "en": "Which fields are uncertain?", "pt": "Quais campos são incertos?"},
+    "chat.fu_countries": {"fr": "Dans quels pays est-il homologué ?", "en": "In which countries is it registered?", "pt": "Em quais países está registrado?"},
     "ov.title": {"fr": "Vue d'ensemble des homologations", "en": "Registrations overview", "pt": "Visão geral dos registros"},
     "ov.scope": {"fr": "Périmètre", "en": "Scope", "pt": "Escopo"},
     "ov.scope.pilots": {"fr": "Produits pilotes LPC", "en": "LPC pilot products", "pt": "Produtos piloto LPC"},
@@ -286,6 +304,15 @@ EXAMPLES = {
            "Quais produtos Lallemand estão registrados no Brasil?"],
 }
 
+# country with the preposition a question needs ("homologué au Canada", "registered in Canada", "registrado no Canadá")
+COUNTRY_IN = {
+    "fr": {"CA": "au Canada", "US": "aux États-Unis", "FR": "en France", "BR": "au Brésil", "DE": "en Allemagne", "BE": "en Belgique", "MX": "au Mexique", "UY": "en Uruguay",
+           "ES": "en Espagne", "IT": "en Italie", "NL": "aux Pays-Bas", "GB": "au Royaume-Uni", "PL": "en Pologne"},
+    "en": {"CA": "in Canada", "US": "in the United States", "FR": "in France", "BR": "in Brazil", "DE": "in Germany", "BE": "in Belgium", "MX": "in Mexico", "UY": "in Uruguay",
+           "ES": "in Spain", "IT": "in Italy", "NL": "in the Netherlands", "GB": "in the United Kingdom", "PL": "in Poland"},
+    "pt": {"CA": "no Canadá", "US": "nos Estados Unidos", "FR": "na França", "BR": "no Brasil", "DE": "na Alemanha", "BE": "na Bélgica", "MX": "no México", "UY": "no Uruguai",
+           "ES": "na Espanha", "IT": "na Itália", "NL": "nos Países Baixos", "GB": "no Reino Unido", "PL": "na Polônia"},
+}
 COUNTRY_NAMES = {
     "fr": {"CA": "Canada", "US": "États-Unis", "FR": "France", "BR": "Brésil", "DE": "Allemagne", "BE": "Belgique", "MX": "Mexique", "UY": "Uruguay",
            "ES": "Espagne", "IT": "Italie", "NL": "Pays-Bas", "GB": "Royaume-Uni", "PL": "Pologne"},

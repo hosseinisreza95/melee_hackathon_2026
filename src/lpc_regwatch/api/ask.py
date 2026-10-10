@@ -33,6 +33,7 @@ COUNTRY_WORDS = {
     "DE": ["germany", "allemagne", "german", "allemand", "alemanha", "alemão"], "BE": ["belgium", "belgique", "bélgica", "belgica"], "MX": ["mexico", "mexique", "méxico"],
     "UY": ["uruguay", "uruguai"], "ES": ["spain", "espagne", "espanha", "españa"], "IT": ["italy", "italie", "itália", "italia"],
     "NL": ["netherlands", "pays-bas", "países baixos", "paises baixos", "holanda"], "GB": ["united kingdom", "royaume-uni", "uk", "reino unido"],
+    "PL": ["poland", "pologne", "polônia", "polonia", "polish", "polonais"],
 }
 INTENTS = {
     "sister_product": [r"\bs[oœ]urs?\b", r"\bsister", r"jumeau", r"irmã", r"irmão", r"équivalent", r"equivalent", r"même produit", r"same product", r"candidat"],
@@ -88,6 +89,10 @@ class Plan:
     months: int = 12
     unresolved_names: list[str] = field(default_factory=list)
     scope: str = "all"  # country_portfolio: 'lallemand' (holder LALLEMAND/DANSTAR) or 'all'
+    inherited: list[str] = field(default_factory=list)  # what a follow-up question took from the conversation context
+
+
+ALL_COUNTRIES_RE = re.compile(r"quels pays|which countr|quais pa[ií]ses|dans quels|em quais|where|où |onde|partout|everywhere|tous les pays|all countries|todos os pa[ií]ses")
 
 
 PORTFOLIO_RE = re.compile(r"quels? produits?|which products?|what products?|quais produtos|liste des produits|list (?:of |the )?products|produits (?:lallemand|homologu|enregistr|autoris)"
@@ -107,7 +112,7 @@ def _product_index(session: Session) -> list[tuple[str, str, str]]:
     return sorted({i for i in idx if len(i[0]) >= 4}, key=lambda t: (-len(t[0]), t[2] != "name", t[1]))
 
 
-def plan(session: Session, question: str) -> Plan:
+def plan(session: Session, question: str, context: dict | None = None) -> Plan:
     q = question.lower()
     qn = " " + norm_name(question) + " "
     intent = "registration_lookup"
@@ -140,7 +145,28 @@ def plan(session: Session, question: str) -> Plan:
     if not pids and not species and countries and PORTFOLIO_RE.search(q):  # 'which (Lallemand) products are registered in Brazil?'
         intent = "country_portfolio"
         unresolved = []
-    return Plan(intent, pids, countries, species, crop, months, unresolved, scope)
+    # follow-up questions ('et en France ?', 'et ses usages ?'): take the subject from the previous turn, deterministically
+    inherited: list[str] = []
+    ctx = context or {}
+    if ctx and not pids and not species and intent not in ("expiry", "changes", "country_portfolio"):
+        if ctx.get("productIds"):
+            pids = [p for p in ctx["productIds"] if session.get(Product, p)]
+            if pids:
+                inherited.append("product")
+                unresolved = []
+                if intent == "ingredient_search":
+                    intent = "registration_lookup"
+        elif ctx.get("species"):  # previous turn was about a micro-organism: 'and in Canada?' keeps species (and crop)
+            species = ctx["species"]
+            inherited.append("species")
+            if intent in ("registration_lookup", "use_comparison", "ingredient_search"):
+                intent = "ingredient_search"
+            if not crop and ctx.get("crop"):
+                crop = ctx["crop"]
+    if inherited and not countries and ctx.get("countries") and not ALL_COUNTRIES_RE.search(q):
+        countries = list(ctx["countries"])
+        inherited.append("countries")
+    return Plan(intent, pids, countries, species, crop, months, unresolved, scope, inherited)
 
 
 # --------------------------------------------------------------------------- 2. tools (the only data access)
@@ -150,6 +176,15 @@ def run_tools(session: Session, pl: Plan) -> tuple[list[dict], list[dict], list[
     evidence: list[dict] = []
     warnings: list[str] = []
     tools: list[str] = []
+    if pl.inherited:  # say explicitly what was taken from the conversation
+        parts = []
+        if "product" in pl.inherited:
+            parts.append(", ".join((session.get(Product, p).commercial_name if session.get(Product, p) else p) for p in pl.product_ids))
+        if "species" in pl.inherited:
+            parts.append(f"{pl.species}" + (f" ({pl.crop})" if pl.crop else ""))
+        if "countries" in pl.inherited:
+            parts.append(", ".join(pl.countries))
+        warnings.append("Context taken from the conversation: " + " · ".join(parts) + ".")
 
     def add_reg(r: dict, product_name: str | None = None, uses_limit: int = 0):
         facts.append({"type": "registration", "product": product_name or r["productId"], "country": r["countryCode"],
@@ -354,9 +389,9 @@ def template_answer(pl: Plan, facts: list[dict], warnings: list[str], language: 
 
 
 # --------------------------------------------------------------------------- 3b. structured answer (deterministic)
-CNAME = {"fr": {"CA": "Canada", "US": "États-Unis", "FR": "France", "BR": "Brésil", "DE": "Allemagne", "BE": "Belgique", "MX": "Mexique", "UY": "Uruguay", "ES": "Espagne", "IT": "Italie", "NL": "Pays-Bas", "GB": "Royaume-Uni"},
-         "en": {"CA": "Canada", "US": "United States", "FR": "France", "BR": "Brazil", "DE": "Germany", "BE": "Belgium", "MX": "Mexico", "UY": "Uruguay", "ES": "Spain", "IT": "Italy", "NL": "Netherlands", "GB": "United Kingdom"},
-         "pt": {"CA": "Canadá", "US": "Estados Unidos", "FR": "França", "BR": "Brasil", "DE": "Alemanha", "BE": "Bélgica", "MX": "México", "UY": "Uruguai", "ES": "Espanha", "IT": "Itália", "NL": "Países Baixos", "GB": "Reino Unido"}}
+CNAME = {"fr": {"CA": "Canada", "US": "États-Unis", "FR": "France", "BR": "Brésil", "DE": "Allemagne", "BE": "Belgique", "MX": "Mexique", "UY": "Uruguay", "ES": "Espagne", "IT": "Italie", "NL": "Pays-Bas", "GB": "Royaume-Uni", "PL": "Pologne"},
+         "en": {"CA": "Canada", "US": "United States", "FR": "France", "BR": "Brazil", "DE": "Germany", "BE": "Belgium", "MX": "Mexico", "UY": "Uruguay", "ES": "Spain", "IT": "Italy", "NL": "Netherlands", "GB": "United Kingdom", "PL": "Poland"},
+         "pt": {"CA": "Canadá", "US": "Estados Unidos", "FR": "França", "BR": "Brasil", "DE": "Alemanha", "BE": "Bélgica", "MX": "México", "UY": "Uruguai", "ES": "Espanha", "IT": "Itália", "NL": "Países Baixos", "GB": "Reino Unido", "PL": "Polônia"}}
 
 # English warning templates (API contract, tests) -> French / Portuguese wording for the caveats shown to the reader.
 WARN_I18N: list[tuple[re.Pattern, dict[str, str]]] = [
@@ -394,6 +429,8 @@ WARN_I18N: list[tuple[re.Pattern, dict[str, str]]] = [
     (re.compile(r"^Crop '(?P<crop>.+?)' was not applied to this country listing; ask with a product or a micro-organism to filter by crop\.$"),
      {"fr": "La culture « {crop} » n'a pas été appliquée à cette liste par pays ; posez la question avec un produit ou un micro-organisme pour filtrer par culture.",
       "pt": "A cultura « {crop} » não foi aplicada a esta lista por país; pergunte com um produto ou um microrganismo para filtrar por cultura."}),
+    (re.compile(r"^Context taken from the conversation: (?P<what>.+)\.$"),
+     {"fr": "Contexte repris de la conversation : {what}.", "pt": "Contexto retomado da conversa: {what}."}),
     (re.compile(r"^Sister-product candidates are hypotheses with a review status; none is a confirmed equivalent unless review_status=validated\.$"),
      {"fr": "Les candidats « produit sœur » sont des hypothèses avec un statut de revue ; aucun n'est un équivalent confirmé sauf review_status=validated.",
       "pt": "Os candidatos a « produto irmão » são hipóteses com um estado de revisão; nenhum é equivalente confirmado salvo review_status=validated."}),
@@ -538,7 +575,7 @@ def build_structured(pl: Plan, facts: list[dict], warnings: list[str], language:
     for w in warnings:
         if len(caveats) >= 4:
             break
-        if any(k in w for k in ("not proof", "dose is not", "two independent lists", "AI model", "hypotheses", "no source connected", "only the first", "Scope 'Lallemand'", "was not applied")):
+        if any(k in w for k in ("Context taken", "not proof", "dose is not", "two independent lists", "AI model", "hypotheses", "no source connected", "only the first", "Scope 'Lallemand'", "was not applied")):
             caveats.append(localize_warning(w, lang))
     return StructuredAnswer(headline=headline, items=items[:12], caveats=caveats[:4])
 
@@ -592,6 +629,7 @@ Rules:
 - Never add a country, product, number, date, dose or status that is not in FACTS. If FACTS are empty, say that nothing was found and that this is not proof of no registration.
 - A sister-product candidate is a hypothesis unless its review status is 'validated'.
 - Write the headline, the item details and the caveats in the requested language (translate WARNINGS; keep identifiers, numbers, dates and status values as written).
+- CONVERSATION (earlier turns) is given for wording only: never reuse a number, product or country from it unless it is in FACTS.
 - No advice on product use."""
 
 
@@ -605,7 +643,7 @@ def guard(llm_text: str, facts: list[dict], warnings: list[str]) -> tuple[bool, 
     for n in _numbers(llm_text):
         if n not in allowed and not re.fullmatch(r"\d{1,2}", n):  # small counts (e.g. '3 countries') are tolerated
             return False, f"unsupported number '{n}' in model text"
-    ccs = set(re.findall(r"\b([A-Z]{2})\b", llm_text)) & set(Q.COUNTRY_SOURCES) | set(re.findall(r"\b(DE|BE|MX|UY|ES|IT|NL|GB)\b", llm_text))
+    ccs = set(re.findall(r"\b([A-Z]{2})\b", llm_text)) & set(Q.COUNTRY_SOURCES) | set(re.findall(r"\b(DE|BE|MX|UY|ES|IT|NL|GB|PL)\b", llm_text))
     fact_ccs = {f.get("country") for f in facts if f.get("country")} | set(re.findall(r"\(([A-Z]{2})\)", " ".join(warnings)))
     for cc in ccs - fact_ccs:
         if cc in Q.COUNTRY_WORDS if hasattr(Q, "COUNTRY_WORDS") else cc in COUNTRY_WORDS:
@@ -613,8 +651,8 @@ def guard(llm_text: str, facts: list[dict], warnings: list[str]) -> tuple[bool, 
     return True, None
 
 
-def ask(session: Session, question: str, language: str = "fr") -> dict:
-    pl = plan(session, question)
+def ask(session: Session, question: str, language: str = "fr", context: dict | None = None, history: list[dict] | None = None) -> dict:
+    pl = plan(session, question, context)
     facts, evidence, warnings, tools = run_tools(session, pl)
     structured = build_structured(pl, facts, warnings, language)
     text = structured.to_text(language)
@@ -622,7 +660,9 @@ def ask(session: Session, question: str, language: str = "fr") -> dict:
     if settings.ai_enabled and facts:
         try:
             client = get_client()
-            user = (f"QUESTION ({language}): {question}\n\nFACTS (JSON rows):\n{json.dumps(facts[:60], ensure_ascii=False, default=str)}\n\n"
+            conv = "".join(f"- {h.get('role')}: {str(h.get('content') or '')[:300]}\n" for h in (history or [])[-6:] if isinstance(h, dict))
+            user = ((f"CONVERSATION (earlier turns, wording only):\n{conv}\n" if conv else "")
+                    + f"QUESTION ({language}): {question}\n\nFACTS (JSON rows):\n{json.dumps(facts[:60], ensure_ascii=False, default=str)}\n\n"
                     f"WARNINGS:\n- " + "\n- ".join(warnings[:12]) + f"\n\nDRAFT (same shape; improve selection and wording, never content):\n{structured.model_dump_json()}")
             data = client.chat_json(SYSTEM, user, schema=ANSWER_SCHEMA, max_tokens=1200)
             cand = StructuredAnswer.model_validate(data)
@@ -647,4 +687,5 @@ def ask(session: Session, question: str, language: str = "fr") -> dict:
     lang = (language or "fr").lower()[:2]
     return {"answer": text, "evidence": ev[:50], "warnings": list(dict.fromkeys(warnings)), "disclaimer": DISCLAIMER,
             "facts": facts[:200], "intent": pl.intent, "toolsUsed": list(dict.fromkeys(tools)), "model": model,
-            "structured": structured.model_dump(), "warningsLocalized": [localize_warning(w, lang) for w in dict.fromkeys(warnings)]}
+            "structured": structured.model_dump(), "warningsLocalized": [localize_warning(w, lang) for w in dict.fromkeys(warnings)],
+            "context": {"productIds": pl.product_ids, "countries": pl.countries, "species": pl.species, "crop": pl.crop, "intent": pl.intent}}

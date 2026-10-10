@@ -63,6 +63,11 @@ Final UI pass (2026-10-10): the caveats and a `warningsLocalized` copy are writt
 templates are mapped to French/Portuguese; the `warnings` field itself stays English for the contract and the tests), and a
 `country_portfolio` intent answers "which (Lallemand) products are registered in <country>" from the same overview query as the
 map, capped at 40 facts / 12 rows with an explicit caveat (`test_country_portfolio_question`, `test_caveats_follow_the_question_language`).
+Conversation (same day, later): the assistant is a chat. Every answer returns a `context` ({productIds, countries, species, crop, intent});
+the UI sends it back with the next question and the planner inherits the subject deterministically when the question names none
+("et en France ?" keeps the product, "et ses usages ?" keeps product and country, "dans quels pays…" resets the countries, a named
+product resets the thread). What was inherited is stated in the first caveat. Earlier turns are passed to the model for wording only
+and the grounding guard still applies (`test_follow_up_questions_inherit_the_conversation_context`, `test_chat_assistant_keeps_the_thread`).
 
 - Deterministic path (no key): 100 % of the facts come from predefined queries; tests `tests/test_gold.py` (T01–T05 + adversarial +
   other products/countries/crops) pass offline.

@@ -9,7 +9,7 @@
     }
   },
   "host": "37.187.176.97",
-  "basePath": "C:/Program Files/Git/api",
+  "basePath": "/api",
   "schemes": [
     "http"
   ],
@@ -484,6 +484,21 @@
         "model": {
           "type": "string",
           "x-nullable": true
+        },
+        "structured": {
+          "type": "object",
+          "x-nullable": true
+        },
+        "warningsLocalized": {
+          "type": "array",
+          "title": "Warningslocalized",
+          "items": {
+            "type": "string"
+          }
+        },
+        "context": {
+          "type": "object",
+          "x-nullable": true
         }
       },
       "required": [
@@ -505,6 +520,17 @@
           "type": "string",
           "default": "fr",
           "title": "Language"
+        },
+        "context": {
+          "type": "object",
+          "x-nullable": true
+        },
+        "history": {
+          "type": "array",
+          "title": "History",
+          "items": {
+            "type": "object"
+          }
         }
       },
       "required": [
@@ -604,6 +630,19 @@
         "evidence"
       ]
     },
+    "Body_registry_reconcile_registry_reconcile_post": {
+      "type": "object",
+      "title": "Body_registry_reconcile_registry_reconcile_post",
+      "properties": {
+        "file": {
+          "type": "string",
+          "title": "File"
+        }
+      },
+      "required": [
+        "file"
+      ]
+    },
     "ChangeOut": {
       "type": "object",
       "title": "ChangeOut",
@@ -701,6 +740,13 @@
         "commercialName": {
           "type": "string",
           "x-nullable": true
+        },
+        "relatedProducts": {
+          "type": "array",
+          "title": "Relatedproducts",
+          "items": {
+            "type": "object"
+          }
         }
       },
       "required": [
@@ -1101,11 +1147,11 @@
   "x-ms-connector-metadata": [
     {
       "propertyName": "Website",
-      "propertyValue": "http://37.187.176.97C:/Program Files/Git/api/docs"
+      "propertyValue": "http://37.187.176.97/api/docs"
     },
     {
       "propertyName": "Privacy policy",
-      "propertyValue": "http://37.187.176.97C:/Program Files/Git/api/sources"
+      "propertyValue": "http://37.187.176.97/api/sources"
     },
     {
       "propertyName": "Categories",

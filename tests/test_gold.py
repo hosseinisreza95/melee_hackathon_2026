@@ -162,3 +162,31 @@ def test_caveats_follow_the_question_language(api_client):
     assert any("Brasil (BR): não encontrado em BR-AGROFIT" in c for c in d_pt["structured"]["caveats"])
     d_en = _ask(api_client, "Is LALSTOP CONTANS WG registered in Brazil?", "en")
     assert d_en["warningsLocalized"] == d_en["warnings"]
+
+
+def test_follow_up_questions_inherit_the_conversation_context(api_client):
+    """Chat mode: the answer returns a `context`; sent back with the next question, follow-ups keep product / countries."""
+    d1 = _ask(api_client, "LALSTOP G46 WG est-il homologué au Canada ?")
+    ctx = d1["context"]
+    assert ctx["productIds"] == ["P-LPC-G46"] and ctx["countries"] == ["CA"]
+    d2 = api_client.post("/ask", json={"question": "Et en France ?", "language": "fr", "context": ctx}).json()
+    assert [(f["country"], f["registrationNumber"]) for f in d2["facts"] if f["type"] == "registration"] == [("FR", "2230771")]
+    assert d2["context"]["productIds"] == ["P-LPC-G46"] and d2["context"]["countries"] == ["FR"]
+    assert any(w == "Context taken from the conversation: LALSTOP G46 WG." for w in d2["warnings"])
+    assert d2["structured"]["caveats"][0] == "Contexte repris de la conversation : LALSTOP G46 WG."
+    d3 = api_client.post("/ask", json={"question": "Et ses usages ?", "language": "fr", "context": d2["context"]}).json()
+    assert d3["intent"] == "use_comparison" and d3["context"]["countries"] == ["FR"]  # product and country inherited
+    assert any(f["type"] == "use" for f in d3["facts"])
+    assert any(w == "Context taken from the conversation: LALSTOP G46 WG · FR." for w in d3["warnings"])
+    d4 = api_client.post("/ask", json={"question": "Dans quels pays est-il homologué ?", "language": "fr", "context": d3["context"]}).json()
+    assert sorted({f["country"] for f in d4["facts"] if f["type"] in ("registration", "coverage")}) == ["BR", "CA", "FR", "US"]  # 'quels pays' = all
+    d5 = api_client.post("/ask", json={"question": "Quels sont ses produits sœurs ?", "language": "fr", "context": d4["context"]}).json()
+    assert d5["intent"] == "sister_product" and any(f["type"] == "alias" for f in d5["facts"])
+    d6 = api_client.post("/ask", json={"question": "Et PRESTOP au Canada ?", "language": "fr", "context": d5["context"]}).json()
+    assert "P-PRESTOP" in d6["context"]["productIds"] and not any("Context taken" in w for w in d6["warnings"])  # a named product resets the thread
+    d7 = api_client.post("/ask", json={"question": "Which products containing Clonostachys rosea are registered on strawberries?", "language": "en"}).json()
+    d8 = api_client.post("/ask", json={"question": "And in Canada?", "language": "en", "context": d7["context"]}).json()
+    assert d8["intent"] == "ingredient_search" and d8["context"]["species"] == "Clonostachys rosea"
+    regs8 = [f for f in d8["facts"] if f["type"] == "registration"]
+    assert regs8 and all(f["country"] == "CA" for f in regs8)
+    assert any(w.startswith("Context taken from the conversation: Clonostachys rosea") for w in d8["warnings"]), d8["warnings"]

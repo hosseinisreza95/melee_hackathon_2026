@@ -16,9 +16,10 @@ import httpx
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
+import streamlit.components.v1 as components
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # `streamlit run src/lpc_regwatch/ui/app.py` without PYTHONPATH
-from lpc_regwatch.ui.i18n import COUNTRY_NAMES, EXAMPLES, LANGS, tr  # noqa: E402
+from lpc_regwatch.ui.i18n import COUNTRY_IN, COUNTRY_NAMES, EXAMPLES, LANGS, tr  # noqa: E402
 
 API = os.getenv("API_BASE_URL", "http://localhost:8000").rstrip("/")
 PILOTS = ["P-LPC-CONTANS", "P-LPC-G46", "P-LPC-M52"]
@@ -34,7 +35,7 @@ STATUS_COLOR = {"active": "#2fd27a", "expired": "#f0a21f", "withdrawn": RED, "pe
 MAP_KEYS = ["m.active", "m.related", "m.withdrawn", "m.pending", "m.notfound", "m.nosource"]
 MAP_COLORS = {"m.active": "#2fd27a", "m.related": "#38c6ff", "m.withdrawn": RED, "m.pending": "#f5c842", "m.notfound": "#5e6b72", "m.nosource": "#434f56"}
 ASSETS = Path(__file__).parent / "assets"
-PAGES = ["page.overview", "page.compare", "page.map", "page.ask", "page.sisters", "page.watch", "page.registry", "page.sources"]
+PAGES = ["page.home", "page.compare", "page.map", "page.sisters", "page.watch", "page.registry", "page.sources"]
 
 st.set_page_config(page_title="LPC Regulatory Watch", page_icon=str(ASSETS / "lallemand_logo.svg"), layout="wide", initial_sidebar_state="expanded")
 
@@ -94,6 +95,10 @@ st.markdown(f"""
   .lpc-menu-list {{ list-style:none; padding:0; margin:0; font-size:.9rem; line-height:1.8; }}
   .lpc-menu-list a {{ color:{SLATE}; text-decoration:none; }}
   .lpc-menu-list a:hover {{ color:{RED}; }}
+  [class*="st-key-chat_sugg_"] [data-testid="stButtonGroup"] {{ flex-wrap:wrap; row-gap:6px; }}
+  [class*="st-key-chat_sugg_"] [data-testid="stButtonGroup"] button {{ white-space:normal; text-align:left; line-height:1.25; }}
+  .st-key-chat_box [data-testid="stChatMessage"] {{ padding:.6rem .7rem; }}
+  .st-key-chat_box [data-testid="stChatMessage"] p {{ font-size:.92rem; }}
   .ccard {{ border:1px solid #d7d9db; border-radius:8px; padding:12px 14px; background:#fff; min-height:150px; }}
   .ccard h4 {{ margin:0 0 6px; font-size:1rem; color:{INK}; }}
   .ccard .m {{ color:#5b6770; font-size:.82rem; }}
@@ -307,9 +312,123 @@ def country_detail_table(regs: list[dict]) -> pd.DataFrame:
                           t("collected"): fmt_dt(r["collectedAt"]), "URL": r["sourceUrl"]} for r in regs])
 
 
+# ---------------------------------------------------------------------------------- assistant (chat) helpers
+BOT_AVATAR, USER_AVATAR = ":material/support_agent:", ":material/person:"
+ANSWER_COLS = [("country", "country"), ("product", "product"), ("registrationNumber", "number"), ("status", "status"), ("statusOriginal", "status_orig"),
+               ("expiry", "expires"), ("relationship", "ask.item.relationship"), ("detail", "ask.item.detail"), ("sourceId", "source"), ("collectedAt", "collected")]
+
+
+def answer_status(v: str | None) -> str | None:
+    """Readable, translated status for an answer row (registration status or coverage verdict)."""
+    if v in STATUS_COLOR:
+        return st_label(v)
+    return {"not_found_in_source": t("m.notfound"), "source_not_collected": t("m.nosource")}.get(v or "", v)
+
+
+def render_answer(ans: dict):
+    """One assistant turn: headline, only the useful rows, caveats; evidence, meta and raw facts folded away."""
+    sa = ans.get("structured") or {}
+    st.markdown(f"**{sa.get('headline') or t('ask.answer')}**")
+    items = sa.get("items") or []
+    if items:
+        rows = [{t(lbl): (answer_status(it.get(k)) if k == "status" else it.get(k)) for k, lbl in ANSWER_COLS if any(x.get(k) for x in items)} for it in items]
+        st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
+    for cv in sa.get("caveats") or []:
+        st.markdown(f'<div class="warn">• {cv}</div>', unsafe_allow_html=True)
+    other = [w for w in (ans.get("warningsLocalized") or ans["warnings"]) if w not in (sa.get("caveats") or [])]
+    with st.expander(t("chat.details", n=len(ans["evidence"]))):
+        st.caption(t("ask.meta", intent=ans["intent"], tools=", ".join(ans["toolsUsed"]) or "—", model=ans["model"] or t("ask.det")))
+        for w in other:
+            st.markdown(f'<div class="warn">• {w}</div>', unsafe_allow_html=True)
+        if ans["evidence"]:
+            ev = pd.DataFrame([{t("source"): e["sourceId"], "URL": e["sourceUrl"], t("collected"): fmt_dt(e["collectedAt"]), t("validation"): e["validationStatus"],
+                                t("ask.excerpt"): (e.get("excerpt") or "")[:160]} for e in ans["evidence"]])
+            st.dataframe(ev, hide_index=True, use_container_width=True, column_config={"URL": st.column_config.LinkColumn("URL", display_text=t("ask.open"))})
+        else:
+            st.info(t("ask.no_evidence"))
+        st.json(ans["facts"], expanded=False)
+
+
+FOLLOW_UPS = {"registration_lookup": ["chat.fu_uses", "chat.fu_sisters", "chat.fu_sources"], "use_comparison": ["chat.fu_sisters", "chat.fu_quality", "chat.fu_countries"],
+              "sister_product": ["chat.fu_countries", "chat.fu_uses"], "source": ["chat.fu_uses", "chat.fu_quality"], "data_quality": ["chat.fu_countries", "chat.fu_uses"],
+              "ingredient_search": ["chat.fu_sources"]}
+
+
+def chat_suggestions(cc: str | None) -> list[str]:
+    """Quick questions: follow-ups on the last answer, a question about the country selected on the map, starters."""
+    lang = st.session_state["lang"]
+    last = next((m for m in reversed(st.session_state["chat"]) if m["role"] == "assistant" and m.get("ans")), None)
+    out: list[str] = []
+    last_intent = last["ans"].get("intent") if last else None
+    if last and (last["ans"].get("context") or {}).get("productIds"):
+        out += [t(k) for k in FOLLOW_UPS.get(last_intent, [])]
+    if cc:
+        cin = COUNTRY_IN.get(lang, COUNTRY_IN["en"]).get(cc, cc)
+        out.append(t("chat.sugg_country", cin=cin))
+        if not last or last_intent == "country_portfolio":
+            out.append(t("chat.sugg_country_pilot", cin=cin))
+    asked = {m["content"] for m in st.session_state["chat"] if m["role"] == "user"}
+    out = [s for s in out if s not in asked]  # never suggest a question already asked in this thread
+    if len(out) < 2:
+        out += [s for s in EXAMPLES.get(lang, EXAMPLES["fr"])[:3] if s not in asked]
+    return list(dict.fromkeys(out))[:4]
+
+
+def chat_panel(cc: str | None):
+    """Conversational assistant: every turn goes through POST /ask with the previous `context` (follow-ups keep the thread)."""
+    lang = st.session_state["lang"]
+    st.session_state.setdefault("chat", [])
+    h1, h2 = st.columns([5, 1])
+    h1.caption(t("chat.caption"))
+    if h2.button(t("chat.clear"), key="chat_clear", use_container_width=True):
+        st.session_state["chat"], st.session_state["chat_ctx"], st.session_state["chat_pending"] = [], None, None
+        st.rerun()
+    box = st.container(height=540, border=True, key="chat_box")
+    with box:
+        if not st.session_state["chat"]:
+            with st.chat_message("assistant", avatar=BOT_AVATAR):
+                st.markdown(t("chat.hello"))
+        for m in st.session_state["chat"]:
+            if m["role"] == "user":
+                with st.chat_message("user", avatar=USER_AVATAR):
+                    st.markdown(m["content"])
+            else:
+                with st.chat_message("assistant", avatar=BOT_AVATAR):
+                    if m.get("error"):
+                        st.error(m["error"])
+                    else:
+                        render_answer(m["ans"])
+        pending = st.session_state.get("chat_pending")
+        if pending:
+            with st.chat_message("assistant", avatar=BOT_AVATAR):
+                with st.spinner(t("ask.spinner")):
+                    hist = [{"role": m["role"], "content": m["content"] if m["role"] == "user" else (((m.get("ans") or {}).get("structured") or {}).get("headline") or "")}
+                            for m in st.session_state["chat"][:-1]][-6:]
+                    try:
+                        ans = api_post("/ask", {"question": pending, "language": lang, "context": st.session_state.get("chat_ctx"), "history": hist})
+                        st.session_state["chat_ctx"] = ans.get("context")
+                        st.session_state["chat"].append({"role": "assistant", "ans": ans})
+                    except httpx.HTTPError as e:  # noqa: BLE001 - the API refused or failed: say so, keep the thread
+                        st.session_state["chat"].append({"role": "assistant", "error": t("ask.error", err=e)})
+            st.session_state["chat_pending"] = None
+            st.rerun()
+    components.html("""<script>
+      const w = window.parent.document.querySelector('.st-key-chat_box');
+      if (w) { for (const el of [w, ...w.querySelectorAll('div')]) { if (el.scrollHeight > el.clientHeight + 4) { el.scrollTop = el.scrollHeight; break; } } }
+    </script>""", height=0)
+    sugg = chat_suggestions(cc)
+    pick = st.pills(t("chat.suggest"), sugg, selection_mode="single", key=f"chat_sugg_{len(st.session_state['chat'])}_{lang}", label_visibility="collapsed") if sugg else None
+    typed = st.chat_input(t("chat.placeholder"), key="chat_in")
+    q = (typed or pick or "").strip()
+    if q:
+        st.session_state["chat"].append({"role": "user", "content": q})
+        st.session_state["chat_pending"] = q
+        st.rerun()
+
+
 # ---------------------------------------------------------------------------------- pages
-if page == "page.overview":
-    st.title(t("ov.title"))
+if page == "page.home":
+    st.title(t("home.title"))
     c1, c2, c3 = st.columns([2.2, 2, 1])
     scope_keys = ["ov.scope.pilots", "ov.scope.lallemand", "ov.scope.all", "ov.scope.product"]
     with c1:
@@ -344,23 +463,27 @@ if page == "page.overview":
                      t("source"): c["sourceId"] or t("none"), t("collected"): fmt_dt(c["collectedAt"]),
                      t("ov.col.list"): (", ".join(prods[:6]) + (" …" if len(prods) > 6 else "")) or "—"})
     df = pd.DataFrame(rows)
-    clicked = status_map(df, "ov_map", 580, size_col=t("registrations"))
-    st.caption(t("ov.caption"))
-    sel_iso = country_picker(df, clicked, "ov", t("registrations"))
-    cc = ISO3_TO_CC[sel_iso]
-    c = next(x for x in ov["countries"] if x["countryCode"] == cc)
-    st.markdown(f"### {cname(cc)} ({cc}) — {c['sourceId'] or t('none_country')}" + (f" · {t('collected').lower()} {fmt_dt(c['collectedAt'])}" if c["collectedAt"] else ""))
-    if c["registrations"]:
-        st.dataframe(country_detail_table(c["registrations"]), hide_index=True, use_container_width=True, column_config=LINK)
-    elif c["coverage"] == "not_found_in_source":
-        st.info(t("ov.notfound", src=c["sourceId"], at=fmt_dt(c["collectedAt"]), n=c.get("totalInStore", 0)))
-    else:
-        st.warning(t("ov.nosource"))
-    with st.expander(t("ov.table")):
-        view = df.drop(columns=["iso3"]).copy()
-        view["Statut"] = view["Statut"].map(t)
-        view = view.rename(columns={"Statut": t("status")})
-        st.dataframe(view, hide_index=True, use_container_width=True)
+    left, right = st.columns([1.15, 1], gap="medium")
+    with left:
+        clicked = status_map(df, "ov_map", 500, size_col=t("registrations"))
+        st.caption(t("ov.caption"))
+        sel_iso = country_picker(df, clicked, "ov", t("registrations"))
+        cc = ISO3_TO_CC[sel_iso]
+        c = next(x for x in ov["countries"] if x["countryCode"] == cc)
+        st.markdown(f"#### {cname(cc)} ({cc}) — {c['sourceId'] or t('none_country')}" + (f" · {t('collected').lower()} {fmt_dt(c['collectedAt'])}" if c["collectedAt"] else ""))
+        if c["registrations"]:
+            st.dataframe(country_detail_table(c["registrations"]), hide_index=True, use_container_width=True, column_config=LINK)
+        elif c["coverage"] == "not_found_in_source":
+            st.info(t("ov.notfound", src=c["sourceId"], at=fmt_dt(c["collectedAt"]), n=c.get("totalInStore", 0)))
+        else:
+            st.warning(t("ov.nosource"))
+        with st.expander(t("ov.table")):
+            view = df.drop(columns=["iso3"]).copy()
+            view["Statut"] = view["Statut"].map(t)
+            view = view.rename(columns={"Statut": t("status")})
+            st.dataframe(view, hide_index=True, use_container_width=True)
+    with right:
+        chat_panel(cc)
     disclaimer_box(ov["disclaimer"])
 
 elif page == "page.compare":
@@ -546,47 +669,6 @@ elif page == "page.map":
     else:
         st.info(t(df.set_index("iso3").loc[sel, "Statut"]).capitalize() + " — " + t("map.nothing"))
     warnings_box(warnings)
-    disclaimer_box()
-
-elif page == "page.ask":
-    st.title(t("ask.title"))
-    st.caption(t("ask.caption"))
-    lang = st.session_state["lang"]
-    ex = st.selectbox(t("ask.examples"), [""] + EXAMPLES.get(lang, EXAMPLES["fr"]), key=f"ask_ex_{lang}")
-    q = st.text_area(t("ask.q"), value=ex, height=80)
-    if st.button(t("ask.go"), type="primary") and q.strip():
-        with st.spinner(t("ask.spinner")):
-            try:
-                st.session_state["ask_last"] = {"q": q.strip(), "ans": api_post("/ask", {"question": q.strip(), "language": lang})}
-            except httpx.HTTPError as e:  # noqa: BLE001 - the API refused or failed: say so, keep the page usable
-                st.session_state.pop("ask_last", None)
-                st.error(t("ask.error", err=e))
-    last = st.session_state.get("ask_last")
-    if last:
-        ans = last["ans"]
-        sa = ans.get("structured") or {}
-        st.caption(f"« {last['q']} »")
-        st.markdown(f"#### {sa.get('headline') or t('ask.answer')}")
-        items = sa.get("items") or []
-        if items:
-            cols_map = [("country", t("country")), ("product", t("product")), ("registrationNumber", t("number")), ("status", t("status")), ("statusOriginal", t("status_orig")),
-                        ("expiry", t("expires")), ("relationship", t("ask.item.relationship")), ("detail", t("ask.item.detail")), ("sourceId", t("source")), ("collectedAt", t("collected"))]
-            rows = [{lbl: (st_label(it[k]) if k == "status" and it.get(k) in STATUS_COLOR else it.get(k)) for k, lbl in cols_map if any(x.get(k) for x in items)} for it in items]
-            st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
-        for cv in sa.get("caveats") or []:
-            st.markdown(f'<div class="warn">• {cv}</div>', unsafe_allow_html=True)
-        st.caption(t("ask.meta", intent=ans["intent"], tools=", ".join(ans["toolsUsed"]) or "—", model=ans["model"] or t("ask.det")))
-        other = [w for w in (ans.get("warningsLocalized") or ans["warnings"]) if w not in (sa.get("caveats") or [])]
-        warnings_box(other)
-        with st.expander(t("ask.evidence", n=len(ans["evidence"]))):
-            if ans["evidence"]:
-                ev = pd.DataFrame([{t("source"): e["sourceId"], "URL": e["sourceUrl"], t("collected"): fmt_dt(e["collectedAt"]), t("validation"): e["validationStatus"],
-                                    t("cmp.extraction"): e.get("extractionMethod"), t("ask.excerpt"): (e.get("excerpt") or "")[:160]} for e in ans["evidence"]])
-                st.dataframe(ev, hide_index=True, use_container_width=True, column_config={"URL": st.column_config.LinkColumn("URL", display_text=t("ask.open"))})
-            else:
-                st.info(t("ask.no_evidence"))
-        with st.expander(t("ask.facts")):
-            st.json(ans["facts"])
     disclaimer_box()
 
 elif page == "page.sisters":

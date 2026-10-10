@@ -127,6 +127,8 @@ class AliasOut(Camel):  # ext
 class AskRequest(BaseModel):
     question: str = Field(min_length=3)
     language: str = "fr"
+    context: dict | None = None  # ext: `context` of the previous answer ({productIds, countries, species, crop, intent}) so follow-up questions keep the thread
+    history: list[dict] = Field(default_factory=list)  # ext: previous turns [{role, content}] - wording only, never a data source
 
 
 class Answer(Camel):
@@ -140,6 +142,7 @@ class Answer(Camel):
     model: str | None = None  # ext: null when answered deterministically
     structured: dict | None = None  # ext: {headline, items[], caveats[]} (answer_model.StructuredAnswer)
     warningsLocalized: list[str] = Field(default_factory=list)  # ext: `warnings` in the question language (`warnings` itself stays English)
+    context: dict | None = None  # ext: plan summary to send back with the next question of the same conversation
 
 
 class ReviewRequest(BaseModel):

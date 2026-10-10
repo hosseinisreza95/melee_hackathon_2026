@@ -116,7 +116,7 @@ def compare(productId: str, countries: str = Query(..., examples=["CA,US,FR,BR"]
 
 @app.post("/ask", operation_id="askRegulatoryQuestion", response_model=Answer, tags=["contract"])
 def ask(req: AskRequest, s: Session = Depends(db)):
-    return run_ask(s, req.question, req.language)
+    return run_ask(s, req.question, req.language, req.context, req.history)
 
 
 # --------------------------------------------------------------------------- extensions (documented in m365/README.md)
