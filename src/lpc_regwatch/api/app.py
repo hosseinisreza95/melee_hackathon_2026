@@ -54,7 +54,9 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="LPC Global Regulatory AI API", version=__version__, description=DESCRIPTION,
+# Behind the reverse proxy the API lives under /api (the proxy strips the prefix); root_path makes Swagger UI fetch
+# /api/openapi.json instead of /openapi.json (which the proxy would route to the UI).
+app = FastAPI(title="LPC Global Regulatory AI API", version=__version__, description=DESCRIPTION, root_path=settings.api_root_path, root_path_in_servers=False,
               servers=[{"url": settings.public_base_url}], docs_url="/docs", redoc_url="/redoc", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 

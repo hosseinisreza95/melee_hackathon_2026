@@ -21,6 +21,7 @@ x-app: &app
     RAW_DIR: /app/data/raw
     API_BASE_URL: http://api:8000
     API_PUBLIC_URL: /api   # what the browser opens (behind the proxy); the UI links its API docs here
+    API_ROOT_PATH: /api    # the proxy strips this prefix; FastAPI needs it so Swagger UI loads /api/openapi.json
     PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost/api}
   volumes:
     - rawdata:/app/data/raw

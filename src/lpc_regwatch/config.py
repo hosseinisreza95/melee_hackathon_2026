@@ -40,6 +40,7 @@ class Settings:
     pipeline_schedule: str = os.getenv("PIPELINE_SCHEDULE", "30 3 * * *")  # cron of the nightly pipeline (UTC), advertised by /health
     api_base_url: str = os.getenv("API_BASE_URL", "http://localhost:8000")  # used by the Streamlit thin client
     public_base_url: str = os.getenv("PUBLIC_BASE_URL", "http://localhost:8000")  # advertised in OpenAPI servers[]
+    api_root_path: str = os.getenv("API_ROOT_PATH", "")  # path prefix added by the reverse proxy ("/api" on the server)
 
     @property
     def ai_enabled(self) -> bool:
