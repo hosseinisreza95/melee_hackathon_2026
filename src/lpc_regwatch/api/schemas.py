@@ -139,6 +139,7 @@ class Answer(Camel):
     toolsUsed: list[str] = Field(default_factory=list)  # ext
     model: str | None = None  # ext: null when answered deterministically
     structured: dict | None = None  # ext: {headline, items[], caveats[]} (answer_model.StructuredAnswer)
+    warningsLocalized: list[str] = Field(default_factory=list)  # ext: `warnings` in the question language (`warnings` itself stays English)
 
 
 class ReviewRequest(BaseModel):

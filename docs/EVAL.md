@@ -59,6 +59,10 @@ Answer shape (since 2026-10-10 evening): a Pydantic `StructuredAnswer` — `head
 key is configured the model receives the same facts plus the JSON schema and may only re-select and re-phrase; the grounding guard
 runs on the flattened text. The UI renders headline, a compact table and the caveats; evidence and raw facts stay in expanders.
 Languages: French, English, Portuguese (planner words, labels and the model's output language).
+Final UI pass (2026-10-10): the caveats and a `warningsLocalized` copy are written in the question language (the English warning
+templates are mapped to French/Portuguese; the `warnings` field itself stays English for the contract and the tests), and a
+`country_portfolio` intent answers "which (Lallemand) products are registered in <country>" from the same overview query as the
+map, capped at 40 facts / 12 rows with an explicit caveat (`test_country_portfolio_question`, `test_caveats_follow_the_question_language`).
 
 - Deterministic path (no key): 100 % of the facts come from predefined queries; tests `tests/test_gold.py` (T01–T05 + adversarial +
   other products/countries/crops) pass offline.

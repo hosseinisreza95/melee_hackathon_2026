@@ -68,3 +68,27 @@ def test_every_page_renders_in_every_language(ui_http, lang, page):
     assert title == tr(lang, expected)
     # the disclaimer is on every page, in the selected language
     assert any(tr(lang, "disclaimer") in (m.value or "") for m in at.markdown)
+
+
+def test_single_language_control_switches_every_page(ui_http):
+    """One control (top-right menu) for the whole app: switching it re-renders the current page in the new language,
+    and the question page has no second language selector."""
+    from streamlit.testing.v1 import AppTest
+
+    at = AppTest.from_file(str(APP), default_timeout=60)
+    at.session_state["page"] = "page.ask"
+    at.run()
+    assert not at.exception
+    ctrls = [c for c in at.segmented_control if c.key == "lang_ctl"]
+    assert len(ctrls) == 1 and len(at.segmented_control) == 1  # the only segmented control is the language one
+    assert all(tr("fr", "page.ask") != r.label for r in at.radio) and not [r for r in at.radio if list(r.options) == list(LANGS)]
+    assert at.title[0].value == tr("fr", "ask.title")
+    ctrls[0].set_value("pt").run()
+    assert not at.exception
+    assert at.session_state["lang"] == "pt" and at.session_state["page"] == "page.ask"  # same page, new language
+    assert at.title[0].value == tr("pt", "ask.title")
+    # deselecting the control (single mode allows an empty selection) keeps the current language
+    at = AppTest.from_file(str(APP), default_timeout=60)
+    at.run()
+    at.segmented_control(key="lang_ctl").set_value(None).run()
+    assert not at.exception and at.session_state["lang"] == "fr" and at.title[0].value == tr("fr", "ov.title")

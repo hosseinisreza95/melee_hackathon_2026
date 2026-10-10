@@ -30,8 +30,9 @@ log = logging.getLogger(__name__)
 COUNTRY_WORDS = {
     "CA": ["canada", "canadian", "canadien", "canadienne", "canadá"], "US": ["usa", "united states", "u.s.", "etats-unis", "états-unis", "etats unis", "american", "américain", "epa", "estados unidos", "eua"],
     "FR": ["france", "french", "français", "francais", "française", "anses", "e-phy", "ephy", "frança", "francês"], "BR": ["brazil", "brésil", "bresil", "brazilian", "brésilien", "agrofit", "brasil", "brasileiro"],
-    "DE": ["germany", "allemagne", "german", "allemand"], "BE": ["belgium", "belgique"], "MX": ["mexico", "mexique"], "UY": ["uruguay"],
-    "ES": ["spain", "espagne"], "IT": ["italy", "italie"], "NL": ["netherlands", "pays-bas"], "GB": ["united kingdom", "royaume-uni", "uk"],
+    "DE": ["germany", "allemagne", "german", "allemand", "alemanha", "alemão"], "BE": ["belgium", "belgique", "bélgica", "belgica"], "MX": ["mexico", "mexique", "méxico"],
+    "UY": ["uruguay", "uruguai"], "ES": ["spain", "espagne", "espanha", "españa"], "IT": ["italy", "italie", "itália", "italia"],
+    "NL": ["netherlands", "pays-bas", "países baixos", "paises baixos", "holanda"], "GB": ["united kingdom", "royaume-uni", "uk", "reino unido"],
 }
 INTENTS = {
     "sister_product": [r"\bs[oœ]urs?\b", r"\bsister", r"jumeau", r"irmã", r"irmão", r"équivalent", r"equivalent", r"même produit", r"same product", r"candidat"],
@@ -86,6 +87,11 @@ class Plan:
     crop: str | None = None
     months: int = 12
     unresolved_names: list[str] = field(default_factory=list)
+    scope: str = "all"  # country_portfolio: 'lallemand' (holder LALLEMAND/DANSTAR) or 'all'
+
+
+PORTFOLIO_RE = re.compile(r"quels? produits?|which products?|what products?|quais produtos|liste des produits|list (?:of |the )?products|produits (?:lallemand|homologu|enregistr|autoris)"
+                          r"|lallemand products|produtos (?:lallemand|registrad)|portefeuille|portfolio|tous les produits|all (?:the )?products|todos os produtos")
 
 
 # --------------------------------------------------------------------------- 1. plan
@@ -130,7 +136,11 @@ def plan(session: Session, question: str) -> Plan:
                 unresolved.append(tok)
     if species and not pids and intent in ("registration_lookup", "use_comparison"):
         intent = "ingredient_search"
-    return Plan(intent, pids, countries, species, crop, months, unresolved)
+    scope = "lallemand" if re.search(r"lallemand|danstar", q) else "all"
+    if not pids and not species and countries and PORTFOLIO_RE.search(q):  # 'which (Lallemand) products are registered in Brazil?'
+        intent = "country_portfolio"
+        unresolved = []
+    return Plan(intent, pids, countries, species, crop, months, unresolved, scope)
 
 
 # --------------------------------------------------------------------------- 2. tools (the only data access)
@@ -192,6 +202,36 @@ def run_tools(session: Session, pl: Plan) -> tuple[list[dict], list[dict], list[
             warnings.append(f"No product with '{sp}'" + (f" on crop '{pl.crop}'" if pl.crop else "") + " in the collected sources - not proof of absence.")
         if pl.crop:
             warnings.append("Crop filter applied on normalized and original crop wording; CA/US crop lists are not paired with targets by the source.")
+        return facts, evidence, warnings, tools
+
+    if pl.intent == "country_portfolio":
+        tools.append("overview")
+        ov = Q.overview(session, pl.scope, None, pl.months)
+        for c in ov["countries"]:
+            cc = c["countryCode"]
+            if cc not in pl.countries:
+                continue
+            regs = c["registrations"]
+            name = Q.COUNTRY_NAMES.get(cc, cc)
+            for r in regs[:40]:
+                facts.append({"type": "registration", "product": r["productName"], "country": cc, "registrationNumber": r["registrationNumber"],
+                              "statusOriginal": r["statusOriginal"], "statusNormalized": r["statusNormalized"], "holder": r["holder"],
+                              "expirationDate": r["expirationDate"], "usesCount": r["usesCount"], "activeEntityNormalized": r["activeEntityNormalized"],
+                              "validationStatus": r["validationStatus"], "sourceId": r["sourceId"], "sourceUrl": r["sourceUrl"],
+                              "collectedAt": r["collectedAt"].isoformat() if r["collectedAt"] else None})
+                evidence.append({"sourceId": r["sourceId"], "sourceUrl": r["sourceUrl"], "collectedAt": r["collectedAt"], "validationStatus": r["validationStatus"]})
+            facts.append({"type": "portfolio", "country": cc, "scope": pl.scope, "total": len(regs), "shown": min(len(regs), 40), "coverage": c["coverage"],
+                          "sourceId": c["sourceId"], "collectedAt": c["collectedAt"].isoformat() if c["collectedAt"] else None})
+            if c["coverage"] == "source_not_collected":
+                warnings.append(f"{name} ({cc}): no source connected - unknown, not 'not registered'.")
+            elif not regs:
+                warnings.append(f"{name} ({cc}): no product of scope '{pl.scope}' found in {c['sourceId']} as of {c['collectedAt']:%Y-%m-%d} - this is not proof of no registration.")
+            elif len(regs) > 40:
+                warnings.append(f"{name} ({cc}): {len(regs)} registrations in scope '{pl.scope}', only the first 40 are listed - narrow the question (e.g. 'Lallemand products').")
+        if pl.scope == "lallemand":
+            warnings.append("Scope 'Lallemand' = registrations whose holder contains LALLEMAND or DANSTAR in the official source; distributor registrations are not included.")
+        if pl.crop:
+            warnings.append(f"Crop '{pl.crop}' was not applied to this country listing; ask with a product or a micro-organism to filter by crop.")
         return facts, evidence, warnings, tools
 
     if not pl.product_ids:
@@ -314,6 +354,90 @@ def template_answer(pl: Plan, facts: list[dict], warnings: list[str], language: 
 
 
 # --------------------------------------------------------------------------- 3b. structured answer (deterministic)
+CNAME = {"fr": {"CA": "Canada", "US": "États-Unis", "FR": "France", "BR": "Brésil", "DE": "Allemagne", "BE": "Belgique", "MX": "Mexique", "UY": "Uruguay", "ES": "Espagne", "IT": "Italie", "NL": "Pays-Bas", "GB": "Royaume-Uni"},
+         "en": {"CA": "Canada", "US": "United States", "FR": "France", "BR": "Brazil", "DE": "Germany", "BE": "Belgium", "MX": "Mexico", "UY": "Uruguay", "ES": "Spain", "IT": "Italy", "NL": "Netherlands", "GB": "United Kingdom"},
+         "pt": {"CA": "Canadá", "US": "Estados Unidos", "FR": "França", "BR": "Brasil", "DE": "Alemanha", "BE": "Bélgica", "MX": "México", "UY": "Uruguai", "ES": "Espanha", "IT": "Itália", "NL": "Países Baixos", "GB": "Reino Unido"}}
+
+# English warning templates (API contract, tests) -> French / Portuguese wording for the caveats shown to the reader.
+WARN_I18N: list[tuple[re.Pattern, dict[str, str]]] = [
+    (re.compile(r"^(?P<name>.+?) \((?P<cc>\w\w)\): not found in (?P<src>\S+) as of (?P<date>\d{4}-\d\d-\d\d) - this is not proof of no registration\.$"),
+     {"fr": "{name} ({cc}) : non trouvé dans {src} au {date} — ce n'est pas une preuve d'absence d'homologation.",
+      "pt": "{name} ({cc}): não encontrado em {src} em {date} — isto não prova ausência de registro."}),
+    (re.compile(r"^(?P<name>.+?) \((?P<cc>\w\w)\): no source connected - unknown, not 'not registered'\.$"),
+     {"fr": "{name} ({cc}) : aucune source connectée — inconnu, pas « non homologué ».", "pt": "{name} ({cc}): nenhuma fonte conectada — desconhecido, não « não registrado »."}),
+    (re.compile(r"^(?P<name>.+?) \((?P<cc>\w\w)\): no registration of this product, but related product '(?P<rel>.+?)' \((?P<type>[a-z_]+), (?P<review>[a-z_]+)\) has n° (?P<num>\S+) - a distinct product, not an equivalent\.$"),
+     {"fr": "{name} ({cc}) : pas d'enregistrement de ce produit, mais le produit lié « {rel} » ({type}, {review}) porte le n° {num} — produit distinct, pas un équivalent.",
+      "pt": "{name} ({cc}): nenhum registro deste produto, mas o produto relacionado « {rel} » ({type}, {review}) tem o nº {num} — produto distinto, não equivalente."}),
+    (re.compile(r"^(?P<cc>\w\w) (?P<num>\S+): dose is not in the structured source; only the official label PDF states it\.$"),
+     {"fr": "{cc} {num} : la dose n'est pas dans la source structurée ; seule l'étiquette officielle (PDF) l'indique.",
+      "pt": "{cc} {num}: a dose não está na fonte estruturada; apenas o rótulo oficial (PDF) a indica."}),
+    (re.compile(r"^(?P<cc>\w\w) (?P<num>\S+): the source lists crops and targets as two independent lists; crop-target pairs are not asserted by the source\.$"),
+     {"fr": "{cc} {num} : la source liste cultures et cibles comme deux listes indépendantes ; les couples culture-cible ne sont pas affirmés par la source.",
+      "pt": "{cc} {num}: a fonte lista culturas e alvos como duas listas independentes; os pares cultura-alvo não são afirmados pela fonte."}),
+    (re.compile(r"^(?P<cc>\w\w) (?P<num>\S+): some uses were extracted from the label PDF by an AI model \(extraction_method=llm_pdf\) and are not yet validated\.$"),
+     {"fr": "{cc} {num} : certains usages ont été extraits de l'étiquette PDF par un modèle d'IA (extraction_method=llm_pdf) et ne sont pas encore validés.",
+      "pt": "{cc} {num}: alguns usos foram extraídos do rótulo PDF por um modelo de IA (extraction_method=llm_pdf) e ainda não foram validados."}),
+    (re.compile(r"^(?P<cc>\w\w) (?P<num>\S+): automatically extracted, not yet validated by Regulatory Affairs\.$"),
+     {"fr": "{cc} {num} : extraction automatique, non encore validée par Regulatory Affairs.", "pt": "{cc} {num}: extração automática, ainda não validada pelo Regulatory Affairs."}),
+    (re.compile(r"^No known product name recognised in the question(?P<unres> \(unresolved: .+?\))?\. Nothing was found in the collected sources; this is not proof of no registration\. Try the exact commercial name or an alias\.$"),
+     {"fr": "Aucun nom de produit connu reconnu dans la question{unres}. Rien n'a été trouvé dans les sources collectées ; ce n'est pas une preuve d'absence d'homologation. Essayez le nom commercial exact ou un alias.",
+      "pt": "Nenhum nome de produto conhecido reconhecido na pergunta{unres}. Nada foi encontrado nas fontes coletadas; isto não prova ausência de registro. Tente o nome comercial exato ou um alias."}),
+    (re.compile(r"^(?P<name>.+?) \((?P<cc>\w\w)\): no product of scope '(?P<scope>\w+)' found in (?P<src>\S+) as of (?P<date>\d{4}-\d\d-\d\d) - this is not proof of no registration\.$"),
+     {"fr": "{name} ({cc}) : aucun produit du périmètre « {scope} » dans {src} au {date} — ce n'est pas une preuve d'absence d'homologation.",
+      "pt": "{name} ({cc}): nenhum produto do escopo « {scope} » em {src} em {date} — isto não prova ausência de registro."}),
+    (re.compile(r"^(?P<name>.+?) \((?P<cc>\w\w)\): (?P<n>\d+) registrations in scope '(?P<scope>\w+)', only the first 40 are listed - narrow the question \(e\.g\. 'Lallemand products'\)\.$"),
+     {"fr": "{name} ({cc}) : {n} enregistrements dans le périmètre « {scope} », seuls les 40 premiers sont listés — précisez la question (ex. « produits Lallemand »).",
+      "pt": "{name} ({cc}): {n} registros no escopo « {scope} », apenas os 40 primeiros são listados — restrinja a pergunta (ex. « produtos Lallemand »)."}),
+    (re.compile(r"^Scope 'Lallemand' = registrations whose holder contains LALLEMAND or DANSTAR in the official source; distributor registrations are not included\.$"),
+     {"fr": "Périmètre « Lallemand » = enregistrements dont le titulaire contient LALLEMAND ou DANSTAR dans la source officielle ; les enregistrements de distributeurs ne sont pas inclus.",
+      "pt": "Escopo « Lallemand » = registros cujo titular contém LALLEMAND ou DANSTAR na fonte oficial; registros de distribuidores não estão incluídos."}),
+    (re.compile(r"^Crop '(?P<crop>.+?)' was not applied to this country listing; ask with a product or a micro-organism to filter by crop\.$"),
+     {"fr": "La culture « {crop} » n'a pas été appliquée à cette liste par pays ; posez la question avec un produit ou un micro-organisme pour filtrer par culture.",
+      "pt": "A cultura « {crop} » não foi aplicada a esta lista por país; pergunte com um produto ou um microrganismo para filtrar por cultura."}),
+    (re.compile(r"^Sister-product candidates are hypotheses with a review status; none is a confirmed equivalent unless review_status=validated\.$"),
+     {"fr": "Les candidats « produit sœur » sont des hypothèses avec un statut de revue ; aucun n'est un équivalent confirmé sauf review_status=validated.",
+      "pt": "Os candidatos a « produto irmão » são hipóteses com um estado de revisão; nenhum é equivalente confirmado salvo review_status=validated."}),
+    (re.compile(r"^No registration with an expiry date within (?P<m>\d+) months in the collected sources; BR and US sources give no expiry dates\.$"),
+     {"fr": "Aucun enregistrement avec une date d'expiration dans les {m} mois dans les sources collectées ; les sources BR et US ne donnent pas de date d'expiration.",
+      "pt": "Nenhum registro com data de vencimento nos próximos {m} meses nas fontes coletadas; as fontes BR e US não informam datas de vencimento."}),
+    (re.compile(r"^Expiry dates exist only in CA-PPID and FR-EPHY \(withdrawal date\); US-EPA-PPLS and BR-AGROFIT do not publish them\.$"),
+     {"fr": "Les dates d'expiration n'existent que dans CA-PPID et FR-EPHY (date de retrait) ; US-EPA-PPLS et BR-AGROFIT ne les publient pas.",
+      "pt": "As datas de vencimento existem apenas em CA-PPID e FR-EPHY (data de retirada); US-EPA-PPLS e BR-AGROFIT não as publicam."}),
+    (re.compile(r"^No change detected yet: change detection needs at least two collections of the same source\.$"),
+     {"fr": "Aucun changement détecté pour l'instant : la détection nécessite au moins deux collectes de la même source.",
+      "pt": "Nenhuma mudança detectada ainda: a detecção exige pelo menos duas coletas da mesma fonte."}),
+    (re.compile(r"^No micro-organism species recognised in the question \(known species are those present in the store, e\.g\. (?P<ex>.+?)\)\.$"),
+     {"fr": "Aucune espèce de micro-organisme reconnue dans la question (espèces connues : celles présentes dans la base, ex. {ex}).",
+      "pt": "Nenhuma espécie de microrganismo reconhecida na pergunta (espécies conhecidas: as presentes na base, ex. {ex})."}),
+    (re.compile(r"^No product with '(?P<sp>.+?)'(?P<crop> on crop '.+?')? in the collected sources - not proof of absence\.$"),
+     {"fr": "Aucun produit avec « {sp} »{crop} dans les sources collectées — pas une preuve d'absence.",
+      "pt": "Nenhum produto com « {sp} »{crop} nas fontes coletadas — não prova ausência."}),
+    (re.compile(r"^Crop filter applied on normalized and original crop wording; CA/US crop lists are not paired with targets by the source\.$"),
+     {"fr": "Filtre culture appliqué sur le libellé normalisé et original ; les listes de cultures CA/US ne sont pas appariées aux cibles par la source.",
+      "pt": "Filtro de cultura aplicado ao texto normalizado e original; as listas de culturas CA/US não são pareadas com os alvos pela fonte."}),
+    (re.compile(r"^AI phrasing rejected by the grounding guard \((?P<why>.+)\); deterministic answer shown instead\.$"),
+     {"fr": "Formulation IA rejetée par le garde-fou d'ancrage ({why}) ; réponse déterministe affichée.",
+      "pt": "Formulação da IA rejeitada pela proteção de fundamentação ({why}); resposta determinística exibida."}),
+    (re.compile(r"^AI provider unavailable \((?P<kind>.+)\); deterministic answer shown, built from the same facts\.$"),
+     {"fr": "Fournisseur d'IA indisponible ({kind}) ; réponse déterministe affichée, construite à partir des mêmes faits.",
+      "pt": "Provedor de IA indisponível ({kind}); resposta determinística exibida, construída a partir dos mesmos fatos."}),
+]
+
+
+def localize_warning(w: str, lang: str) -> str:
+    """French/Portuguese wording of a known English warning; unknown wording is returned unchanged."""
+    if lang == "en":
+        return w
+    for rx, tpl in WARN_I18N:
+        m = rx.match(w)
+        if m and lang in tpl:
+            gd = {k: (v or "") for k, v in m.groupdict().items()}
+            if gd.get("cc") in CNAME.get(lang, {}) and "name" in gd:
+                gd["name"] = CNAME[lang][gd["cc"]]  # country name in the reader's language
+            return tpl[lang].format(**gd)
+    return w
+
+
 def build_structured(pl: Plan, facts: list[dict], warnings: list[str], language: str) -> StructuredAnswer:
     """Compact, question-shaped answer from the facts: one headline, only the relevant rows, short caveats."""
     lang = (language or "fr").lower()[:2]
@@ -355,6 +479,23 @@ def build_structured(pl: Plan, facts: list[dict], warnings: list[str], language:
         for f in ch[:12]:
             items.append(AnswerItem(registrationNumber=f.get("entityId"), detail=f"{f.get('field')}: {f.get('oldValue')} → {f.get('newValue')}", collectedAt=(f.get("detectedAt") or "")[:10]))
         headline = H["changes"].format(n=len(ch))
+    elif pl.intent == "country_portfolio":
+        CN = CNAME.get(lang, CNAME["en"])
+        scope_txt = H["scope_lallemand"] if pl.scope == "lallemand" else ""
+        for f in regs[:12]:
+            items.append(item_from_reg(f, detail=f.get("activeEntityNormalized") or f.get("holder")))
+        parts = []
+        for f in [x for x in facts if x["type"] == "portfolio"]:
+            cn = CN.get(f["country"], f["country"])
+            if f["coverage"] == "source_not_collected":
+                parts.append(H["pf_nosrc"].format(country=cn))
+            elif f["total"] == 0:
+                parts.append(H["pf_none"].format(country=cn, scope=scope_txt, source=f.get("sourceId"), date=(f.get("collectedAt") or "")[:10]))
+            else:
+                parts.append(H["pf"].format(country=cn, n=f["total"], scope=scope_txt, source=f.get("sourceId"), date=(f.get("collectedAt") or "")[:10]))
+                if f["total"] > 12:
+                    caveats.append(H["pf_more"].format(more=f["total"] - 12))
+        headline = " ".join(parts) or L["nothing"]
     elif pl.intent in ("ingredient_search",):
         for f in regs[:12]:
             uses = [u for u in facts if u["type"] == "use" and u.get("registrationNumber") == f["registrationNumber"]]
@@ -397,8 +538,8 @@ def build_structured(pl: Plan, facts: list[dict], warnings: list[str], language:
     for w in warnings:
         if len(caveats) >= 4:
             break
-        if any(k in w for k in ("not proof", "dose is not", "two independent lists", "AI model", "hypotheses", "no source connected")):
-            caveats.append(w)
+        if any(k in w for k in ("not proof", "dose is not", "two independent lists", "AI model", "hypotheses", "no source connected", "only the first", "Scope 'Lallemand'", "was not applied")):
+            caveats.append(localize_warning(w, lang))
     return StructuredAnswer(headline=headline, items=items[:12], caveats=caveats[:4])
 
 
@@ -410,7 +551,10 @@ HEAD = {
            "sisters_caveat": "Les candidats sont des hypothèses tant qu'un relecteur ne les a pas validés.", "quality": "{product} : {n} enregistrement(s) ; champs manquants ou incertains listés par pays.",
            "expiry": "{n} autorisation(s) active(s) expirent dans les {m} prochains mois (sources avec date : Canada, France).", "changes": "{n} changement(s) détecté(s) entre deux collectes.",
            "ingredient": "{species}{crop} : {n} enregistrement(s) dans {nc} pays.",
-           "cov_not_found_in_source": "non trouvé dans la source officielle collectée — pas une preuve d'absence", "cov_source_not_collected": "aucune source officielle connectée — inconnu"},
+           "cov_not_found_in_source": "non trouvé dans la source officielle collectée — pas une preuve d'absence", "cov_source_not_collected": "aucune source officielle connectée — inconnu",
+           "pf": "{country} : {n} enregistrement(s){scope} dans {source} (collecte du {date}).", "pf_none": "{country} : aucun enregistrement{scope} dans {source} (collecte du {date}) — pas une preuve d'absence.",
+           "pf_nosrc": "{country} : aucune source officielle connectée — inconnu.", "pf_more": "{more} autre(s) enregistrement(s) non affiché(s) ; précisez la question (ex. « produits Lallemand »).",
+           "scope_lallemand": " de titulaire Lallemand/Danstar"},
     "en": {"lookup": "{product}: {n} registration(s) found in the collected official sources for {countries}.",
            "lookup_nf": "Not found in the official source of: {countries} (≠ not registered).", "lookup_ns": "No source connected for: {countries}.",
            "lookup_none": "{product}: no registration in the collected sources (not found: {nf}; source not connected: {ns}). This is not proof of no registration.",
@@ -418,7 +562,10 @@ HEAD = {
            "sisters_caveat": "Candidates remain hypotheses until a reviewer validates them.", "quality": "{product}: {n} registration(s); missing or uncertain fields listed per country.",
            "expiry": "{n} active authorisation(s) expire within the next {m} months (sources with dates: Canada, France).", "changes": "{n} change(s) detected between two collections.",
            "ingredient": "{species}{crop}: {n} registration(s) in {nc} countries.",
-           "cov_not_found_in_source": "not found in the collected official source — not proof of absence", "cov_source_not_collected": "no official source connected — unknown"},
+           "cov_not_found_in_source": "not found in the collected official source — not proof of absence", "cov_source_not_collected": "no official source connected — unknown",
+           "pf": "{country}: {n} registration(s){scope} in {source} (collected {date}).", "pf_none": "{country}: no registration{scope} in {source} (collected {date}) — not proof of absence.",
+           "pf_nosrc": "{country}: no official source connected — unknown.", "pf_more": "{more} more registration(s) not shown; narrow the question (e.g. 'Lallemand products').",
+           "scope_lallemand": " held by Lallemand/Danstar"},
     "pt": {"lookup": "{product}: {n} registro(s) encontrado(s) nas fontes oficiais coletadas para {countries}.",
            "lookup_nf": "Não encontrado na fonte oficial de: {countries} (≠ não registrado).", "lookup_ns": "Nenhuma fonte conectada para: {countries}.",
            "lookup_none": "{product}: nenhum registro nas fontes coletadas (não encontrado: {nf}; fonte não conectada: {ns}). Isto não prova ausência de registro.",
@@ -426,7 +573,10 @@ HEAD = {
            "sisters_caveat": "Os candidatos permanecem hipóteses até que um revisor os valide.", "quality": "{product}: {n} registro(s); campos ausentes ou incertos listados por país.",
            "expiry": "{n} autorização(ões) ativa(s) vencem nos próximos {m} meses (fontes com data: Canadá, França).", "changes": "{n} mudança(s) detectada(s) entre duas coletas.",
            "ingredient": "{species}{crop}: {n} registro(s) em {nc} países.",
-           "cov_not_found_in_source": "não encontrado na fonte oficial coletada — não prova ausência", "cov_source_not_collected": "nenhuma fonte oficial conectada — desconhecido"},
+           "cov_not_found_in_source": "não encontrado na fonte oficial coletada — não prova ausência", "cov_source_not_collected": "nenhuma fonte oficial conectada — desconhecido",
+           "pf": "{country}: {n} registro(s){scope} em {source} (coleta de {date}).", "pf_none": "{country}: nenhum registro{scope} em {source} (coleta de {date}) — não prova ausência.",
+           "pf_nosrc": "{country}: nenhuma fonte oficial conectada — desconhecido.", "pf_more": "{more} outro(s) registro(s) não exibido(s); restrinja a pergunta (ex. « produtos Lallemand »).",
+           "scope_lallemand": " de titular Lallemand/Danstar"},
 }
 
 # --------------------------------------------------------------------------- 4. LLM phrasing + guard
@@ -441,6 +591,7 @@ Rules:
 - caveats: at most 4 short sentences from WARNINGS that the reader must know (dose not in structured source, unpaired lists, not proof of absence, hypothesis).
 - Never add a country, product, number, date, dose or status that is not in FACTS. If FACTS are empty, say that nothing was found and that this is not proof of no registration.
 - A sister-product candidate is a hypothesis unless its review status is 'validated'.
+- Write the headline, the item details and the caveats in the requested language (translate WARNINGS; keep identifiers, numbers, dates and status values as written).
 - No advice on product use."""
 
 
@@ -493,6 +644,7 @@ def ask(session: Session, question: str, language: str = "fr") -> dict:
         if k not in seen:
             seen.add(k)
             ev.append(e)
+    lang = (language or "fr").lower()[:2]
     return {"answer": text, "evidence": ev[:50], "warnings": list(dict.fromkeys(warnings)), "disclaimer": DISCLAIMER,
             "facts": facts[:200], "intent": pl.intent, "toolsUsed": list(dict.fromkeys(tools)), "model": model,
-            "structured": structured.model_dump()}
+            "structured": structured.model_dump(), "warningsLocalized": [localize_warning(w, lang) for w in dict.fromkeys(warnings)]}

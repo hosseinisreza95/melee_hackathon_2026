@@ -130,3 +130,35 @@ def test_expiry_question(api_client):
     regs = [f for f in d["facts"] if f["type"] == "registration"]
     assert [f["registrationNumber"] for f in regs] == ["32404"] and regs[0]["expirationDate"] == "2026-12-31"
     assert any("US-EPA-PPLS and BR-AGROFIT do not publish" in w for w in d["warnings"])
+
+
+def test_country_portfolio_question(api_client):
+    """'Which (Lallemand) products are registered in <country>?' - no product named, the country is the subject."""
+    d = _ask(api_client, "Quels produits Lallemand sont homologués au Canada ?")
+    assert d["intent"] == "country_portfolio" and d["toolsUsed"] == ["overview"]
+    regs = [f for f in d["facts"] if f["type"] == "registration"]
+    assert {f["registrationNumber"] for f in regs} == {"29066", "32404", "28820", "30829"}
+    assert all(f["country"] == "CA" for f in regs) and len(d["evidence"]) == 4
+    assert d["structured"]["headline"].startswith("Canada : 4 enregistrement(s) de titulaire Lallemand/Danstar dans CA-PPID")
+    assert len(d["structured"]["items"]) == 4
+    assert any("Lallemand" in c and "DANSTAR" in c for c in d["structured"]["caveats"])  # localized caveat about the scope
+    d2 = _ask(api_client, "Which products are registered in Brazil?", "en")
+    assert d2["intent"] == "country_portfolio"
+    assert [(f["country"], f["registrationNumber"]) for f in d2["facts"] if f["type"] == "registration"] == [("BR", "27520")]
+    d3 = _ask(api_client, "Quais produtos estão registrados na Alemanha?", "pt")
+    assert d3["intent"] == "country_portfolio" and d3["evidence"] == [] and [f for f in d3["facts"] if f["type"] == "registration"] == []
+    assert "Alemanha" in d3["structured"]["headline"] and any("Alemanha (DE): nenhuma fonte conectada" in c for c in d3["structured"]["caveats"])
+    assert any("no source connected" in w for w in d3["warnings"])  # the API warnings stay English
+    d4 = _ask(api_client, "Quels produits contenant Clonostachys rosea sont homologués au Canada ?")
+    assert d4["intent"] == "ingredient_search"  # a species question is still an ingredient search
+
+
+def test_caveats_follow_the_question_language(api_client):
+    d = _ask(api_client, "LALSTOP CONTANS WG est-il homologué au Brésil ?")
+    assert any("Brésil (BR) : non trouvé dans BR-AGROFIT" in c and "preuve d'absence" in c for c in d["structured"]["caveats"])
+    assert any("not found in BR-AGROFIT" in w for w in d["warnings"])  # English in the contract field
+    assert any("Brésil (BR) : non trouvé" in w for w in d["warningsLocalized"])
+    d_pt = _ask(api_client, "LALSTOP CONTANS WG está registrado no Brasil?", "pt")
+    assert any("Brasil (BR): não encontrado em BR-AGROFIT" in c for c in d_pt["structured"]["caveats"])
+    d_en = _ask(api_client, "Is LALSTOP CONTANS WG registered in Brazil?", "en")
+    assert d_en["warningsLocalized"] == d_en["warnings"]

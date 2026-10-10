@@ -50,6 +50,19 @@ def cname(cc: str) -> str:
     return COUNTRY_NAMES.get(st.session_state.get("lang", "fr"), COUNTRY_NAMES["fr"]).get(cc, cc)
 
 
+def lang_key(base: str) -> str:
+    """Widget key scoped to the current language. Option labels are part of a radio's identity in the browser: after a
+    language switch the server keeps the value but the page shows no selected option. A fresh key per language, seeded
+    with the authoritative value kept in `st.session_state[base]`, keeps both the value and the visible selection."""
+    lang = st.session_state.get("lang", "fr")
+    key = f"{base}__{lang}"
+    if st.session_state.get(f"{base}__lang") != lang:  # first render in this language (or first render at all)
+        if base in st.session_state:
+            st.session_state[key] = st.session_state[base]
+        st.session_state[f"{base}__lang"] = lang
+    return key
+
+
 st.markdown(f"""
 <style>
   section[data-testid="stSidebar"] {{ min-width: 300px; }}
@@ -69,9 +82,18 @@ st.markdown(f"""
   .lpc-list {{ font-size:.84rem; color:#e6eaec; line-height:1.55; margin:0; padding-left:0; list-style:none; }}
   .lpc-list li::before {{ content:""; display:inline-block; width:6px; height:6px; border-radius:50%; background:{RED}; margin-right:8px; vertical-align:middle; }}
   .badge {{ display:inline-block; padding:2px 9px; border-radius:999px; font-size:.78rem; font-weight:600; color:#fff; }}
-  .kpi {{ background:{GREY_LIGHT}; border-left:4px solid {RED}; border-radius:6px; padding:10px 14px; }}
+  .kpi {{ background:{GREY_LIGHT}; border-left:4px solid {RED}; border-radius:6px; padding:10px 12px; margin-bottom:16px; }}
   .kpi .v {{ font-size:1.6rem; font-weight:700; color:{INK}; line-height:1.1; }}
-  .kpi .l {{ font-size:.7rem; color:#5b6770; text-transform:uppercase; letter-spacing:.03em; line-height:1.2; }}
+  .kpi .l {{ font-size:.64rem; color:#5b6770; text-transform:uppercase; letter-spacing:.02em; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }}
+  .st-key-lpc_topbar {{ position:fixed; top:.55rem; right:1rem; z-index:999991; width:auto; }}
+  .st-key-lpc_topbar button[data-testid="stPopoverButton"] {{ border-radius:999px; min-height:2.2rem; height:2.2rem; width:2.2rem; padding:0; justify-content:center; color:{SLATE}; background:#fff; border:1px solid #d7d9db; }}
+  .st-key-lpc_topbar button[data-testid="stPopoverButton"] p {{ font-size:1.35rem; line-height:1; font-weight:700; }}
+  .st-key-lpc_topbar button[data-testid="stPopoverButton"] [data-testid="stIconMaterial"] {{ display:none; }}
+  .st-key-lpc_topbar button[data-testid="stPopoverButton"]:hover {{ border-color:{RED}; color:{RED}; }}
+  .lpc-menu-h {{ font-size:.72rem; letter-spacing:.14em; text-transform:uppercase; color:#5b6770; margin:2px 0 6px; }}
+  .lpc-menu-list {{ list-style:none; padding:0; margin:0; font-size:.9rem; line-height:1.8; }}
+  .lpc-menu-list a {{ color:{SLATE}; text-decoration:none; }}
+  .lpc-menu-list a:hover {{ color:{RED}; }}
   .ccard {{ border:1px solid #d7d9db; border-radius:8px; padding:12px 14px; background:#fff; min-height:150px; }}
   .ccard h4 {{ margin:0 0 6px; font-size:1rem; color:{INK}; }}
   .ccard .m {{ color:#5b6770; font-size:.82rem; }}
@@ -212,24 +234,34 @@ with st.sidebar:
     logo = (ASSETS / "lallemand_logo.svg").read_text(encoding="utf-8") if (ASSETS / "lallemand_logo.svg").exists() else ""
     st.markdown(f'<div class="lpc-logo">{logo}</div><div class="lpc-brand"><div><div class="t1">Regulatory Watch</div><div class="t2">{t("app.subtitle")}</div></div></div>',
                 unsafe_allow_html=True)
-    st.markdown(f'<div class="lpc-section">{t("sb.lang")}</div>', unsafe_allow_html=True)
-    lang_pick = st.segmented_control(t("sb.lang"), list(LANGS), format_func=lambda k: LANGS[k], default=st.session_state["lang"], key="lang_ctl", label_visibility="collapsed")
-    if lang_pick and lang_pick != st.session_state["lang"]:
-        st.session_state["lang"] = lang_pick
-        st.rerun()
     ai_txt = f'<span class="ok">{t("sb.ai_on")}</span> · {health.get("aiProvider")}' if health.get("aiEnabled") else f'<span class="off">{t("sb.ai_off")}</span>'
     st.markdown(f'<div class="lpc-card"><b>{health.get("registrations")}</b> {t("sb.records")} · v{health.get("version")}<br>{t("sb.ai")} : {ai_txt}<br>'
                 f'{t("sb.last")} : {fmt_dt(health.get("lastSnapshotAt"))}</div>', unsafe_allow_html=True)
     st.markdown(f'<div class="lpc-section">{t("sb.nav")}</div>', unsafe_allow_html=True)
-    page = st.radio(t("sb.nav"), PAGES, format_func=t, label_visibility="collapsed", key="page")
+    page = st.radio(t("sb.nav"), PAGES, format_func=t, label_visibility="collapsed", key=lang_key("page"))
+    st.session_state["page"] = page
     with st.expander(t("sb.about")):
         st.markdown(f'<div class="lpc-section">{t("sb.pilots")}</div><ul class="lpc-list"><li>LALSTOP CONTANS WG</li><li>LALSTOP G46 WG</li><li>LALGUARD M52 OD</li></ul>'
                     f'<div class="lpc-section">{t("sb.sources")}</div><ul class="lpc-list"><li>Santé Canada — PPID</li><li>US EPA — PPLS</li><li>ANSES — E-Phy</li><li>MAPA — AGROFIT</li></ul>'
                     f'<div class="lpc-section">{t("sb.limits")}</div>', unsafe_allow_html=True)
         for k in ("sb.lim1", "sb.lim2", "sb.lim3", "sb.lim4", "sb.lim5"):
             st.markdown(f"- {t(k)}")
-    st.markdown(f'<ul class="lpc-list" style="margin-top:10px"><li><a href="{API}/docs" target="_blank">{t("sb.api_docs")}</a></li><li><a href="/pitch/" target="_blank">{t("sb.pitch")}</a></li></ul>',
-                unsafe_allow_html=True)
+
+
+# ---------------------------------------------------------------------------------- top-right menu (language, links)
+def _set_lang():
+    v = st.session_state.get("lang_ctl")
+    if v and v != st.session_state["lang"]:
+        st.session_state["lang"] = v
+
+
+st.session_state.setdefault("lang_ctl", st.session_state["lang"])
+with st.container(key="lpc_topbar"):
+    with st.popover("\u22ee"):
+        st.markdown(f'<div class="lpc-menu-h">{t("sb.lang")}</div>', unsafe_allow_html=True)
+        st.segmented_control(t("sb.lang"), list(LANGS), format_func=lambda k: LANGS[k], key="lang_ctl", on_change=_set_lang, label_visibility="collapsed")
+        st.markdown(f'<div class="lpc-menu-h" style="margin-top:12px">{t("sb.links")}</div><ul class="lpc-menu-list"><li><a href="{API}/docs" target="_blank">{t("sb.api_docs")}</a></li>'
+                    f'<li><a href="/pitch/" target="_blank">{t("sb.pitch")}</a></li></ul>', unsafe_allow_html=True)
 
 products = api_get("/products", {"limit": 500})["items"]
 prod_label = {p["productId"]: f"{p['commercialName']}  ({', '.join(p['countries']) or t('no_country')})" for p in products}
@@ -281,14 +313,15 @@ if page == "page.overview":
     c1, c2, c3 = st.columns([2.2, 2, 1])
     scope_keys = ["ov.scope.pilots", "ov.scope.lallemand", "ov.scope.all", "ov.scope.product"]
     with c1:
-        scope_key = st.radio(t("ov.scope"), scope_keys, format_func=t, horizontal=True, key="ov_scope")
+        scope_key = st.radio(t("ov.scope"), scope_keys, format_func=t, horizontal=True, key=lang_key("ov_scope"))
+        st.session_state["ov_scope"] = scope_key
     scope = {"ov.scope.pilots": "pilots", "ov.scope.lallemand": "lallemand", "ov.scope.all": "all", "ov.scope.product": "product"}[scope_key]
     params = {"scope": scope}
     with c2:
         if scope == "product":
             params["productId"] = product_picker("ov")
     with c3:
-        params["months"] = st.number_input(t("ov.months"), 1, 60, 12)
+        params["months"] = st.number_input(t("ov.months"), 1, 60, 12, key="ov_months")
     ov = api_get("/overview", params)
     if "__404__" in ov:
         st.error(ov["__404__"]["message"])
@@ -297,7 +330,7 @@ if page == "page.overview":
     k = st.columns(6)
     for col, (v, lbl) in zip(k, [(tt["sourcesConnected"], t("ov.k.sources")), (tt["countriesFound"], t("ov.k.countries")), (tt["products"], t("products")),
                                   (tt["registrations"], t("registrations")), (tt["active"], t("ov.k.active")), (tt["expiringSoon"], t("ov.k.expiring", m=ov["months"]))]):
-        col.markdown(f'<div class="kpi"><div class="v">{v}</div><div class="l">{lbl}</div></div>', unsafe_allow_html=True)
+        col.markdown(f'<div class="kpi"><div class="v">{v}</div><div class="l" title="{lbl}">{lbl}</div></div>', unsafe_allow_html=True)
     rows = []
     for c in ov["countries"]:
         if c["countryCode"] not in ISO3:
@@ -336,7 +369,9 @@ elif page == "page.compare":
     with col1:
         pid = product_picker("cmp")
     with col2:
-        countries = st.multiselect(t("countries"), ALL_COUNTRIES, default=["CA", "US", "FR", "BR"], format_func=lambda c: f"{cname(c)} ({c})")
+        st.session_state.setdefault("cmp_countries", ["CA", "US", "FR", "BR"])
+        countries = st.multiselect(t("countries"), ALL_COUNTRIES, format_func=lambda c: f"{cname(c)} ({c})", key=lang_key("cmp_countries"))
+        st.session_state["cmp_countries"] = countries
     if pid and countries:
         data = api_get("/compare", {"productId": pid, "countries": ",".join(countries)})
         if "__404__" in data:
@@ -366,7 +401,11 @@ elif page == "page.compare":
                           t("source"): cov["sourceId"] or t("none"), t("collected"): fmt_dt(cov["collectedAt"])})
         mdf = pd.DataFrame(mrows)
         clicked = status_map(mdf, "cmp_map", 440, size_col=t("uses"))
-        focus = ISO3_TO_CC.get(clicked) if clicked else None
+        if clicked and st.session_state.get("cmp_last_click") != clicked:  # a new click: highlight the card and filter the uses below
+            st.session_state["cmp_last_click"] = clicked
+            st.session_state["cmp_focus"] = ISO3_TO_CC.get(clicked)
+            st.session_state[lang_key("cmp_uses_cc")] = [ISO3_TO_CC.get(clicked)]
+        focus = st.session_state.get("cmp_focus") if st.session_state.get("cmp_focus") in countries else None
         cols = st.columns(len(countries))
         for c, cc in zip(cols, countries):
             cov = next(x for x in data["coverage"] if x["countryCode"] == cc)
@@ -375,7 +414,7 @@ elif page == "page.compare":
                 if cov["coverage"] == "found":
                     inner = ""
                     for r in regs_by_cc.get(cc, []):
-                        inner += (f'{badge(r["statusNormalized"])} <b>{t("number")} {r["registrationNumber"]}</b><div class="m">« {r["statusOriginal"]} » · {r["usesCount"]} {t("uses").lower()} · '
+                        inner += (f'{badge(r["statusNormalized"])} <b>{t("number")} {r["registrationNumber"]}</b><div class="m">« {r["statusOriginal"]} » · {r["usesCount"]} {t("use" if r["usesCount"] == 1 else "uses").lower()} · '
                                   f'{t("expires").lower()} {r["expirationDate"] or "—"}<br><a href="{r["evidence"]["sourceUrl"]}" target="_blank">{r["evidence"]["sourceId"]}</a> · '
                                   f'{fmt_dt(r["evidence"]["collectedAt"])}<br><code>{r["evidence"]["validationStatus"]}</code></div>')
                 elif cov["coverage"] == "not_found_in_source":
@@ -404,14 +443,22 @@ elif page == "page.compare":
         frames = [uses_table(r) for r in data["registrations"] if r["uses"]]
         if frames:
             df = pd.concat(frames, ignore_index=True)
-            f1, f2, f3 = st.columns(3)
+            cc_opts = sorted(df[t("country")].unique())
+            st.session_state.setdefault("cmp_uses_cc", cc_opts)
+            cc_key = lang_key("cmp_uses_cc")
+            if not st.session_state.get(cc_key) or any(c not in cc_opts for c in st.session_state[cc_key]):
+                st.session_state[cc_key] = cc_opts  # options changed (other product) or the clicked country has no uses: show everything
+            f0, f1, f2, f3 = st.columns([1.2, 1.6, 1.6, 1.6])
+            with f0:
+                cc_f = st.multiselect(t("country"), cc_opts, format_func=lambda c: f"{cname(c)} ({c})", key=cc_key)
+                st.session_state["cmp_uses_cc"] = cc_f
             with f1:
-                crop_f = st.text_input(t("cmp.filter_crop"), "")
+                crop_f = st.text_input(t("cmp.filter_crop"), "", key="cmp_crop_f")
             with f2:
-                pairing_f = st.multiselect(t("cmp.pairing"), sorted(df[t("cmp.pairing")].unique()), default=sorted(df[t("cmp.pairing")].unique()))
+                pairing_f = st.multiselect(t("cmp.pairing"), sorted(df[t("cmp.pairing")].unique()), default=sorted(df[t("cmp.pairing")].unique()), key=f"cmp_pair_{pid}")
             with f3:
-                extr_f = st.multiselect(t("cmp.extraction"), sorted(df[t("cmp.extraction")].unique()), default=sorted(df[t("cmp.extraction")].unique()))
-            view = df[df[t("cmp.pairing")].isin(pairing_f) & df[t("cmp.extraction")].isin(extr_f)]
+                extr_f = st.multiselect(t("cmp.extraction"), sorted(df[t("cmp.extraction")].unique()), default=sorted(df[t("cmp.extraction")].unique()), key=f"cmp_extr_{pid}")
+            view = df[df[t("country")].isin(cc_f or cc_opts) & df[t("cmp.pairing")].isin(pairing_f) & df[t("cmp.extraction")].isin(extr_f)]
             if crop_f:
                 m = view[t("u.crop_o")].fillna("").str.contains(crop_f, case=False) | view[t("u.crop_n")].fillna("").str.contains(crop_f, case=False)
                 view = view[m]
@@ -441,7 +488,8 @@ elif page == "page.compare":
 
 elif page == "page.map":
     st.title(t("map.title"))
-    mode = st.radio(t("map.mode"), ["map.mode.product", "map.mode.species"], format_func=t, horizontal=True, key="map_mode")
+    mode = st.radio(t("map.mode"), ["map.mode.product", "map.mode.species"], format_func=t, horizontal=True, key=lang_key("map_mode"))
+    st.session_state["map_mode"] = mode
     rows, warnings = [], []
     detail: dict[str, list] = {}
     if mode == "map.mode.product":
@@ -472,8 +520,8 @@ elif page == "page.map":
                                  "activeEntityNormalized": None, "sourceId": r["evidence"]["sourceId"], "sourceUrl": r["evidence"]["sourceUrl"],
                                  "collectedAt": r["evidence"]["collectedAt"], "validationStatus": r["evidence"]["validationStatus"]} for rp, r in rel]
     else:
-        species = st.text_input(t("map.species"), "Clonostachys rosea")
-        crop = st.text_input(t("map.crop"), "")
+        species = st.text_input(t("map.species"), "Clonostachys rosea", key="map_species")
+        crop = st.text_input(t("map.crop"), "", key="map_crop")
         data = api_get(f"/active-entities/{species}/registrations", {"crop": crop} if crop else None)
         warnings = data["warnings"]
         by_cc: dict[str, list] = {}
@@ -504,13 +552,20 @@ elif page == "page.ask":
     st.title(t("ask.title"))
     st.caption(t("ask.caption"))
     lang = st.session_state["lang"]
-    ex = st.selectbox(t("ask.examples"), [""] + EXAMPLES.get(lang, EXAMPLES["fr"]))
+    ex = st.selectbox(t("ask.examples"), [""] + EXAMPLES.get(lang, EXAMPLES["fr"]), key=f"ask_ex_{lang}")
     q = st.text_area(t("ask.q"), value=ex, height=80)
-    ans_lang = st.radio(t("ask.lang"), list(LANGS), format_func=lambda k: LANGS[k], index=list(LANGS).index(lang), horizontal=True)
     if st.button(t("ask.go"), type="primary") and q.strip():
         with st.spinner(t("ask.spinner")):
-            ans = api_post("/ask", {"question": q, "language": ans_lang})
+            try:
+                st.session_state["ask_last"] = {"q": q.strip(), "ans": api_post("/ask", {"question": q.strip(), "language": lang})}
+            except httpx.HTTPError as e:  # noqa: BLE001 - the API refused or failed: say so, keep the page usable
+                st.session_state.pop("ask_last", None)
+                st.error(t("ask.error", err=e))
+    last = st.session_state.get("ask_last")
+    if last:
+        ans = last["ans"]
         sa = ans.get("structured") or {}
+        st.caption(f"« {last['q']} »")
         st.markdown(f"#### {sa.get('headline') or t('ask.answer')}")
         items = sa.get("items") or []
         if items:
@@ -521,7 +576,7 @@ elif page == "page.ask":
         for cv in sa.get("caveats") or []:
             st.markdown(f'<div class="warn">• {cv}</div>', unsafe_allow_html=True)
         st.caption(t("ask.meta", intent=ans["intent"], tools=", ".join(ans["toolsUsed"]) or "—", model=ans["model"] or t("ask.det")))
-        other = [w for w in ans["warnings"] if w not in (sa.get("caveats") or [])]
+        other = [w for w in (ans.get("warningsLocalized") or ans["warnings"]) if w not in (sa.get("caveats") or [])]
         warnings_box(other)
         with st.expander(t("ask.evidence", n=len(ans["evidence"]))):
             if ans["evidence"]:
@@ -555,11 +610,11 @@ elif page == "page.sisters":
         with c1:
             target = st.selectbox(t("sis.target"), df["id"], format_func=lambda i: f"{idx.loc[i, t('sis.name')]} ({idx.loc[i, t('cmp.relation')]}, {idx.loc[i, t('cmp.review')]})")
         with c2:
-            new = st.selectbox(t("sis.new"), ["validated", "rejected", "to_verify", "obsolete"])
+            new = st.selectbox(t("sis.new"), ["validated", "rejected", "to_verify", "obsolete"], key="sis_new")
         with c3:
-            reviewer = st.text_input(t("sis.reviewer"), "")
+            reviewer = st.text_input(t("sis.reviewer"), "", key="sis_reviewer")
         with c4:
-            note = st.text_input(t("sis.note"), "")
+            note = st.text_input(t("sis.note"), "", key="sis_note")
         if st.button(t("sis.save"), disabled=not reviewer):
             res = api_post("/review", {"entityType": "alias", "entityId": target, "newStatus": new, "reviewer": reviewer, "note": note})
             st.success(t("sis.saved", id=res["entityId"], old=res["oldStatus"], new=res["newStatus"], who=res["reviewer"]))
@@ -572,7 +627,7 @@ elif page == "page.sisters":
 
 elif page == "page.watch":
     st.title(t("watch.title"))
-    months = st.slider(t("watch.horizon"), 1, 60, 12)
+    months = st.slider(t("watch.horizon"), 1, 60, 12, key="watch_months")
     exp = api_get("/expiring", {"months": months})
     st.markdown(f"### {t('watch.exp_h', m=months, n=len(exp['items']))}")
     if exp["items"]:
