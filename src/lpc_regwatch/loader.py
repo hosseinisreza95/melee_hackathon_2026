@@ -15,7 +15,7 @@ from pathlib import Path
 from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
-from .db.models import AuthorizedUse, ChangeLog, Product, ProductAlias, Registration, Source
+from .db.models import AuthorizedUse, ChangeLog, ExtractionMethod, Product, ProductAlias, Registration, Source
 from .parsers.base import Batch
 
 STARTER_COLUMNS = {
@@ -56,7 +56,10 @@ def load_batch(session: Session, b: Batch) -> dict[str, int]:
     # ---- change detection (bonus A1): compare with what the previous snapshot of this source said
     counts["changes"] = _detect_changes(session, b, reg_ids)
     if reg_ids:
-        session.execute(delete(AuthorizedUse).where(AuthorizedUse.registration_id.in_(reg_ids)))
+        # re-parse replaces the rows that come from the structured source; AI label rows (llm_pdf) are owned by
+        # extract_labels.py, which replaces them itself - deleting them here produced false 'uses_count' changes
+        session.execute(delete(AuthorizedUse).where(AuthorizedUse.registration_id.in_(reg_ids),
+                                                    AuthorizedUse.extraction_method != ExtractionMethod.llm_pdf))
     for r in b.registrations:
         session.merge(Registration(**r))
         counts["registrations"] += 1
@@ -109,7 +112,8 @@ def _detect_changes(session: Session, b: Batch, reg_ids: list[str]) -> int:
                 session.add(ChangeLog(entity_type="registration", entity_id=rid, field=f, old_value=ov, new_value=nv,
                                       from_snapshot_id=old.snapshot_id, to_snapshot_id=b.snapshot_id))
                 n += 1
-        old_uses = session.query(AuthorizedUse).filter_by(registration_id=rid).count()
+        old_uses = (session.query(AuthorizedUse).filter_by(registration_id=rid)
+                    .filter(AuthorizedUse.extraction_method != ExtractionMethod.llm_pdf).count())  # compare source rows only
         if old_uses != uses_new.get(rid, 0):
             session.add(ChangeLog(entity_type="registration", entity_id=rid, field="uses_count", old_value=str(old_uses),
                                   new_value=str(uses_new.get(rid, 0)), from_snapshot_id=old.snapshot_id, to_snapshot_id=b.snapshot_id))

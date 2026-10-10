@@ -170,3 +170,24 @@ def test_br_parser(session, tmp_path):
     assert b.uses[0]["crop_name_original"] == "Todas as culturas" and b.uses[0]["target_name_original"] == "Botrytis cinerea"
     load_batch(session, b)
     assert session.get(Registration, "R-BR-27520").holder_original == "Agrivalle"
+
+
+def test_reparse_keeps_ai_label_rows_and_logs_no_false_change(session, tmp_path):
+    """Re-loading the same structured snapshot must neither delete llm_pdf rows nor log a uses_count change."""
+    from lpc_regwatch.db.models import AuthorizedUse, ChangeLog, ExtractionMethod
+
+    rec = {"eparegno": "64137-34", "productname": "LALSTOP CONTANS WG", "product_status": "Active", "product_status_date": "x", "registereddate": None,
+           "cancel_flag": "No", "formulations": [], "active_ingredients": [{"active_ing": "Coniothyrium minitans strain CON/M/91-08", "active_ing_percent": 5}],
+           "companyinfo": [{"name": "DANSTAR FERMENT AG"}], "altbrandnames": [], "inactive_brand_names": [], "pdffiles": [], "sites": [{"site": "LETTUCE"}],
+           "pests": [{"pest": "WHITE MOLD"}], "transfer_history": []}
+    snap = _snap(session, "US-EPA-PPLS", {"ppls_64137-34.json": json.dumps(rec).encode()}, tmp_path, kind="api_json")
+    b = UsEpaPplsParser(session).parse(snap)
+    load_batch(session, b)
+    session.add(AuthorizedUse(use_id="U-R-US-64137-34-LBL1", registration_id="R-US-64137-34", crop_name_original="Lettuce", dose_value=2.0, dose_unit_original="lb/acre",
+                              pairing="llm_paired", source_record_url="https://x.pdf", collected_at=NOW, extraction_method=ExtractionMethod.llm_pdf, confidence=0.9))
+    session.commit()
+    counts = load_batch(session, UsEpaPplsParser(session).parse(snap))
+    assert counts["changes"] == 0
+    kinds = {u.extraction_method for u in session.query(AuthorizedUse).filter_by(registration_id="R-US-64137-34")}
+    assert kinds == {ExtractionMethod.json_parser, ExtractionMethod.llm_pdf}
+    assert session.query(ChangeLog).filter_by(field="uses_count").count() == 0
