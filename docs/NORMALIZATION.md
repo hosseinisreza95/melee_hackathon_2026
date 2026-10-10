@@ -7,11 +7,12 @@
 | Target | `target_name_original` | `target_name_normalized`, `eppo_target_code` | same, **no plural stripping and no genus → species guess** ("Thrips", "Pythium" never get a species code); scientific name inside parentheses is used ("WHITE MOLD (SCLEROTINIA SCLEROTIORUM)") | `eppo_target_status` |
 | Dose | `dose_value`, `dose_unit_original` | `dose_value_normalized`, `dose_unit_normalized` | only exact conversions to kg/ha or L/ha (g/m², g/ha, ml/ha, lb/acre, oz/acre, qt/acre…); g/kg of seed, g/L of substrate, g/plant, g/hive stay unconverted | null when no exact conversion |
 | Active entity | `active_entity_original` (per registration and product) | `active_entity_normalized` = "Species strain", `strain` | genus + species parsed from text; strain after strain/souche/cepa/isolado; synonyms applied only from the documented list (Gliocladium catenulatum → Clonostachys rosea; Metarhizium anisopliae **F52 only** → M. brunneum) | synonym note in the normalisation report |
-| Product identity | `commercial_name` + `product_aliases` | one `product_id` per pilot across markets | kit canonical/historical names; official equivalences (same registration carries two names) persisted in `data/product_equivalences_observed.csv`; everything else is an alias or a hypothesis | `relationship_type`, `review_status` |
+| Product identity | `commercial_name` + `product_aliases` | one `product_id` per pilot across markets | kit canonical/historical names only. A registration that carries a pilot name as alternate/historical name (CA 32404 PRESTOP WG) links its product as `related_product` with the official field as evidence — **never merged** (LPC answer 2026-10-10). LPC statements in `data/lpc_curated_relations.csv` are applied last | `relationship_type`, `review_status` |
+| Registration number | source field only | — | never derived from a product name or a code; trial codes like `12522-00001-F-1-WG` are not registration numbers (LPC) | — |
 | Dates | source strings | `approval_date`, `expiration_date` (YYYY-MM-DD) | parsed only from unambiguous formats (ISO, dd/mm/yyyy, "Month d, yyyy"); otherwise null | — |
 
 Not normalised on purpose: `restrictions_original`, `application_method` (source vocabularies differ too much to merge without RA review),
 holder names (legal entities), formulation wording (kept as written; `formulation_code` only when the name ends with a known code).
 
 Coverage on the 2026-10-09 data: crop code on ~23 % of use rows (CA/FR good, US site wording very granular), target code on rows with a
-scientific name (BR, part of CA/US), dose conversion on all FR area doses (41 rows), 2 taxonomy synonyms applied, 1 official equivalence merged.
+scientific name (BR, part of CA/US), dose conversion on all FR area doses (41 rows), 2 taxonomy synonyms applied, 1 official name link (PRESTOP WG -> related product of LALSTOP G46 WG, not merged).
