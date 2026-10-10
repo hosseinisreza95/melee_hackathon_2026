@@ -119,7 +119,7 @@ def test_chat_assistant_keeps_the_thread(ui_http):
     assert ans["context"]["productIds"] == ["P-LPC-G46"] and ans["context"]["countries"] == ["FR"]
     assert ans["structured"]["caveats"][0].startswith("Contexte repris de la conversation : LALSTOP G46 WG")
     assert [f["registrationNumber"] for f in ans["facts"] if f["type"] == "registration"] == ["2230771"]
-    assert len(at.chat_message) == 2 and len(at.dataframe) >= 1
+    assert len(at.chat_message) == 2 and at.session_state["_tbl_n"] >= 1  # at least one sortable table rendered
     sugg = [p for p in at.pills if p.key and p.key.startswith("chat_sugg_")]
     assert sugg and tr("fr", "chat.fu_uses") in list(sugg[0].options)  # follow-ups about the same product
     assert [b for b in at.sidebar.button if b.key and b.key.startswith("thread_")]  # the thread is listed

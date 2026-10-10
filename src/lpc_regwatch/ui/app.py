@@ -19,6 +19,7 @@ import httpx
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
+import streamlit.components.v1 as components
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # `streamlit run src/lpc_regwatch/ui/app.py` without PYTHONPATH
 from lpc_regwatch.ui.i18n import COUNTRY_IN, COUNTRY_NAMES, EXAMPLES, LANGS, tr  # noqa: E402
@@ -45,7 +46,7 @@ TOOL_ICONS = {"page.overview": ":material/public:", "page.compare": ":material/c
 STARTER_ICONS = [":material/public:", ":material/compare_arrows:", ":material/fact_check:", ":material/account_tree:", ":material/microbiology:", ":material/event:"]
 BOT_AVATAR = ":material/microbiology:"
 STATUS_TEXT = {"active": "#1e8e4e", "withdrawn": "#c8102e", "expired": "#c76b00", "pending": "#b8860b", "unknown": "#5b6770"}
-RAIL_ITEMS = [("chat", ":material/forum:"), ("page.overview", ":material/public:"), ("page.compare", ":material/compare_arrows:"), ("page.map", ":material/map:"),
+RAIL_ITEMS = [("new", ":material/edit_square:"), ("page.overview", ":material/public:"), ("page.compare", ":material/compare_arrows:"), ("page.map", ":material/map:"),
               ("page.sisters", ":material/account_tree:"), ("page.watch", ":material/monitoring:"), ("page.registry", ":material/fact_check:"), ("page.sources", ":material/database:")]
 
 
@@ -139,7 +140,8 @@ st.markdown(f"""
   .st-key-rail {{ display:none; }}
   section[data-testid="stSidebar"][aria-expanded="false"] {{ display:block !important; width:72px !important; min-width:72px !important; max-width:72px !important; transform:none !important; }}
   section[data-testid="stSidebar"][aria-expanded="false"] .st-key-sbfull {{ display:none; }}
-  section[data-testid="stSidebar"][aria-expanded="false"] .st-key-rail {{ display:block; padding-top:2.6rem; }}
+  section[data-testid="stSidebar"][aria-expanded="false"] .st-key-rail {{ display:block; padding-top:2.4rem; }}
+  section[data-testid="stSidebar"][aria-expanded="false"] [data-testid="stSidebarCollapseButton"] {{ display:none; }}
   section[data-testid="stSidebar"][aria-expanded="false"] .block-container {{ padding:1rem .4rem; }}
   .st-key-rail [data-testid="stButton"] button {{ width:44px; height:40px; padding:0; justify-content:center; margin:0 auto; }}
   .st-key-rail [data-testid="stButton"] button [data-testid="stIconMaterial"] {{ color:{SLATE}; font-size:1.35rem; }}
@@ -379,13 +381,14 @@ def go_page(p: str):
 
 with st.sidebar:
     with st.container(key="rail"):  # icon rail shown only when the sidebar is collapsed (CSS)
-        if st.button("+", key="rail_new", icon=":material/add:"):
-            if current_thread()["messages"]:
-                st.session_state["thread_id"] = None
-            go_chat()
         for item, icon in RAIL_ITEMS:
             if st.button(" ", key=f"rail_{item}", icon=icon, type="tertiary"):
-                go_page("page.chat" if item == "chat" else item)
+                if item == "new":
+                    if current_thread()["messages"]:
+                        st.session_state["thread_id"] = None
+                    go_chat()
+                else:
+                    go_page(item)
     with st.container(key="sbfull"):
         with st.container(key="logo_btn"):
             if st.button("Lallemand Plant Care", key="logo_home", type="tertiary", use_container_width=True):
@@ -425,9 +428,6 @@ with st.container(key="lpc_topbar"):
         st.segmented_control(t("sb.lang"), list(LANGS), format_func=lambda k: LANGS[k], key="lang_ctl", on_change=_set_lang, label_visibility="collapsed")
         st.markdown(f'<div class="lpc-menu-h" style="margin-top:12px">{t("sb.links")}</div><ul class="lpc-menu-list"><li><a href="{API_PUBLIC}/guide" target="_blank">{t("sb.guide")}</a></li>'
                     f'<li><a href="{API_PUBLIC}/docs" target="_blank">{t("sb.swagger")}</a></li><li><a href="/pitch/" target="_blank">{t("sb.pitch")}</a></li></ul>', unsafe_allow_html=True)
-        st.markdown(f'<div class="lpc-menu-h" style="margin-top:12px">{t("sb.about")}</div><div class="lpc-about"><b>{t("sb.pilots")}</b> : LALSTOP CONTANS WG, LALSTOP G46 WG, LALGUARD M52 OD<br>'
-                    f'<b>{t("sb.sources")}</b> : Santé Canada PPID, US EPA PPLS, ANSES E-Phy, MAPA AGROFIT<br><b>{t("sb.limits")}</b> : {t("sb.lim1")} {t("sb.lim2")}<br>'
-                    f'<span class="muted">{t("disclaimer")}</span></div>', unsafe_allow_html=True)
 
 products = api_get("/products", {"limit": 500})["items"]
 prod_label = {p["productId"]: f"{p['commercialName']}  ({', '.join(p['countries']) or t('no_country')})" for p in products}
@@ -499,25 +499,52 @@ FOLLOW_UPS = {"registration_lookup": ["chat.fu_uses", "chat.fu_sisters", "chat.f
               "ingredient_search": ["chat.fu_sources"]}
 
 
+SORT_ICON = ('<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M5 2v12M11 2v12" stroke="#b3bac0" stroke-width="1.6" stroke-linecap="round"/>'
+             '<circle class="k" cx="5" cy="6" r="2.3" fill="#fff" stroke="#36434b" stroke-width="1.4"/><circle class="k" cx="11" cy="10" r="2.3" fill="#fff" stroke="#36434b" stroke-width="1.4"/></svg>')
+TABLE_CSS = ("*{box-sizing:border-box}body{margin:0;font-family:'Source Sans Pro','Segoe UI',Arial,sans-serif;font-size:14px;color:#212529;background:transparent}"
+             ".wrap{overflow:auto;max-height:%(h)dpx;border:1px solid #e1e3e4;border-radius:8px;background:#fff}table{border-collapse:separate;border-spacing:0;width:100%%;min-width:100%%}"
+             "th{position:sticky;top:0;background:#f1f3f4;color:#36434b;font-weight:600;text-align:left;padding:7px 10px;border-bottom:1px solid #e1e3e4;cursor:pointer;user-select:none;white-space:nowrap}"
+             "th .h{display:flex;align-items:center;justify-content:space-between;gap:14px}th svg{flex:none;opacity:.55}th:hover svg{opacity:1}th.asc svg,th.desc svg{opacity:1}"
+             "th.asc svg .k,th.desc svg .k{stroke:#e30327}td{padding:6px 10px;border-bottom:1px solid #eef0f1;white-space:nowrap;max-width:420px;overflow:hidden;text-overflow:ellipsis;vertical-align:top}"
+             "tr:last-child td{border-bottom:none}tr:hover td{background:#fafbfb}td.s-active{color:#1e8e4e;font-weight:600}td.s-withdrawn{color:#c8102e;font-weight:600}"
+             "td.s-expired{color:#c76b00;font-weight:600}td.s-pending{color:#b8860b;font-weight:600}td.s-unknown,td.s-nf{color:#5b6770}td.num{text-align:right;font-variant-numeric:tabular-nums}"
+             "a{color:#36434b}")
+TABLE_JS = ("const tb=document.querySelector('table');const ths=[...tb.querySelectorAll('th')];const num=s=>{const v=parseFloat(String(s).replace(',','.'));return isNaN(v)?null:v};"
+            "ths.forEach((th,i)=>th.addEventListener('click',()=>{const dir=th.classList.contains('asc')?'desc':'asc';ths.forEach(x=>x.classList.remove('asc','desc'));th.classList.add(dir);"
+            "const rows=[...tb.tBodies[0].rows];rows.sort((a,b)=>{const x=a.cells[i].dataset.v,y=b.cells[i].dataset.v;if(x===''&&y!=='')return 1;if(y===''&&x!=='')return -1;"
+            "const nx=num(x),ny=num(y);const c=(nx!==null&&ny!==null)?nx-ny:x.localeCompare(y,undefined,{sensitivity:'base'});return dir==='asc'?c:-c});rows.forEach(r=>tb.tBodies[0].appendChild(r));}));")
+
+
 def show_table(df: pd.DataFrame, style=None, **kw):
-    """st.dataframe with a right-aligned sort control (sliders icon) above it: column + order, applied before display.
-    `style` is an optional callable (DataFrame -> Styler) applied after sorting."""
+    """Sortable table rendered as HTML: click a header to sort (ascending, then descending); every header carries the sort icon
+    on its right; status columns are coloured; link columns open the official record. `column_config` link columns are honoured."""
     n = st.session_state.get("_tbl_n", 0) + 1
     st.session_state["_tbl_n"] = n
-    key = f"tbl{st.session_state['page']}_{n}"
+    cfg = kw.get("column_config") or {}
+    link_cols = {c: (v.get("type_config") or {}).get("display_text") for c, v in cfg.items() if isinstance(v, dict) and (v.get("type_config") or {}).get("type") == "link"}
+    status_cols = {c for c in df.columns if c in (t("status"), t("reg.status_col"), t("reg.off_status"))}
+    status_class = {st_label(k): f"s-{k}" for k in STATUS_TEXT}
+    status_class.update({t("m.notfound"): "s-nf", t("m.nosource"): "s-nf", "not_found_in_source": "s-nf", "source_not_collected": "s-nf"})
     cols = list(df.columns)
-    if cols and len(df) > 1:
-        with st.container(key=key):
-            _, right = st.columns([9, 1])
-            with right:
-                with st.popover("sort", icon=":material/instant_mix:"):
-                    col = st.selectbox(t("tbl.sort"), [None] + cols, format_func=lambda c: t("tbl.none") if c is None else str(c), key=f"{key}_col")
-                    order = st.radio(t("tbl.order"), ["asc", "desc"], format_func=lambda o: t("tbl." + o), horizontal=True, key=f"{key}_order")
-        if col:
-            series = df[col]
-            df = df.sort_values(col, ascending=(order == "asc"), kind="stable", na_position="last",
-                                key=(lambda x: x.astype(str).str.lower()) if series.dtype == object else None)
-    st.dataframe(style(df) if style else df, **kw)
+    head = "".join(f'<th><span class="h"><span>{html.escape(str(c))}</span>{SORT_ICON}</span></th>' for c in cols)
+    body = []
+    for _, row in df.iterrows():
+        cells = []
+        for c in cols:
+            v = row[c]
+            raw = "" if v is None or (isinstance(v, float) and pd.isna(v)) else str(v)
+            cls = status_class.get(raw, "") if c in status_cols else ("num" if isinstance(v, (int, float)) and not isinstance(v, bool) else "")
+            if c in link_cols and raw.startswith("http"):
+                txt = f'<a href="{html.escape(raw)}" target="_blank" rel="noopener">{html.escape(link_cols[c] or raw)}</a>'
+            else:
+                txt = html.escape(raw)
+            cells.append(f'<td class="{cls}" data-v="{html.escape(raw)}" title="{html.escape(raw[:300])}">{txt}</td>')
+        body.append("<tr>" + "".join(cells) + "</tr>")
+    rows_shown = min(len(df), 10)
+    h = rows_shown * 33 + 44 + 14
+    page = (f"<!doctype html><html><head><meta charset='utf-8'><style>{TABLE_CSS % {'h': h - 4}}</style></head><body><div class='wrap'><table><thead><tr>{head}</tr></thead>"
+            f"<tbody>{''.join(body)}</tbody></table></div><script>{TABLE_JS}</script></body></html>")
+    components.html(page, height=h + 4, scrolling=False)
 
 
 def answer_status(v: str | None) -> str | None:
@@ -557,18 +584,6 @@ def _typed(text: str, delay: float = 0.018):
         time.sleep(delay)
 
 
-def style_status(df: pd.DataFrame):
-    """Colour the status column(s) of a table (active green, withdrawn red, expired orange, pending amber)."""
-    labels = {st_label(k): v for k, v in STATUS_TEXT.items()}
-    labels.update({t("m.notfound"): "#5b6770", t("m.nosource"): "#5b6770"})
-    cols = [c for c in df.columns if c in (t("status"), t("reg.status_col"), t("reg.off_status"))]
-    if not cols:
-        return df
-    fn = lambda v: f"color:{labels[v]}; font-weight:600" if v in labels else ""  # noqa: E731
-    sty = df.style
-    return sty.map(fn, subset=cols) if hasattr(sty, "map") else sty.applymap(fn, subset=cols)
-
-
 def answer_items_df(items: list[dict]) -> pd.DataFrame:
     rows = [{t(lbl): (answer_status(it.get(k)) if k == "status" else it.get(k)) for k, lbl in ANSWER_COLS + [("url", "ask.url")] if any(x.get(k) for x in items)} for it in items]
     return pd.DataFrame(rows)
@@ -579,7 +594,7 @@ def render_items(items: list[dict]):
         return
     df = answer_items_df(items)
     cfg = {t("ask.url"): st.column_config.LinkColumn(t("ask.url"), display_text=t("ask.open"))} if t("ask.url") in df.columns else None
-    show_table(df, style=style_status, hide_index=True, use_container_width=True, column_config=cfg)
+    show_table(df, hide_index=True, use_container_width=True, column_config=cfg)
 
 
 def render_answer(ans: dict, key: str, stream: bool = False):
