@@ -78,7 +78,11 @@ STOP_WORDS = set((
     "em para com qual quais está estão el los las y es son del al qué cuál cuáles están hay homologué homologuée homologués autorisé autorisée registered registrado "
     "autorizado homologation homologations registration registrations usage usages uses use doses dose pays country countries países marque marques brand brands sœurs "
     "sœur sister sisters source sources preuve evidence cherche looking search je me moi my mon ma mes vous nous dis donne give tell about sur produit's info infos "
-    "informations information fiche profil détails details statut status date dates expiration titulaire holder").split())
+    "informations information fiche profil détails details statut status date dates expiration titulaire holder "
+    "entre between deux two dois dos comparer compare comparar comparez pilote pilotes pilot pilots piloto pilotos "
+    "champs fields campos incertains uncertain incertos manquants missing donnée données data dados chaque each cada "
+    "officielle official oficial").split())
+PILOT_RE = re.compile(r"\b(produits? pilotes?|pilot products?|produtos? pilotos?|productos? pilotos?)\b")
 FOLLOW_UP_RE = re.compile(r"^(et|and|e|y|puis|aussi|also|também|además|mais|but|ok|d'accord)\b|\b(ses|son|sa|il|elle|lui|its|it|this product|that product|ce produit|celui-ci|celle-ci|seus?|suas?|ele|ela|dele|dela|su|sus|este producto|ese producto|le même|the same|o mesmo|el mismo)\b")
 
 
@@ -358,6 +362,8 @@ def plan(session: Session, question: str, context: dict | None = None) -> Plan:
             consumed = consumed.replace(f" {nname} ", " ")
             if kind == "name" and len(pids) >= 3:
                 break
+    if not pids and PILOT_RE.search(q):  # starter-kit wording « le produit pilote » = the three LPC pilot products
+        pids = list(Q.PILOT_IDS)
     species = next((s for s in species_in_db(session) if s.lower() in q), None)
     crop = crop_in_question(question)
     crop_cid = _crop_concept_id(question)
@@ -461,7 +467,10 @@ def run_tools(session: Session, pl: Plan) -> tuple[list[dict], list[dict], list[
         return ok
 
     def add_reg(r: dict, product_name: str | None = None, uses_limit: int = 0):
-        uses = r.get("uses", [])
+        all_uses = r.get("uses", [])
+        uses = [u for u in all_uses if not u.get("withdrawn")]  # withdrawn uses (E-Phy 'Retrait') are never shown as authorised
+        if len(uses) < len(all_uses):
+            warnings.append(f"{r['countryCode']} {r['registrationNumber']}: {len(all_uses) - len(uses)} withdrawn use(s) excluded from the authorised uses.")
         matched = [u for u in uses if use_matches(u)] if (pl.crop or (pl.target_terms and pl.product_ids)) else uses
         facts.append({"type": "registration", "product": product_name or r["productId"], "country": r["countryCode"],
                       "registrationNumber": r["registrationNumber"], "statusOriginal": r["statusOriginal"], "statusNormalized": r["statusNormalized"],
@@ -1097,7 +1106,7 @@ def build_structured(pl: Plan, facts: list[dict], warnings: list[str], language:
         if "holder" in pl.flags and regs:
             return H["holder_of"].format(product=name or "", rows="; ".join(f"{f['country']} {L['no']} {f['registrationNumber']}: {f.get('holder') or '—'}" for f in regs[:6]))
         if "expiry" in pl.flags and regs:
-            return H["expiry_of"].format(product=name or "", rows="; ".join(f"{f['country']} {L['no']} {f['registrationNumber']} " + (f"{L['expires']} {f['expirationDate']}" if f.get("expirationDate") else L["exp_none"]) for f in regs[:6]))
+            return H["expiry_of"].format(product=name or "", rows="; ".join(f"{f['country']} {L['no']} {f['registrationNumber']} " + (f"{L['expires']} {f['expirationDate']}" if f.get("expirationDate") else H["exp_none"]) for f in regs[:6]))
         if checks and pl.crop:
             cw = pl.crop_word or pl.crop
             parts = []

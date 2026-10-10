@@ -37,8 +37,16 @@ def evidence_of(obj, source_id: str | None = None) -> dict:
             "confidence": obj.confidence, "snapshotId": getattr(obj, "snapshot_id", None)}
 
 
+WITHDRAWN_USE = re.compile(r"retrait|retir|withdraw|cancel|expir|revoga|cancelad", re.I)
+
+
+def use_withdrawn(u: AuthorizedUse) -> bool:
+    """A use the source marks as withdrawn (E-Phy 'Retrait'): never listed among the authorised uses."""
+    return bool(u.use_status_original and WITHDRAWN_USE.search(u.use_status_original))
+
+
 def use_dict(u: AuthorizedUse, source_id: str) -> dict:
-    return {"useId": u.use_id, "cropOriginal": u.crop_name_original, "cropNormalized": u.crop_name_normalized,
+    return {"useId": u.use_id, "useStatusOriginal": u.use_status_original, "withdrawn": use_withdrawn(u), "cropOriginal": u.crop_name_original, "cropNormalized": u.crop_name_normalized,
             "eppoCropCode": u.eppo_crop_code, "eppoCropStatus": u.eppo_crop_status, "targetOriginal": u.target_name_original,
             "targetNormalized": u.target_name_normalized, "eppoTargetCode": u.eppo_target_code, "eppoTargetStatus": u.eppo_target_status,
             "applicationMethod": u.application_method, "doseValue": u.dose_value, "doseUnitOriginal": u.dose_unit_original,
@@ -227,7 +235,8 @@ def products_by_active_entity(session: Session, species: str, crop: str | None =
         uses = r.uses
         if crop:
             cl = crop.strip().lower()
-            uses = [u for u in r.uses if cl in (u.crop_name_normalized or "").lower() or cl in (u.crop_name_original or "").lower()]
+            uses = [u for u in r.uses if (cl in (u.crop_name_normalized or "").lower() or cl in (u.crop_name_original or "").lower())
+                    and not use_withdrawn(u)]
             if not uses:
                 continue
         d = registration_dict(r, False)
@@ -430,6 +439,8 @@ def uses_by_target(session: Session, terms: list[str], eppo_code: str | None = N
         q = q.filter(Registration.country_code.in_(countries))
     by_reg: dict[str, dict] = {}
     for u in q.limit(3000):
+        if use_withdrawn(u):
+            continue
         r = u.registration
         d = by_reg.setdefault(r.registration_id, {**_reg_row(r), "matchingUses": [], "matchingUsesCount": 0})
         d["matchingUsesCount"] += 1
