@@ -32,7 +32,12 @@ class Settings:
     # Accepted key names: AI_API_KEY (documented), OPENAI_API_KEY, OPEN_AI (team convention). Never logged.
     ai_api_key: str = os.getenv("AI_API_KEY") or os.getenv("OPENAI_API_KEY") or os.getenv("OPEN_AI") or ""
     ai_base_url: str | None = os.getenv("AI_BASE_URL") or None
+    ai_reasoning_effort: str = os.getenv("AI_REASONING_EFFORT", "low")  # gpt-5 family: minimal | low | medium | high (answer latency vs depth)
     http_user_agent: str = os.getenv("HTTP_USER_AGENT", "lpc-regwatch/0.1 (hackathon prototype)")
+    # FR E-Phy scope: 'lallemand' = pilots + Lallemand/Danstar holders + pilot species; 'all' = every AUTORISE product
+    # in France (the whole current French registry) plus the Lallemand-related ones of any status
+    fr_ephy_scope: str = os.getenv("FR_EPHY_SCOPE", "lallemand")
+    pipeline_schedule: str = os.getenv("PIPELINE_SCHEDULE", "30 3 * * *")  # cron of the nightly pipeline (UTC), advertised by /health
     api_base_url: str = os.getenv("API_BASE_URL", "http://localhost:8000")  # used by the Streamlit thin client
     public_base_url: str = os.getenv("PUBLIC_BASE_URL", "http://localhost:8000")  # advertised in OpenAPI servers[]
 

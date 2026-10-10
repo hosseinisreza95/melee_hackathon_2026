@@ -85,7 +85,7 @@ def test_T05_official_source_of_each_datum(api_client):
 
 def test_adversarial_unknown_product_yields_no_facts(api_client):
     d = _ask(api_client, "Dans quels pays le produit FOOBARIX 3000 est-il homologué ?")
-    assert d["facts"] == [] and d["evidence"] == []
+    assert not [f for f in d["facts"] if f["type"] in ("registration", "coverage", "use")] and d["evidence"] == []  # only the store scope is returned, nothing invented
     assert any("not proof of no registration" in w for w in d["warnings"])
     assert "FOOBARIX" in " ".join(d["warnings"])  # the unresolved name is echoed, nothing invented
     assert "homologu" not in d["answer"].lower() or "absence" in d["answer"].lower()

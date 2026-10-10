@@ -37,6 +37,8 @@ class LLMClient:
         kw: dict[str, Any] = {"model": self.model, "messages": messages}
         if reasoning:
             kw["max_completion_tokens"] = max(max_tokens * 8, 8000)  # reasoning tokens count against the limit
+            if self.model.startswith("gpt-5") and settings.ai_reasoning_effort:
+                kw["reasoning_effort"] = settings.ai_reasoning_effort
         else:
             kw["temperature"] = temperature
             kw["max_tokens"] = max_tokens

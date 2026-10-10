@@ -13,6 +13,7 @@ import zipfile
 
 import pandas as pd
 
+from ..config import settings
 from .base import BaseParser, Batch, excerpt, is_relevant, parse_date, to_float, to_int
 
 ENCODING = "utf-8-sig"
@@ -43,9 +44,16 @@ class FrEphyParser(BaseParser):
         c_amm_u = _col(uses, "numero AMM")
 
         prod = prod[prod["type produit"].str.strip() == "PPP"]
-        rel = prod[prod.apply(lambda r: is_relevant(r["nom produit"], r["titulaire"], r["Substances actives"]), axis=1)]
-        b.notes.append(f"{len(rel)} relevant PPP products of {len(prod)}")
+        relevant = prod.apply(lambda r: is_relevant(r["nom produit"], r["titulaire"], r["Substances actives"]), axis=1)
+        if settings.fr_ephy_scope == "all":
+            rel = prod[relevant | (prod[c_etat].str.strip().str.upper() == "AUTORISE")]
+            b.notes.append(f"scope=all: {len(rel)} PPP products (every AUTORISE product + Lallemand-related of any status) of {len(prod)}")
+        else:
+            rel = prod[relevant]
+            b.notes.append(f"{len(rel)} relevant PPP products of {len(prod)}")
         url = doc.url  # the exact dataset file we fetched; AMM number identifies the record inside it
+        uses_by_amm = {amm: g for amm, g in uses.groupby(uses[c_amm_u].str.strip())}
+        empty = uses.iloc[0:0]
 
         for _, r in rel.iterrows():
             amm = r["numero AMM"].strip()
@@ -60,7 +68,7 @@ class FrEphyParser(BaseParser):
             for name in [n.strip() for n in r["seconds noms commerciaux"].replace(";", "|").split("|") if n.strip()]:
                 b.add_alias(pid, name, "alternate_name", "E-Phy 'seconds noms commerciaux' (same AMM)", url, "FR")
 
-            u = uses[uses[c_amm_u].str.strip() == amm]
+            u = uses_by_amm.get(amm, empty)
             for i, (_, x) in enumerate(u.iterrows(), 1):
                 # Verified on the 2026-10-08 file: despite the header names, 'identifiant usage lib court'
                 # holds the numeric use code (e.g. 11012217) and 'identifiant usage' holds the text
@@ -82,6 +90,6 @@ class FrEphyParser(BaseParser):
                           max_applications=to_int(x["nombre max d'application"]), phi_days=to_float(x["delai avant recolte jour"]),
                           growth_stage_min=x["stade cultural min (BBCH)"] or None, growth_stage_max=x["stade cultural max (BBCH)"] or None,
                           restrictions_original=restrictions, use_status_original=x["etat usage"] or None)
-            if u.empty:
+            if u.empty and settings.fr_ephy_scope != "all":
                 b.notes.append(f"AMM {amm}: no rows in usages_des_produits_autorises (withdrawn products have none)")
         return b

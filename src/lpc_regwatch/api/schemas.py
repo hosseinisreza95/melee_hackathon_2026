@@ -143,6 +143,8 @@ class Answer(Camel):
     structured: dict | None = None  # ext: {headline, items[], caveats[]} (answer_model.StructuredAnswer)
     warningsLocalized: list[str] = Field(default_factory=list)  # ext: `warnings` in the question language (`warnings` itself stays English)
     context: dict | None = None  # ext: plan summary to send back with the next question of the same conversation
+    language: str | None = None  # ext: language of the answer (detected from the question, else the requested one)
+    extraIntents: list[str] = Field(default_factory=list)  # ext: further parts of a multi-part question that were answered in `structured.sections`
 
 
 class ReviewRequest(BaseModel):

@@ -63,16 +63,20 @@ def _index(kind: str) -> tuple[dict[str, Concept], dict[str, str]]:
                 tok = tok.split(":", 1)[-1]
                 if tok.strip():
                     alias[_clean(tok)] = c.concept_id
-    p = DATA / "eppo_observed_aliases.csv"
-    if p.exists():
+    # observed wordings (seen in the sources) and extra multilingual aliases (diseases, pests, Spanish/Portuguese crops) for
+    # the assistant: same exact-match rule, codes are candidates (to_verify) until checked on gd.eppo.int
+    for fn in ("eppo_observed_aliases.csv", "eppo_extra_aliases.csv"):
+        p = DATA / fn
+        if not p.exists():
+            continue
         with p.open(encoding="utf-8-sig", newline="") as f:
             for r in csv.DictReader(f):
                 if r["kind"] != kind:
                     continue
                 cid = r["concept_id"]
                 if cid not in concepts:  # concept added from observations: code is a candidate, status to_verify
-                    concepts[cid] = Concept(cid, cid.replace("_", " ").capitalize(), r.get("scientific_name") or None,
-                                            r.get("eppo_code_candidate") or None, "to_verify")
+                    sci = r.get("scientific_name") or None
+                    concepts[cid] = Concept(cid, sci or cid.replace("_", " ").capitalize(), sci, r.get("eppo_code_candidate") or None, "to_verify")
                 alias[_clean(r["alias"])] = cid
     return concepts, alias
 

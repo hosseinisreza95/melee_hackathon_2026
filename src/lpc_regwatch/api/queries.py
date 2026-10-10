@@ -6,11 +6,12 @@ regulatory assertion. No LLM here; this is the only place the agent gets facts f
 from __future__ import annotations
 
 import datetime as dt
+import re
 
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session, selectinload
 
-from ..config import DISCLAIMER
+from ..config import DISCLAIMER, settings
 from ..db.models import AuthorizedUse, ChangeLog, Product, ProductAlias, Registration, RegStatus, Source
 from ..parsers.base import norm_name
 
@@ -341,6 +342,146 @@ def overview(session: Session, scope: str = "pilots", product_id: str | None = N
               "sourcesConnected": len(COUNTRY_SOURCES), "expiringSoon": sum(d["expiringSoon"] for d in rows),
               "products": len({r.product_id for r in regs})}
     return {"scope": scope, "productId": product_id, "months": months, "countries": rows, "totals": totals, "disclaimer": DISCLAIMER}
+
+
+# --------------------------------------------------------------------------- assistant helpers (scope, substances, targets, alternatives)
+SOURCE_SCOPE = {
+    "CA-PPID": "Lallemand Plant Care pilot products and their related products (search-term extracts of the PPID)",
+    "US-EPA-PPLS": "Lallemand Plant Care pilot products and their related products (company 64137 and search terms in PPLS)",
+    "BR-AGROFIT": "micro-organism products of the AGROFIT extract (search terms), including the Lallemand ones",
+}
+NOISE_TARGETS = {"no pest", "no pests", "none", ""}
+
+
+def store_scope(session: Session) -> list[dict]:
+    """Sources with counts, last collection and a one-line description of what each one contains in this store."""
+    rows = sources_summary(session)
+    fr = "every product currently authorised in France (AUTORISE) plus Lallemand-related products of any status" if settings.fr_ephy_scope == "all" \
+        else "Lallemand Plant Care pilot products and their related products"
+    for r in rows:
+        r["scope"] = fr if r["sourceId"] == "FR-EPHY" else SOURCE_SCOPE.get(r["sourceId"], "")
+    return rows
+
+
+def active_key(text: str | None) -> str:
+    """Active-substance wording before any concentration ('cuivre (Copper compounds) 200.0 g/kg' -> 'cuivre (copper compounds)')."""
+    t = re.split(r"\d", (text or "").lower(), 1)[0]
+    return re.sub(r"\s+", " ", t).strip(" ,;:-(")
+
+
+def _reg_row(r: Registration) -> dict:
+    d = registration_dict(r, False)
+    d["productName"] = r.product.commercial_name
+    d["activeEntityOriginal"] = r.active_entity_original or r.product.active_entity_original
+    d["activeEntityNormalized"] = r.product.active_entity_normalized
+    return d
+
+
+def search_active_substance(session: Session, text: str, countries: list[str] | None = None, limit: int = 80) -> list[dict]:
+    """Current registrations whose active entity wording (product or registration, original or normalised) contains `text`."""
+    like = f"%{text.strip()}%"
+    q = (session.query(Registration).options(selectinload(Registration.product)).join(Product)
+         .filter(Registration.is_current.is_(True), or_(Product.active_entity_normalized.ilike(like), Product.active_entity_original.ilike(like),
+                                                         Registration.active_entity_original.ilike(like))))
+    if countries:
+        q = q.filter(Registration.country_code.in_(countries))
+    return [_reg_row(r) for r in q.order_by(Registration.country_code, Registration.registration_number).limit(limit)]
+
+
+def active_entities_available(session: Session, countries: list[str] | None = None, limit: int = 15) -> list[tuple[str, int]]:
+    """Most frequent active-substance wordings (before concentration) among current registrations: guidance when a substance is unknown."""
+    q = session.query(Registration.active_entity_original, Product.active_entity_normalized).join(Product).filter(Registration.is_current.is_(True))
+    if countries:
+        q = q.filter(Registration.country_code.in_(countries))
+    counts: dict[str, int] = {}
+    for orig, norm in q:
+        key = norm or active_key(orig)
+        if key:
+            counts[key] = counts.get(key, 0) + 1
+    return sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))[:limit]
+
+
+def uses_by_target(session: Session, terms: list[str], eppo_code: str | None = None, crop: str | None = None, countries: list[str] | None = None) -> list[dict]:
+    """Current registrations with at least one use whose target matches (EPPO code, normalised or original wording), with the matching uses."""
+    conds = []
+    if eppo_code:
+        conds.append(AuthorizedUse.eppo_target_code == eppo_code)
+    for t in terms:
+        like = f"%{t.strip()}%"
+        conds += [AuthorizedUse.target_name_normalized.ilike(like), AuthorizedUse.target_name_original.ilike(like)]
+    if not conds:
+        return []
+    q = (session.query(AuthorizedUse).join(Registration).options(selectinload(AuthorizedUse.registration).selectinload(Registration.product))
+         .filter(or_(*conds), Registration.is_current.is_(True)))
+    if crop:
+        cl = f"%{crop.strip()}%"
+        q = q.filter(or_(AuthorizedUse.crop_name_normalized.ilike(cl), AuthorizedUse.crop_name_original.ilike(cl)))
+    if countries:
+        q = q.filter(Registration.country_code.in_(countries))
+    by_reg: dict[str, dict] = {}
+    for u in q.limit(3000):
+        r = u.registration
+        d = by_reg.setdefault(r.registration_id, {**_reg_row(r), "matchingUses": [], "matchingUsesCount": 0})
+        d["matchingUsesCount"] += 1
+        if len(d["matchingUses"]) < 6:
+            d["matchingUses"].append(use_dict(u, r.source_id))
+    return sorted(by_reg.values(), key=lambda d: (d["countryCode"], d["productName"]))
+
+
+def targets_available(session: Session, crop: str | None = None, countries: list[str] | None = None, limit: int = 15) -> list[tuple[str, int]]:
+    """Most frequent targets (normalised wording) by number of registrations: guidance when a target is unknown or absent."""
+    n = func.count(func.distinct(AuthorizedUse.registration_id))
+    q = session.query(AuthorizedUse.target_name_normalized, n).join(Registration).filter(AuthorizedUse.target_name_normalized.isnot(None), Registration.is_current.is_(True))
+    if crop:
+        cl = f"%{crop.strip()}%"
+        q = q.filter(or_(AuthorizedUse.crop_name_normalized.ilike(cl), AuthorizedUse.crop_name_original.ilike(cl)))
+    if countries:
+        q = q.filter(Registration.country_code.in_(countries))
+    rows = q.group_by(AuthorizedUse.target_name_normalized).order_by(n.desc()).limit(limit + 5)
+    return [(t, int(c)) for t, c in rows if t and t.strip().lower() not in NOISE_TARGETS][:limit]
+
+
+def targets_of_product(session: Session, product_id: str, countries: list[str] | None = None) -> list[dict]:
+    """Distinct (country, target) of a product's current uses, with EPPO code candidate, crop examples and use counts."""
+    q = session.query(AuthorizedUse).join(Registration).options(selectinload(AuthorizedUse.registration)).filter(Registration.product_id == product_id, Registration.is_current.is_(True))
+    if countries:
+        q = q.filter(Registration.country_code.in_(countries))
+    agg: dict[tuple[str, str], dict] = {}
+    for u in q:
+        target = (u.target_name_normalized or u.target_name_original or "").strip()
+        if target.lower() in NOISE_TARGETS:
+            continue
+        key = (u.registration.country_code, target.lower())
+        d = agg.setdefault(key, {"country": u.registration.country_code, "target": target, "eppoTargetCode": u.eppo_target_code, "crops": set(), "uses": 0,
+                                 "registrationNumber": u.registration.registration_number})
+        d["uses"] += 1
+        crop = (u.crop_name_normalized or u.crop_name_original or "").strip()
+        if crop:
+            d["crops"].add(crop)
+    out = [{**d, "crops": sorted(d["crops"])[:6]} for d in agg.values()]
+    return sorted(out, key=lambda d: (d["country"], -d["uses"], d["target"]))[:40]
+
+
+def alternatives_for(session: Session, product_id: str, countries: list[str] | None = None, limit: int = 60) -> list[dict]:
+    """Other current registrations sharing the active-substance wording (before concentration) — distinct products, never equivalents."""
+    p = session.get(Product, product_id)
+    if p is None:
+        return []
+    key = active_key(p.active_entity_normalized or p.active_entity_original)
+    if len(key) < 4:
+        return []
+    like = f"{key}%"
+    q = (session.query(Registration).options(selectinload(Registration.product)).join(Product)
+         .filter(Registration.product_id != product_id, Registration.is_current.is_(True),
+                 or_(Product.active_entity_original.ilike(like), Product.active_entity_normalized.ilike(like), Registration.active_entity_original.ilike(like))))
+    if countries:
+        q = q.filter(Registration.country_code.in_(countries))
+    out = []
+    for r in q.order_by(Registration.country_code, Registration.registration_number).limit(limit):
+        d = _reg_row(r)
+        d["sharedActive"] = key
+        out.append(d)
+    return out
 
 
 def sources_summary(session: Session) -> list[dict]:

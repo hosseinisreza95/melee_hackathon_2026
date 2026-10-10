@@ -11,6 +11,7 @@ import io
 import logging
 from typing import Iterator
 
+from datetime import datetime, timedelta, timezone
 from fastapi import Depends, FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response, StreamingResponse
@@ -80,7 +81,29 @@ def health(s: Session = Depends(db)):
     n = s.query(Registration).count()
     last = s.query(Snapshot).filter_by(status="ok").order_by(Snapshot.collected_at.desc()).first()
     return {"status": "ok", "version": __version__, "registrations": n, "aiEnabled": settings.ai_enabled, "aiProvider": settings.ai_provider if settings.ai_enabled else None,
-            "lastSnapshotAt": last.collected_at if last else None, "disclaimer": DISCLAIMER}
+            "aiModel": settings.ai_model if settings.ai_enabled else None, "lastSnapshotAt": last.collected_at if last else None,
+            "updateSchedule": schedule_info(last.collected_at if last else None), "frEphyScope": settings.fr_ephy_scope, "disclaimer": DISCLAIMER}
+
+
+def schedule_info(last: datetime | None) -> dict:
+    """The nightly pipeline schedule (cron in UTC, from PIPELINE_SCHEDULE) with the next run, so the UI can say when data is refreshed."""
+    cron = settings.pipeline_schedule.strip()
+    parts = cron.split()
+    nxt = None
+    freq = "custom"
+    try:
+        minute, hour = int(parts[0]), int(parts[1])
+        if parts[2:5] == ["*", "*", "*"]:
+            freq = "daily"
+            now = datetime.now(timezone.utc)
+            nxt = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+            if nxt <= now:
+                nxt += timedelta(days=1)
+        elif parts[2:4] == ["*", "*"] and parts[4] != "*":
+            freq = "weekly"
+    except (ValueError, IndexError):
+        pass
+    return {"cron": cron, "timezone": "UTC", "frequency": freq, "nextRunAt": nxt, "lastRunAt": last}
 
 
 @app.get("/products", operation_id="searchProducts", response_model=ProductsResponse, tags=["contract"])
