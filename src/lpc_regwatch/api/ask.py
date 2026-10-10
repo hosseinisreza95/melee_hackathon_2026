@@ -58,7 +58,8 @@ INTENTS = {
                          r"\bà base de\b", r"\ba base de\b", r"\bbased on\b"],
     "ingredient_search": [r"contenant", r"contien", r"containing", r"\bcontain", r"\bcontém\b", r"\bcontiene", r"microorganism", r"micro-organisme", r"\bsouche", r"\bstrain", r"\bespèce", r"\bspecies", r"same active",
                           r"même (?:micro|substance|matière)", r"\bcepa\b", r"\bcontendo\b", r"\bcontiene\b", r"\bcon (?:la |el )?(?:bacteria|hongo|microorganismo)"],
-    "product_profile": [r"qu'?\s?est[- ]ce que c'?\s?est", r"c'?\s?est quoi", r"what is (this|it|that)\b", r"what'?s (this|it)\b", r"qué es (esto|este|eso|ese)", r"o que é (isto|isso|este)",
+    "product_profile": [r"qu'?\s?est[- ]ce que c'?\s?est", r"c'?\s?est quoi", r"what is (this|it|that)\b", r"^what is (?!the\b|a\b|an\b)", r"^what'?s (?!the\b)",
+                        r"^qu'?\s?est[- ]ce que (?!la\b|le\b|les\b|l')", r"^qué es (?!la\b|el\b|los\b|las\b)", r"^o que é (?!a\b|o\b|as\b|os\b)", r"what'?s (this|it)\b", r"qué es (esto|este|eso|ese)", r"o que é (isto|isso|este)",
                         r"\bdécri[st]", r"\bdescri(be|ba|va)", r"\bprésente[- ]moi", r"\bfiche\b", r"\bprofil\b", r"\bparle[- ]moi", r"tell me about", r"\bquel (type|genre) de produit",
                         r"\bque tipo de produto", r"\bqué tipo de producto"],
     "target_search": [r"\bcontre\b", r"\bagainst\b", r"\bcontra\b", r"pour (lutter|traiter|contrôler|controler)", r"\bmaladies?\b", r"\bdiseases?\b", r"\bdoenças?\b", r"\benfermedad",
@@ -1233,14 +1234,27 @@ def _numbers(text: str) -> set[str]:
     return set(re.findall(r"\d[\d\-/.,]*\d|\d", text))
 
 
+def _parts(tok: str) -> list[str]:
+    return [p for p in re.split(r"[/\-.,]", tok) if p]
+
+
 def guard(llm_text: str, facts: list[dict], warnings: list[str]) -> tuple[bool, str | None]:
-    """Reject any LLM answer containing a number or country code not present in the facts/warnings."""
+    """Reject any LLM answer containing a number or country code not present in the facts/warnings. A number written
+    differently (1,25 for 1.25; 31/12/2026 for 2026-12-31) is accepted when every component is in the facts; small counts
+    (one or two digits) are tolerated."""
     allowed = _numbers(json.dumps(facts, ensure_ascii=False, default=str) + " " + " ".join(warnings))
+    allowed_parts = set(allowed) | {p for tok in allowed for p in _parts(tok)}
     for n in _numbers(llm_text):
-        if n not in allowed and not re.fullmatch(r"\d{1,2}", n):  # small counts (e.g. '3 countries') are tolerated
-            return False, f"unsupported number '{n}' in model text"
+        if n in allowed or re.fullmatch(r"\d{1,2}", n):
+            continue
+        if all(p in allowed_parts or re.fullmatch(r"\d{1,2}", p) for p in _parts(n)):
+            continue  # same figures, other punctuation (decimal comma, d/m/y date)
+        return False, f"unsupported number '{n}' in model text"
     ccs = set(re.findall(r"\b([A-Z]{2})\b", llm_text)) & set(Q.COUNTRY_SOURCES) | set(re.findall(r"\b(DE|BE|MX|UY|ES|IT|NL|GB|PL)\b", llm_text))
-    fact_ccs = {f.get("country") for f in facts if f.get("country")} | set(re.findall(r"\(([A-Z]{2})\)", " ".join(warnings)))
+    blob = (json.dumps(facts, ensure_ascii=False, default=str) + " " + " ".join(warnings)).lower()
+    fact_ccs = ({f.get("country") for f in facts if f.get("country")} | {f.get("countryCode") for f in facts if f.get("countryCode")}
+                | set(re.findall(r"\(([A-Z]{2})\)", " ".join(warnings)))
+                | {cc for cc, words in COUNTRY_WORDS.items() if any(re.search(rf"(?<![a-z]){re.escape(w)}(?![a-z])", blob) for w in words[:3])})
     for cc in ccs - fact_ccs:
         if cc in COUNTRY_WORDS:
             return False, f"country {cc} not in facts"

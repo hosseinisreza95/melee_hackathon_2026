@@ -95,8 +95,18 @@ All 30 deterministic answers are reviewed in `output/jury_answers.json`; the gpt
 ### 2.2 RAGAS validation set (evaluation/qa_validation.jsonl, 18 questions with written ground truths)
 
 `scripts/ragas_eval.py` computes faithfulness, answer relevancy, context precision and context recall (RAGAS 0.2, OpenAI judge) on the
-assistant's answers, with the retrieved official rows (the facts) as contexts and ground truths written from the official data. Results are in
-`output/ragas_report*.json` and summarised below once the run is complete.
+assistant's answers, with the retrieved official rows (the facts) and the pipeline warnings as contexts, and ground truths written from the
+official data. Run of 2026-10-10 (answers: gpt-5, reasoning effort minimal; judge: gpt-5-mini; embeddings text-embedding-3-small):
+
+| metric | mean (18 questions) | reading |
+|---|---|---|
+| faithfulness | **0.92** | the answers state what the retrieved official rows say; the lowest values (0.73–0.76) are the help answer and the two honest "no data" answers, whose sentences about coverage are not rows |
+| context recall | **0.85** | the retrieved rows contain what the reference answer needs; 0 on the help question (no rows by design), 0.33 on alternatives (the reference names three of 44 copper products) |
+| context precision | **0.79** | lower on list answers (uses, alternatives, targets) where many correct rows are retrieved and only a few are needed |
+| answer relevancy | **0.65** | RAGAS scores "no data / no source connected" answers 0 by design (non-committal); without those two, 0.72. Long answers with caveats also lower it |
+
+Per-question scores: `output/ragas_report_gpt5.json`. The 30 jury questions with gpt-5 (minimal effort): 28 phrased by the model, 2 kept
+deterministic by the grounding guard; median 6.7 s, maximum 23 s per answer (`output/jury_answers_gpt5.json`).
 
 - Deterministic path (no key): 100 % of the facts come from predefined queries; tests `tests/test_gold.py` (T01–T05 + adversarial +
   other products/countries/crops) pass offline.

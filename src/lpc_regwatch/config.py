@@ -28,11 +28,11 @@ class Settings:
     raw_dir: Path = Path(os.getenv("RAW_DIR", ROOT / "data" / "raw"))
     # AI provider: any OpenAI-compatible endpoint (OpenAI, Gemini OpenAI-compat, Azure OpenAI, local)
     ai_provider: str = os.getenv("AI_PROVIDER", "openai")
-    ai_model: str = os.getenv("AI_MODEL", "gpt-5-mini")
+    ai_model: str = os.getenv("AI_MODEL", "gpt-5")  # the model that answers users; gpt-5-mini only as a cheaper fallback
     # Accepted key names: AI_API_KEY (documented), OPENAI_API_KEY, OPEN_AI (team convention). Never logged.
     ai_api_key: str = os.getenv("AI_API_KEY") or os.getenv("OPENAI_API_KEY") or os.getenv("OPEN_AI") or ""
     ai_base_url: str | None = os.getenv("AI_BASE_URL") or None
-    ai_reasoning_effort: str = os.getenv("AI_REASONING_EFFORT", "low")  # gpt-5 family: minimal | low | medium | high (answer latency vs depth)
+    ai_reasoning_effort: str = os.getenv("AI_REASONING_EFFORT", "minimal")  # gpt-5 family: minimal (~10 s answers) | low | medium | high
     http_user_agent: str = os.getenv("HTTP_USER_AGENT", "lpc-regwatch/0.1 (regulatory watch)")
     # FR E-Phy scope: 'lallemand' = pilots + Lallemand/Danstar holders + pilot species; 'all' = every AUTORISE product
     # in France (the whole current French registry) plus the Lallemand-related ones of any status
