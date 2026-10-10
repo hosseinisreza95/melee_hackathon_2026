@@ -13,7 +13,7 @@ it without ever overwriting the original wording, and answers product × country
 | Live demo (team server) | UI `http://37.187.176.97/` · API docs `http://37.187.176.97/api/docs` · pitch `http://37.187.176.97/pitch/` |
 | Sources (4, 3 regions) | Health Canada PPID (CA) · US EPA PPLS (US) · ANSES E-Phy (FR) · MAPA AGROFIT (BR) |
 | Pilot products | LALSTOP CONTANS WG · LALSTOP G46 WG · LALGUARD M52 OD |
-| Team report (FR) | [docs/AVANCEMENT_FR.md](docs/AVANCEMENT_FR.md) — what was done, challenges, solutions, why |
+| Team report (FR) | [docs/AVANCEMENT_FR.md](docs/AVANCEMENT_FR.md) — what was done, challenges, solutions, why · LPC answers: [docs/LPC_QA.md](docs/LPC_QA.md) |
 | Requirement matrix | [docs/SPEC.md](docs/SPEC.md) · plan [docs/PLAN.md](docs/PLAN.md) · sources [docs/SOURCES.md](docs/SOURCES.md) · limits [docs/LIMITATIONS.md](docs/LIMITATIONS.md) |
 
 ## Minimum success criteria → where
@@ -41,7 +41,7 @@ python scripts/extract_labels.py                     # optional: needs AI_API_KE
 python scripts/build_submission.py                   # output/submission.json → evaluator 70/70
 python scripts/serve_api.py                          # http://localhost:8000/docs
 streamlit run src/lpc_regwatch/ui/app.py             # http://localhost:8501
-pytest -q                                            # 52 tests: schema, collectors (offline), parsers, normalisation, API, gold T01–T05, blind real-data checks
+pytest -q                                            # 59 tests: schema, collectors (offline), parsers, normalisation, label gate, API, gold T01–T05 + jury-style questions, blind real-data checks
 ```
 
 Docker (production-style stack: PostgreSQL + API + UI + Caddy, one public port): see [infra/README.md](infra/README.md).
@@ -68,7 +68,7 @@ docs/               SPEC, PLAN, SOURCES, DATA_MODEL, ARCHITECTURE, RA_VALIDATION
 m365/               apiDefinition.swagger.json, apiProperties.json, README, Power Automate flow, Copilot Studio action
 infra/              Dockerfile, docker-compose.yml, Caddyfile, cron.d/, README
 presentation/       pitch deck (self-contained HTML, animated)
-tests/              52 tests incl. gold questions and blind checks against the raw official files
+tests/              59 tests incl. gold questions, jury-style questions and blind checks against the raw official files
 schema/ evaluation/ business/ sources/ examples/   organiser starter kit (unchanged)
 ```
 

@@ -1,198 +1,129 @@
-# État d'avancement — Agent IA de veille réglementaire (défi Lallemand Plant Care)
+# Rapport d'avancement — Agent IA de veille réglementaire (défi Lallemand Plant Care)
 
-Date : 9 octobre 2026 · Dépôt : `melee_hackathon_2026` · Branche : `main`
+Date : 10 octobre 2026 · Dépôt : `melee_hackathon_2026` · Branche : `main` · Démo : http://37.187.176.97/ (UI) · http://37.187.176.97/api/docs (API) · http://37.187.176.97/pitch/ (pitch)
 
-Ce document résume ce qui a été fait jusqu'ici, pourquoi, et ce qu'il reste à faire. Il est écrit pour
-l'équipe. Les détails techniques sont dans `docs/SPEC.md`, `docs/PLAN.md`, `docs/SOURCES.md` et `docs/DATA_MODEL.md`.
+Ce document est écrit pour l'équipe : ce qui a été fait, les problèmes rencontrés, les solutions retenues et **pourquoi**.
+Les détails techniques sont dans `docs/SPEC.md` (exigence → composant → test), `docs/ARCHITECTURE.md`, `docs/SOURCES.md`,
+`docs/NORMALIZATION.md`, `docs/EVAL.md`, `docs/LIMITATIONS.md`, `docs/RA_VALIDATION_PROCEDURE.md`, `docs/LPC_QA.md`.
 
 ---
 
 ## 1. Le défi en cinq lignes
 
-Lallemand Plant Care (LPC) vend des produits de biocontrôle à base de micro-organismes. Les homologations de
-ces produits sont dispersées dans des bases nationales (Canada, États-Unis, Brésil, France, …) aux formats,
-langues et nomenclatures différents. Le défi : un **prototype d'agent IA** qui collecte ces sources officielles,
-les structure dans un **référentiel unique, traçable et interrogeable en langage naturel**, et permet de
-comparer produit × pays × usage (culture, cible, dose, restrictions). Durée : 30 h. Livrable : un dépôt Git
-relançable depuis le README, avec une intégration Microsoft 365 démontrée ou documentée.
+Lallemand Plant Care (LPC) vend des produits de biocontrôle à base de micro-organismes. Leurs homologations sont dispersées dans
+des bases nationales aux formats, langues et nomenclatures différents. Le défi : un **prototype d'agent IA** qui collecte ces sources
+officielles, les structure dans un **référentiel unique, traçable, interrogeable en langage naturel**, et compare produit × pays × usage
+(culture, cible, dose, restrictions). Seuil : ≥ 3 sources officielles, ≥ 2 régions, tableau de comparaison avec source et date, au moins une
+correspondance « produit sœur » présentée comme hypothèse, intégration Microsoft 365 démontrée ou documentée, dépôt relançable depuis le
+README sans clé personnelle, aucune donnée inventée, valeur originale conservée à côté de la valeur normalisée.
 
-Seuil minimum imposé : **≥ 3 sources officielles, ≥ 2 régions**, tableau de comparaison avec source et date,
-au moins une correspondance « produit sœur » présentée comme hypothèse, aucune donnée inventée, valeur
-originale conservée à côté de la valeur normalisée.
+## 2. État final : tout est livré et déployé
 
-## 2. Décisions de périmètre (prises le 9 octobre)
-
-| Décision | Choix | Pourquoi |
+| Livrable | État | Où |
 |---|---|---|
-| Sources MVP | **Canada (PPID), États-Unis (EPA PPLS), France (E-Phy), Brésil (AGROFIT)** | 4 sources, 3 régions (Amérique du Nord, Europe, Amérique latine), toutes en accès libre sans compte |
-| Allemagne (BVL) | écartée | l'API répond sans clé, mais on garde le MVP petit ; documentée dans `docs/SOURCES.md` |
-| Mexique, Belgique, Uruguay | hors MVP | Mexique : source non confirmée par l'organisateur ; Belgique : SFTP sur inscription ; Uruguay : HTML |
-| Produits pilotes | LALSTOP CONTANS WG, LALSTOP G46 WG, LALGUARD M52 OD | imposés par la fiche défi |
-| Produits concurrents | tout produit dont le micro-organisme est l'une des espèces pilotes | répond à « quels concurrents sont autorisés sur telle culture » |
-| Fournisseur d'IA | n'importe quel endpoint compatible OpenAI, choisi par `.env` | exigence « fournisseur interchangeable, aucune clé personnelle » |
-| Base de données | SQLite en développement, PostgreSQL sur le serveur de l'équipe | même modèle SQLAlchemy, seule `DATABASE_URL` change |
+| 4 sources officielles, 3 régions (CA, US, FR, BR) | ✅ collectées, parsées, normalisées | `src/lpc_regwatch/collectors`, `parsers`, `docs/SOURCES.md` |
+| Base canonique avec preuve sur chaque ligne | ✅ 232 enregistrements, 6 410 usages, 140 noms/relations, 9 tables | PostgreSQL (serveur), SQLite (dev) |
+| Normalisation (statut, EPPO, unités, taxonomie, identité produit) | ✅ exacte seulement, tout est flaggé | `src/lpc_regwatch/normalize`, `matching.py`, `docs/NORMALIZATION.md` |
+| API conforme au contrat du kit + extensions | ✅ `/health /products /registrations /compare /ask` + liés, qualité, échéances, changements, revue, export | `src/lpc_regwatch/api`, `/api/docs` |
+| Agent `/ask` ancré, sans clé et avec clé | ✅ planificateur déterministe + outils ; LLM optionnel + garde-fou | `api/ask.py` |
+| Extraction IA des étiquettes (dose CA/US) | ✅ 74 lignes acceptées / 11 rejetées, extrait vérifié mot pour mot | `extract/label_llm.py`, `docs/EVAL.md` |
+| Interface (comparaison, carte, question, revue, veille, sources) | ✅ client léger de l'API | `src/lpc_regwatch/ui/app.py` |
+| Microsoft 365 | ✅ connecteur Swagger 2.0 généré + flux Power Automate + action Copilot Studio + design Entra ID (documenté, pas de tenant) | `m365/` |
+| Déploiement production | ✅ Docker Compose (PostgreSQL, API, UI, Caddy), cron quotidien, pare-feu, secrets hors Git | `infra/`, serveur 37.187.176.97 |
+| Tests | ✅ 59 tests verts en local **et** dans le conteneur de production (PostgreSQL + fichiers officiels réels) | `tests/` |
+| Évaluateur de l'organisateur | ✅ 70 / 70 (local et pipeline serveur) | `scripts/build_submission.py` |
+| Pitch | ✅ 10 diapositives HTML animées, autonomes, en français | `presentation/index.html`, `/pitch/` |
 
-## 3. Ce qui est fait
+## 3. Ce que nous avons appris de LPC en cours de route (et appliqué)
 
-### Étape 0 — Cadrage, spécification, modèle de données (commit `ee16946`)
+Nous avons envoyé six questions à LPC ; leurs réponses du 10 octobre ont changé trois choses (détail dans `docs/LPC_QA.md`) :
 
-- Le **kit de démarrage** de LPC (schéma canonique, dictionnaire de champs, contrat OpenAPI, mappings EPPO,
-  rubrique d'évaluation, évaluateur automatique) est fusionné à la racine du dépôt, structure intacte.
-- `docs/SPEC.md` : chaque exigence de la fiche défi, du cahier des charges et de la rubrique est reliée à un
-  composant du code et à un test. 8 critères MVP, 8 règles de gouvernance, 6 règles de sécurité, 9 fonctions,
-  5 questions « gold », 5 règles de normalisation.
-- `docs/PLAN.md` : 8 étapes, chacune avec un test de sortie.
-- `docs/SOURCES.md` : chaque source a été **visitée et testée réellement** (téléchargement, colonnes, présence des
-  produits pilotes, licence, limites). Scripts de sondage conservés dans `scripts/probe/`.
-- **Modèle de données** (`src/lpc_regwatch/db/models.py`) : 9 tables. Cinq reprennent exactement les CSV du kit
-  (`sources`, `products`, `product_aliases`, `registrations`, `uses`) ; quatre ajoutent la traçabilité demandée :
-  `snapshots` (une par exécution de collecte), `raw_documents` (chaque fichier téléchargé avec URL, date, sha256),
-  `change_log` (différences entre deux collectes, bonus), `review_log` (chaque changement de statut de validation
-  par un humain). Sur `registrations` et `uses`, les colonnes source, URL, date de collecte et statut sont
-  **obligatoires au niveau du schéma** — une ligne sans preuve est refusée par la base.
-- `scripts/init_db.py`, `infra/docker-compose.yml` (PostgreSQL), `requirements.txt`, `.env.example`.
+1. **Tout doit marcher sans clé** et ils testeront **d'autres produits, pays et cultures** avec les mêmes intentions → mode sans clé
+   complet et planificateur rendu générique (cultures via l'index EPPO multilingue, espèces lues dans la base, produits par tous les noms et
+   alias). Test `test_other_products_countries_and_crops_like_the_jury_will`.
+2. **PRESTOP WG (Canada 32404) n'est pas LALSTOP G46 WG** ; LALFRESH S non plus (AMM distincte, post-récolte) ; PRESTOP est bien un produit
+   sœur ; MITAXION G est confirmé comme second nom de M52 GR en France. Nous avions fusionné PRESTOP WG sous G46 parce que l'enregistrement
+   canadien et le dossier EPA portent littéralement le nom « LALSTOP G46 WG ». **Nous avons défait la fusion** : la relation devient
+   `related_product`, le produit reste distinct, ses enregistrements s'affichent **à côté** de G46 avec la preuve. Les réponses de LPC sont
+   stockées comme **données** (`data/lpc_curated_relations.csv`), appliquées en dernier, visibles dans l'API avec leur preuve.
+3. Un connecteur prêt à importer avec sa documentation suffit pour M365 ; le registre interne est une liste SharePoint (colonnes à venir) ;
+   le kit ne contient aucun piège ; `12522-00001-F-1-WG` est un code d'essai, pas un numéro d'homologation.
 
-### Étape 1 — Collecteurs et stockage des preuves brutes (commit `46182fa`)
+## 4. Chronologie des étapes
 
-- `BaseCollector` : chaque fichier est écrit tel quel dans `data/raw/<source>/<horodatage UTC>/` avec un fichier
-  `.meta.json` (URL, date, sha256, taille, type). Une ligne `snapshots` par exécution (`ok` / `failed`), une
-  ligne `raw_documents` par fichier. **Garde contre les changements de structure** : si une colonne ou une clé
-  sur laquelle on s'appuie disparaît, l'exécution est enregistrée en échec avec la raison, et aucune donnée
-  fausse n'est produite. Les colonnes nouvelles sont seulement notées.
-- Quatre collecteurs :
-  - **Canada** : extraits CSV `product`, `ingredient`, `application` (historique des noms et titulaires), `label`.
-  - **États-Unis** : découverte par nom partiel et par ingrédient, puis fiche JSON complète par numéro EPA ;
-    téléchargement des PDF d'étiquette **uniquement pour les produits pilotes** (6 PDF). Les champs de contact
-    nominatifs (personne, téléphone, e-mail) sont **caviardés avant écriture sur disque** (règle sécurité du cahier).
-  - **France** : l'URL du zip hebdomadaire change chaque semaine ; le collecteur interroge l'API data.gouv.fr
-    pour obtenir la ressource courante.
-  - **Brésil** : l'URL est résolue via l'API CKAN du portail du ministère ; le CSV de 392 Mo est streamé sur disque.
-- `src/lpc_regwatch/pilots.py` : les termes de recherche (10 noms commerciaux, 5 espèces) sont **lus dans les
-  CSV du kit**, pas codés en dur.
-- Résultat réel : CA 4 fichiers / 28,9 Mo ; US 44 JSON + 6 PDF / 4,2 Mo ; FR zip / 4,0 Mo ; BR CSV / 392 Mo.
-  Une première exécution US a échoué (l'API renvoie `{"items": []}` pour un vieux numéro) : le snapshot en
-  échec est **conservé volontairement** comme preuve du comportement ; la cause est corrigée (« fiche vide » ≠
-  « format changé »).
+| Étape | Contenu | Commit |
+|---|---|---|
+| 0 | Kit fusionné, SPEC (exigence → composant → test), sources vérifiées, modèle de données 9 tables | `ee16946` |
+| 1 | Collecteurs + preuves brutes (`.meta.json`, sha256), snapshots, garde anti-dérive de schéma | `46baf93` |
+| 2 | Parseurs déterministes, loader, export au contrat du kit (validateur OK) | `72ac489` |
+| 3–4 | Normalisation, correspondances, détection de changements, API, `/ask` ancré, extraction d'étiquettes | `65acb93` |
+| 5–6–8 | UI Streamlit, connecteur M365, docs infra, tests aveugles sur données réelles | `ec1d6ca` |
+| Déploiement | Dockerfile, compose, Caddy, cron, serveur nettoyé et reconstruit | `030f05d` → `257a147` |
+| Réponses LPC | produits liés au lieu de fusions, relations curées, questions génériques, gpt-5 | `66a3f02` |
+| Final | EVAL, rapport, pitch, chiffres finaux | dernier commit de `main` |
 
-### Étape 2 — Parseurs déterministes, chargement, export au contrat du kit (commit `72ac489`)
+## 5. Problèmes rencontrés, solutions, et pourquoi
 
-- `parsers/base.py` : chaque ligne porte source, URL, date de collecte, snapshot, document brut, méthode
-  d'extraction et un **extrait de preuve** construit à partir de la ligne source. Les valeurs originales sont
-  copiées telles quelles ; seul le statut est normalisé, via la table versionnée `data/status_mapping.csv`.
-  L'identité des produits pilotes vient de `data/product_name_mapping.csv` (noms canoniques et historiques) ;
-  tout autre produit reçoit un identifiant déterministe. **Les candidats « produit sœur » ne sont jamais fusionnés ici.**
-- Quatre parseurs, chacun documentant ce que la source affirme réellement :
-  - **Canada** : statut, expiration, première homologation, titulaire, matière active. `Sites of Use` et `Pests`
-    sont deux listes indépendantes → une ligne d'usage par culture, liste des cibles en texte, `pairing=unpaired_lists`,
-    dose absente (étiquette seulement). L'extrait `application` donne les **noms historiques** (CONTANS WG déposé
-    par PROPHYTA en 2007, Met52 par NOVOZYMES en 2006).
-  - **États-Unis** : statut, formulation, matières actives avec %, noms de marque alternatifs et inactifs
-    (officiels), historique de transfert, listes `sites` / `pests` non appariées, dose absente.
-  - **France** : la seule source MVP avec **doses structurées** (dose, unité, DAR, nombre max d'applications,
-    stades BBCH, ZNT, conditions), `pairing=source_paired`. Seconds noms commerciaux → alias officiels.
-  - **Brésil** : une ligne par produit × culture × cible, actifs seulement (`SITUACAO=TRUE`), pas de dates ni
-    de dose ; plusieurs noms par numéro d'enregistrement → alias.
-- `loader.py` : chargement idempotent ; export de `data/products.csv`, `product_aliases.csv`,
-  `registrations.csv`, `uses.csv` **dans l'ordre de colonnes du kit** ; `scripts/validate_data.py` de
-  l'organisateur passe sur l'export réel.
-
-Résultat réel (snapshots du 9 octobre) :
-
-| Source | Enregistrements | Usages | Dose structurée | Produits pilotes trouvés |
-|---|---|---|---|---|
-| Canada | 17 | 300 | non | 3/3 (+ PRESTOP, PRESTOP WG, M52 GR) |
-| États-Unis | 29 | 5 438 | non | 3/3 (+ PRESTOP, M52 GR, K61, B33, …) |
-| France | 15 | 144 | **oui** | 3/3 (+ 6 autres produits Lallemand) |
-| Brésil | 171 | 454 | non | **0/3** (17 autres produits Lallemand ; concurrents même espèce) |
-| **Total** | **232** | **6 336** | | 219 produits, 122 alias avec preuve |
-
-Tests : 13 tests `pytest` verts (schéma, collecteurs hors-ligne avec transport simulé, parseurs sur fixtures,
-aller-retour chargement/export). Évaluateur automatique de l'organisateur : 70/70 sur l'exemple.
-
-## 4. Découvertes importantes
-
-1. **Au Canada et aux États-Unis, la dose n'est pas dans les données structurées** : elle n'existe que dans le PDF
-   d'étiquette. La France donne tout en structuré. C'est exactement là que l'« extraction assistée par IA » se
-   justifie : lire ~6 PDF d'étiquette pilotes, pas remplacer les parseurs.
-2. **Un même produit porte trois noms principaux** : France « LALSTOP G46 WG » (AMM 2230771), Canada « PRESTOP WG »
-   (n° 32404), États-Unis « PRESTOP (WG) » (64137-13) dont le champ officiel `altbrandnames` dit
-   « LALSTOP G46 WG ». Aujourd'hui ce sont deux identifiants produit. Règle retenue pour l'étape 3 : un nom
-   alternatif officiel **sur le même enregistrement** est une équivalence (preuve), pas une hypothèse ; « PRESTOP »
-   (poudre mouillable, autre formulation) reste un candidat « produit sœur » à confirmer.
-3. **Synonymes taxonomiques fournis par les sources officielles** : l'EPA écrit « Metarhizium brunneum (formerly
-   known as Metarhizium anisopliae) » ; E-Phy liste « Gliocladium catenulatum souche J1446 | Clonostachys rosea
-   souche J1446 ». Cela validera plusieurs lignes `to_verify` du kit.
-4. **Brésil : aucun produit pilote n'y est enregistré.** C'est la démonstration vivante de la règle « absence de
-   résultat ≠ absence d'homologation ». Le fichier ne liste que les produits actifs : un produit absent ne peut pas
-   être marqué « retiré ». Un concurrent (Kamoi Pro, Agrivalle) a la même espèce que G46 (*Clonostachys rosea*)
-   mais une **autre souche** — cas d'école pour montrer que la souche compte.
-5. **Piège d'en-tête E-Phy** : la colonne `identifiant usage lib court` contient le **code numérique** et la colonne
-   `identifiant usage` contient le **texte** `Culture*Traitement*Cible`. Le test unitaire, écrit d'après les noms,
-   passait ; l'erreur n'est apparue qu'en vérifiant les données réelles. Corrigé et documenté. Leçon : vérifier
-   chaque étape sur les vraies données, pas seulement sur les fixtures.
-6. **Vie privée** : la fiche EPA contient nom, téléphone et e-mail d'une personne de contact. Ces champs sont
-   remplacés par `[redacted]` avant stockage ; le nom de l'entreprise est conservé (fait réglementaire).
-
-## 5. Où sont les données
-
-| Couche | Emplacement | Dans Git ? | Reconstruction |
+| # | Problème | Solution | Pourquoi ce choix |
 |---|---|---|---|
-| Preuves brutes (fichiers officiels + `.meta.json`) | `data/raw/<source>/<horodatage>/` (≈ 420 Mo) | non | `python scripts/collect.py --source all` |
-| Base canonique | `data/lpc_regwatch.sqlite` (7 Mo, 9 tables) | non | `python scripts/init_db.py` puis `parse.py` |
-| Export au contrat du kit | `data/products.csv`, `product_aliases.csv`, `registrations.csv`, `uses.csv` | **oui** | `python scripts/parse.py --source all` |
+| 1 | **Dose absente des données structurées** au Canada et aux États-Unis (seulement dans le PDF d'étiquette). | Deux chemins : parseurs déterministes pour tout ; LLM uniquement pour les PDF, avec un **garde-fou à trois niveaux** (extrait verbatim / début d'extrait + culture + dose vérifiés / rejet). Lignes marquées `llm_pdf`, `llm_paired`, confiance plafonnée à 0,7 si vérification partielle. | Le cahier interdit d'inventer : une ligne IA n'entre que si le PDF contient littéralement ce qu'elle cite. Perdre 11 lignes vaut mieux qu'en fausser une. |
+| 2 | **Premier garde-fou trop strict** : l'étiquette PRESTOP WG (34 pages, tableaux) avait 17/17 lignes rejetées car le modèle réordonnait les cellules. | Niveau « partiel » ajouté ; sortie brute du modèle mise en cache par sha256 pour re-jouer le garde-fou sans repayer l'extraction. | Séparer « ce que le modèle a dit » de « ce que nous acceptons » rend le filtre auditable et améliorable à coût nul. |
+| 3 | **Un même produit sous trois noms** (G46 / PRESTOP WG / PRESTOP (WG)) : nous avions fusionné sur la foi des noms alternatifs officiels. LPC : ce sont des produits distincts. | Fusion supprimée ; relation `related_product` ; décisions LPC en CSV versionné ; `/compare` et la carte montrent « produit absent mais produit lié présent ». | L'autorité produit prime sur l'inférence ; mais l'information officielle (le nom figure sur l'enregistrement) reste visible comme preuve, pas comme identité. |
+| 4 | **Collecteur US emballé sur le serveur** : les termes de recherche étaient dérivés du fichier d'alias exporté, qui contenait « STRAIN », « TECHNICAL », « POWDER » → des milliers de dossiers EPA. | Termes limités aux noms curés du kit + liste de mots génériques exclus ; test de régression. | Une sortie du pipeline ne doit jamais être une entrée du pipeline : boucle de rétroaction incontrôlée. |
+| 5 | **PostgreSQL refuse ce que SQLite acceptait** : `VARCHAR(60)` dépassé par des identifiants d'alias longs. | Colonnes élargies aux longueurs observées ; test sur les longueurs ; base recréée. | Tester en dev sur SQLite ne suffit pas ; la suite complète tourne désormais dans le conteneur de production. |
+| 6 | **En-têtes trompeurs dans E-Phy** : la colonne « identifiant usage lib court » contient le code numérique, « identifiant usage » le texte. Le test unitaire passait, la donnée réelle non. | Correction + documentation dans le parseur et `docs/SOURCES.md` ; tests « aveugles » qui relisent les fichiers officiels sans nos parseurs. | Vérifier chaque étape sur les vraies données, pas seulement sur des fixtures. |
+| 7 | **Clé OpenAI locale invalide (401)** ; une clé valide existait dans l'ancien déploiement du serveur. | Copiée côté serveur uniquement (jamais affichée), `.env` en `chmod 600`, jamais dans Git ; tout le travail IA s'exécute sur le serveur. | La clé ne doit pas être exposée ; le dépôt reste utilisable sans clé. |
+| 8 | **Modèles gpt-5 / gpt-5-mini** (demande de l'équipe) : API différente (`max_completion_tokens`, température fixe). | Client adapté par préfixe de modèle ; gpt-5-mini pour `/ask`, gpt-5 pour les étiquettes (meilleure extraction : 28/28 et 34/34 verbatim ou partiel). | Fournisseur et modèle restent du `.env`. |
+| 9 | **Échéances erronées** : les retraits français de 2006 apparaissaient comme « expirant ». | `/expiring` ne retient que les enregistrements actifs dont l'échéance est future. | Une date de retrait passée n'est pas une échéance. |
+| 10 | **Dérive de source** possible à tout moment (colonnes renommées, API vide). | Garde de schéma : colonnes attendues par source ; une run échouée est **enregistrée** avec sa raison (snapshot `failed`) ; un dossier EPA vide est une preuve « la source n'a rien dit », pas un changement de format. | Le cahier demande d'expliquer ce qui se passe quand une source change : nous le montrons dans la base. |
+| 11 | **Confidentialité** : les dossiers EPA contiennent nom, téléphone, e-mail d'une personne. | Caviardage avant écriture sur disque ; test ; seul le nom de l'entreprise reste. | Donnée personnelle inutile au besoin. |
+| 12 | **Un coéquipier a supprimé** `.gitignore`, `requirements.txt`, `.env.example` depuis une base ancienne (commit « remove »). | Fusion en restaurant ces fichiers ; `.gitattributes` pour les fins de ligne (scripts shell du serveur). | Sans `.gitignore`, le `.env` aurait pu partir dans Git. |
+| 13 | **Serveur de l'équipe** : anciens conteneurs de test (n8n, bot Telegram, etc.). | Tout supprimé à la demande ; `.env` anciens sauvegardés dans `/home/ubuntu/old-deploy-backup-20261009/` ; pare-feu (22/80/443), swap 2 Go, Docker Compose v5, cron. | Production propre, reproductible depuis `infra/README.md`. |
+| 14 | **Codes EPPO** : le kit en fournit 50 ; les sources utilisent des libellés groupés (« Cucurbitacées à peau comestible », « Thrips »). | Correspondance **exacte uniquement** (noms, alias multilingues, libellés observés) ; jamais de code espèce depuis un genre ; tout reste `to_verify`. ~23 % des usages codés. | Un code faux est pire qu'aucun code. |
 
-## 6. Relancer depuis une machine propre
+## 6. Comment c'est construit (une page)
 
-```bash
-uv pip install -r requirements.txt      # ou pip install -r requirements.txt
-cp .env.example .env                     # aucune clé nécessaire pour collecter/parser
-python scripts/init_db.py
-python scripts/collect.py --source all   # ~10 min, 420 Mo (le Brésil fait 392 Mo)
-python scripts/parse.py --source all     # charge la base, exporte les CSV, lance validate_data.py
-pytest
+```
+sources officielles → collecteurs (fichier brut + sha256 + date, snapshot) → parseurs (originaux verbatim, extrait de preuve)
+→ normalisation (statut, EPPO exact, unités, synonymes documentés, souche+espèce) → base canonique (source/URL/date/statut NOT NULL)
+→ API (contrat du kit, evidence[] + warnings[] + disclaimer partout) → UI légère · connecteur Power Platform · Copilot · export CSV/XLSX
+PDF d'étiquette → LLM (schéma JSON strict) → garde-fou verbatim → usages llm_pdf (à vérifier)
+question → planificateur déterministe → outils en lecture seule → faits = preuves → (LLM reformule) → garde-fou chiffres/pays → réponse
 ```
 
-## 7. Structure du dépôt (ce qui est à nous)
+Règles que la base rend impossibles à contourner : pas de ligne réglementaire sans source, URL, date, statut ; `*_original` jamais modifié ;
+trois états distincts « trouvé / non trouvé dans la source (date) / source non connectée » ; hypothèse jamais affichée comme équivalence ;
+toute décision humaine journalisée (`POST /review`, `review_log`).
 
-```
-docs/            SPEC.md (exigences→composants→tests), PLAN.md, SOURCES.md, DATA_MODEL.md, AVANCEMENT_FR.md
-src/lpc_regwatch/
-  config.py      lecture de .env (DATABASE_URL, AI_PROVIDER, AI_MODEL, AI_API_KEY, AI_BASE_URL)
-  pilots.py      termes de recherche dérivés des CSV du kit
-  db/            models.py (9 tables), session.py (SQLite/PostgreSQL)
-  collectors/    base.py + ca_ppid, us_epa_ppls, fr_ephy, br_agrofit
-  parsers/       base.py + ca_ppid, us_epa_ppls, fr_ephy, br_agrofit
-  loader.py      chargement idempotent + export CSV
-scripts/         init_db.py, collect.py, parse.py, probe/ (sondages), + scripts du kit
-tests/           test_db.py, test_collectors.py, test_parsers.py (+ test du kit)
-infra/           docker-compose.yml (PostgreSQL)
-data/            CSV du kit (mappings, dictionnaire) + export réel + status_mapping.csv
-```
+## 7. Les chiffres du 10 octobre (serveur)
 
-## 8. Prochaines étapes (voir `docs/PLAN.md`)
+| Indicateur | Valeur |
+|---|---|
+| Sources / régions | 4 / 3 |
+| Enregistrements · usages · noms et relations | 232 · 6 410 · 140 |
+| Produits pilotes retrouvés | 3, chacun sous un identifiant unique ; CONTANS et M52 OD dans CA/US/FR ; G46 en FR + produits liés PRESTOP WG (CA/US), PRESTOP (CA/US/FR), LALFRESH S (FR) |
+| Lignes d'étiquette IA | 74 acceptées (63 verbatim, 11 partielles), 11 rejetées, 0 valeur fausse sur 20 champs vérifiés à la main |
+| Tests | 59 verts (local + conteneur de production) |
+| Évaluateur | 70 / 70 |
+| Temps du pipeline complet sur le serveur | ≈ 8 min (dont 392 Mo de téléchargement brésilien et ≈ 4 min d'extraction gpt-5) |
 
-| Étape | Contenu | Point d'attention |
-|---|---|---|
-| 3 — Normalisation et correspondances | codes EPPO culture/cible via les CSV du kit (multilingue), unités converties seulement si exactes, fusion des produits avec nom alternatif officiel sur le même enregistrement, candidats « sœurs » = même espèce + même souche | les noms de culture US ont un contexte entre parenthèses, les noms FR sont des groupes de cultures ; ce qui n'est pas mappé reste `to_verify`, honnêtement |
-| 4 — API | FastAPI selon `schema/openapi.yaml` : `/products`, `/compare`, `/ask` (résolution d'entités → outils SQL prédéfinis → réponse construite uniquement à partir des lignes, avec `evidence[]`, `warnings[]`, `disclaimer`) | pas de recherche web libre ; tests des 5 questions « gold » ; `submission.json` → évaluateur |
-| 5 — Interface | Streamlit, **client léger de l'API** : tableau produit × pays × usage avec badge de statut, lien source et date par cellule ; panneau détail original/normalisé ; zone de question ; export CSV/Excel | l'UX ne vaut que 5 % de la note ; pas de KPI décoratifs |
-| 6 — Microsoft 365 | OpenAPI → connecteur personnalisé Power Platform + action Copilot Studio ; ou flux Power Automate sur l'export CSV | 15 % de la note ; à démontrer avec captures |
-| 7 — Extraction IA des étiquettes | PDF (PyMuPDF) → LLM avec schéma JSON strict → lignes d'usage avec dose, `extraction_method=llm_pdf`, confiance, extrait de preuve ; cache par sha256 | ~6 PDF pilotes seulement ; 20 champs vérifiés à la main |
-| 8 — Packaging | docker-compose (api, ui, db) sur le serveur de l'équipe ; README vérifié sur machine propre ; limites connues, procédure de validation Regulatory Affairs, chemin vers la production | |
+## 8. Relancer
 
-Bonus si tout est vert : détection des changements entre snapshots, alertes d'expiration, carte, empreinte concurrent.
+Machine propre : voir `README.md` (10 commandes). Serveur : `infra/README.md`. Cron : `/etc/cron.d/lpc-regwatch` (03:30 UTC) ;
+log `/var/log/lpc-regwatch-pipeline.log`. Mettre à jour : `ssh ubuntu@37.187.176.97 'cd /opt/lpc-regwatch && git pull && docker compose -f infra/docker-compose.yml --env-file .env up -d --build'`.
 
-## 9. Décisions ouvertes pour l'équipe
+## 9. Ce qu'il reste à faire (après le hackathon)
 
-1. Garder les ~150 concurrents brésiliens à base de *Metarhizium anisopliae* ? Proposition : oui, filtrés par
-   défaut dans l'interface.
-2. Committer le fichier SQLite (7 Mo) pour que le jury puisse lancer la démo sans télécharger 420 Mo ?
-3. Répartition des rôles pour les étapes 3 à 6 (données / IA / API / interface / M365 / présentation).
+1. Brancher le flux Power Automate sur les colonnes réelles de la liste SharePoint de LPC (attendues).
+2. Démonstration dans un tenant M365 (captures : connecteur, flux, conversation Copilot).
+3. Entra ID devant l'API (rôles Reader / Reviewer) ; HTTPS par nom de domaine (Caddy le fait seul).
+4. Client EPPO Data Services pour passer les codes en `validated` sous contrôle RA.
+5. Sources supplémentaires avec la même classe de collecteur (Allemagne BVL déjà sondée, Belgique, Uruguay).
 
 ## 10. Règles de travail dans le dépôt
 
-- Une branche par fonctionnalité, commits clairs ; `main` reste exécutable.
-- Jamais de secret dans Git (`.env` est ignoré). Aucune clé n'est nécessaire avant l'étape 4.
-- Après tout changement de parseur : `python scripts/parse.py --source all` doit se terminer par `VALIDATION PASSED`.
-- Toute nouvelle source : une ligne dans `data/source_registry.csv` et une section dans `docs/SOURCES.md`.
-- Ne jamais modifier une valeur `*_original` ; ne jamais passer un statut à `validated` sans revue humaine tracée.
+- Une branche par fonctionnalité ; `main` reste exécutable ; `pytest -q` avant tout push.
+- Jamais de secret dans Git (`.env` ignoré, `chmod 600` sur le serveur). Aucune clé n'est nécessaire pour relancer.
+- Après tout changement de parseur ou de normalisation : `python scripts/parse.py --source all` puis `python scripts/normalize.py` doivent finir par `VALIDATION PASSED`.
+- Toute nouvelle source : une ligne dans `data/source_registry.csv`, une section dans `docs/SOURCES.md`, une entrée dans `sources/ATTRIBUTION.md`.
+- Ne jamais modifier une valeur `*_original` ; ne jamais passer un statut à `validated` sans revue humaine tracée (sauf les réponses écrites de LPC, versionnées dans `data/lpc_curated_relations.csv`).

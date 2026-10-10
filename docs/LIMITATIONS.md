@@ -19,8 +19,8 @@
    LPC's own written answers of 2026-10-10 (`data/lpc_curated_relations.csv`): PRESTOP confirmed sister of LALSTOP G46 WG; PRESTOP WG
    and LALFRESH S distinct related products (never merged); MITAXION G confirmed second name of LALGUARD M52 GR in France.
    A registration that carries a pilot name as alternate name (CA 32404) is therefore shown as a related product, not as the pilot.
-9. **Change detection** needs two collections of the same source; the first run has no baseline (the demo DB shows the
-   product-merge changes only).
+9. **Change detection** needs two collections of the same source; the first run has no baseline (the server cron produces the first
+   real diff on the second night).
 10. **Natural-language answers** are phrased by the LLM only when a key is configured; otherwise a deterministic template
     with the same facts is returned. The guard may reject a correct phrasing that mentions a count not present in the facts.
 11. **No authentication** on the prototype API (public read-only data); the Entra ID design is documented, not built.

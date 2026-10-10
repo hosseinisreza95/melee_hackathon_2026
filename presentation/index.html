@@ -118,7 +118,7 @@
     <div class="node r"><b>Usages</b><span>UI, Power Platform, Copilot Studio, Excel</span></div>
   </div>
   <div class="flowline"></div>
-  <p class="r muted">Les PDF d'étiquette (dose au Canada et aux États-Unis) passent par un LLM, mais chaque ligne doit citer un extrait <b>mot pour mot</b> retrouvé dans le PDF — sinon elle est rejetée.</p>
+  <p class="r muted">Les PDF d'étiquette (dose au Canada et aux États-Unis) passent par un LLM, mais chaque ligne doit citer un extrait <b>mot pour mot</b> retrouvé dans le PDF — sinon elle est rejetée (74 lignes acceptées, 11 rejetées sur les 3 étiquettes pilotes).</p>
 </section>
 
 <!-- 4 -->
@@ -127,13 +127,13 @@
   <div class="grid g4">
     <div class="card r"><div class="num" data-count="4">0</div><div>sources officielles, 3 régions</div></div>
     <div class="card r"><div class="num" data-count="3">0</div><div>produits pilotes retrouvés, chacun sous un seul identifiant, avec leurs produits liés (PRESTOP WG, PRESTOP, LALFRESH S, M52 GR) distincts</div></div>
-    <div class="card r"><div class="num" data-count="232" id="n-reg">0</div><div>enregistrements, 6 300+ usages, 134 noms et hypothèses avec preuve</div></div>
+    <div class="card r"><div class="num" data-count="232" id="n-reg">0</div><div>enregistrements, 6 400+ usages (dont 74 lus dans les étiquettes par IA et vérifiés mot pour mot), 130+ noms et relations avec preuve</div></div>
     <div class="card r"><div class="num" data-count="100">0</div><div>% des lignes réglementaires avec source, URL, date et statut de validation</div></div>
   </div>
   <div class="grid g3" style="margin-top:18px">
-    <div class="card r"><h3>52 tests automatisés</h3><p>schéma, collecteurs hors-ligne, parseurs, normalisation, contrat API, 5 questions « gold », cas adverses, et des tests « aveugles » qui relisent les fichiers officiels sans nos parseurs.</p></div>
+    <div class="card r"><h3>59 tests automatisés</h3><p>schéma, collecteurs hors-ligne, parseurs, normalisation, garde-fou des étiquettes, contrat API, 5 questions « gold », questions « à la manière du jury » (autres produits, pays, cultures), cas adverses, et tests « aveugles » qui relisent les fichiers officiels sans nos parseurs — verts en local et dans le conteneur de production.</p></div>
     <div class="card r"><h3>70 / 70 à l'évaluateur</h3><p>soumission générée par l'agent lui-même sur les cinq questions du jury ; traçabilité, avertissements, disclaimer, limites connues.</p></div>
-    <div class="card r"><h3>0 clé personnelle requise</h3><p>tout fonctionne sans IA ; le fournisseur LLM se change en 4 lignes de configuration (OpenAI, Azure OpenAI, Gemini, local).</p></div>
+    <div class="card r"><h3>0 clé personnelle requise</h3><p>tout fonctionne sans IA (exigence confirmée par LPC) ; le fournisseur LLM se change en 4 lignes de configuration (OpenAI gpt-5 / gpt-5-mini sur la démo, Azure OpenAI, Gemini, local).</p></div>
   </div>
 </section>
 
