@@ -68,6 +68,9 @@ the UI sends it back with the next question and the planner inherits the subject
 ("et en France ?" keeps the product, "et ses usages ?" keeps product and country, "dans quels pays…" resets the countries, a named
 product resets the thread). What was inherited is stated in the first caveat. Earlier turns are passed to the model for wording only
 and the grounding guard still applies (`test_follow_up_questions_inherit_the_conversation_context`, `test_chat_assistant_keeps_the_thread`).
+UI: ChatGPT-like assistant (one centred thread, pinned input, starter cards, pilots map on an empty thread with click-to-ask, threads in the
+sidebar, data pages folded); every page still renders headlessly in the three languages and the chat test drives two turns through the real
+`st.chat_input`.
 
 - Deterministic path (no key): 100 % of the facts come from predefined queries; tests `tests/test_gold.py` (T01–T05 + adversarial +
   other products/countries/crops) pass offline.

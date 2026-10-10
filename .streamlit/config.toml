@@ -3,8 +3,8 @@
 [theme]
 base = "light"
 primaryColor = "#e30327"
-backgroundColor = "#ffffff"
-secondaryBackgroundColor = "#f1f3f4"
+backgroundColor = "#f5f6f7"
+secondaryBackgroundColor = "#ffffff"
 textColor = "#212529"
 linkColor = "#36434b"
 font = "sans-serif"
@@ -13,11 +13,11 @@ borderColor = "#d7d9db"
 showWidgetBorder = true
 
 [theme.sidebar]
-backgroundColor = "#36434b"
-secondaryBackgroundColor = "#2b363d"
-textColor = "#eef1f2"
-linkColor = "#ffffff"
-borderColor = "#4a575f"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f1f3f4"
+textColor = "#212529"
+linkColor = "#36434b"
+borderColor = "#e3e5e7"
 
 [client]
 # no Streamlit "Deploy" button and no native menu: the app draws its own top-right menu (language, links)

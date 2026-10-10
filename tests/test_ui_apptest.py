@@ -11,13 +11,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from lpc_regwatch.ui.i18n import LANGS, S, tr  # noqa: E402
 
 APP = Path(__file__).resolve().parents[1] / "src" / "lpc_regwatch" / "ui" / "app.py"
-PAGES = ["page.home", "page.compare", "page.map", "page.sisters", "page.watch", "page.registry", "page.sources"]
+PAGES = ["page.chat", "page.overview", "page.compare", "page.map", "page.sisters", "page.watch", "page.registry", "page.sources"]
 
 
 def test_every_key_has_all_three_languages():
     missing = [(k, lang) for k, v in S.items() for lang in LANGS if not v.get(lang)]
     assert missing == []
-    assert tr("pt", "page.home") == "Assistente & visão geral" and tr("xx", "page.home") == "Assistant & vue d'ensemble" and tr("en", "no.such.key") == "no.such.key"
+    assert tr("pt", "page.chat") == "Assistente" and tr("xx", "page.overview") == "Vue d'ensemble (carte)" and tr("en", "no.such.key") == "no.such.key"
     assert tr("en", "warnings.n", n=3) == "3 warning(s) — missing or uncertain data"
 
 
@@ -63,7 +63,7 @@ def test_every_page_renders_in_every_language(ui_http, lang, page):
     at.run()
     assert not at.exception, [str(e.value)[:300] for e in at.exception]
     title = at.title[0].value if at.title else ""
-    expected = {"page.home": "home.title", "page.compare": "cmp.title", "page.map": "map.title", "page.sisters": "sis.title",
+    expected = {"page.chat": "chat.hero", "page.overview": "ov.title", "page.compare": "cmp.title", "page.map": "map.title", "page.sisters": "sis.title",
                 "page.watch": "watch.title", "page.registry": "reg.title", "page.sources": "src.title"}[page]
     assert title == tr(lang, expected)
     # the disclaimer is on every page, in the selected language
@@ -91,29 +91,37 @@ def test_single_language_control_switches_every_page(ui_http):
     at = AppTest.from_file(str(APP), default_timeout=60)
     at.run()
     at.segmented_control(key="lang_ctl").set_value(None).run()
-    assert not at.exception and at.session_state["lang"] == "fr" and at.title[0].value == tr("fr", "home.title")
+    assert not at.exception and at.session_state["lang"] == "fr" and at.title[0].value == tr("fr", "chat.hero")
 
 
 def test_chat_assistant_keeps_the_thread(ui_http):
-    """Home page: map + conversational assistant. A follow-up without a product name is answered about the previous product."""
+    """ChatGPT-like assistant: starter cards on an empty thread, pinned input, a follow-up without a product name is answered
+    about the previous product, threads are listed in the sidebar, data pages are folded in the sidebar."""
     from streamlit.testing.v1 import AppTest
 
     at = AppTest.from_file(str(APP), default_timeout=90)
     at.run()
     assert not at.exception
-    assert at.chat_message and tr("fr", "chat.hello")[:20] in at.chat_message[0].markdown[0].value
+    assert at.chat_input and not at.chat_message  # empty thread: hero + starter cards, no messages yet
+    starters = [b for b in at.button if b.key and b.key.startswith("starter_")]
+    assert len(starters) == 4
     at.chat_input[0].set_value("LALSTOP G46 WG est-il homologué au Canada ?").run()
     assert not at.exception, [str(e.value)[:300] for e in at.exception]
-    chat = at.session_state["chat"]
-    assert [m["role"] for m in chat] == ["user", "assistant"] and chat[1]["ans"]["context"]["productIds"] == ["P-LPC-G46"]
-    assert len(at.chat_message) == 2  # the greeting is replaced by the two turns
+    th = at.session_state["threads"][0]
+    assert [m["role"] for m in th["messages"]] == ["user", "assistant"] and th["ctx"]["productIds"] == ["P-LPC-G46"]
+    assert th["title"].startswith("LALSTOP G46 WG") and len(at.chat_message) == 2
     at.chat_input[0].set_value("Et en France ?").run()
     assert not at.exception, [str(e.value)[:300] for e in at.exception]
-    ans = at.session_state["chat"][-1]["ans"]
+    ans = at.session_state["threads"][0]["messages"][-1]["ans"]
     assert ans["context"]["productIds"] == ["P-LPC-G46"] and ans["context"]["countries"] == ["FR"]
     assert ans["structured"]["caveats"][0].startswith("Contexte repris de la conversation : LALSTOP G46 WG")
     assert [f["registrationNumber"] for f in ans["facts"] if f["type"] == "registration"] == ["2230771"]
     assert len(at.chat_message) == 4 and len(at.dataframe) >= 1
-    # the suggestion pills offer follow-ups about the same product
     sugg = [p for p in at.pills if p.key and p.key.startswith("chat_sugg_")]
-    assert sugg and tr("fr", "chat.fu_uses") in list(sugg[0].options)
+    assert sugg and tr("fr", "chat.fu_uses") in list(sugg[0].options)  # follow-ups about the same product
+    assert [b for b in at.sidebar.button if b.key and b.key.startswith("thread_")]  # the thread is listed
+    # a data page opens from the folded tools and the back button returns to the same thread
+    at.sidebar.button(key="tool_page.watch").click().run()
+    assert not at.exception and at.title[0].value == tr("fr", "watch.title")
+    at.button(key="back_chat").click().run()
+    assert not at.exception and at.session_state["page"] == "page.chat" and len(at.chat_message) == 4

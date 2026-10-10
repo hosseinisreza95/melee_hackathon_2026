@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -16,7 +17,6 @@ import httpx
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
-import streamlit.components.v1 as components
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # `streamlit run src/lpc_regwatch/ui/app.py` without PYTHONPATH
 from lpc_regwatch.ui.i18n import COUNTRY_IN, COUNTRY_NAMES, EXAMPLES, LANGS, tr  # noqa: E402
@@ -35,7 +35,28 @@ STATUS_COLOR = {"active": "#2fd27a", "expired": "#f0a21f", "withdrawn": RED, "pe
 MAP_KEYS = ["m.active", "m.related", "m.withdrawn", "m.pending", "m.notfound", "m.nosource"]
 MAP_COLORS = {"m.active": "#2fd27a", "m.related": "#38c6ff", "m.withdrawn": RED, "m.pending": "#f5c842", "m.notfound": "#5e6b72", "m.nosource": "#434f56"}
 ASSETS = Path(__file__).parent / "assets"
-PAGES = ["page.home", "page.compare", "page.map", "page.sisters", "page.watch", "page.registry", "page.sources"]
+TOOLS = ["page.overview", "page.compare", "page.map", "page.sisters", "page.watch", "page.registry", "page.sources"]  # data & monitoring pages
+PAGES = ["page.chat"] + TOOLS
+TOOL_ICONS = {"page.overview": ":material/public:", "page.compare": ":material/compare_arrows:", "page.map": ":material/map:", "page.sisters": ":material/account_tree:",
+              "page.watch": ":material/monitoring:", "page.registry": ":material/fact_check:", "page.sources": ":material/database:"}
+STARTER_ICONS = [":material/public:", ":material/compare_arrows:", ":material/fact_check:", ":material/account_tree:", ":material/microbiology:", ":material/event:"]
+BOT_AVATAR = ":material/microbiology:"
+
+
+def microbe_art(stroke: str, fill: str, accent: str, size: int = 56) -> str:
+    """Three small micro-organism motifs (a bacterium, a conidiophore with spores, a leaf) as inline SVG in the brand colours."""
+    h = size
+    w = int(size * 1.25)
+    sw = 2.4
+    bact = (f'<svg width="{w}" height="{h}" viewBox="0 0 80 64" fill="none"><rect x="14" y="21" width="52" height="22" rx="11" fill="{fill}" stroke="{stroke}" stroke-width="{sw}"/>'
+            f'<circle cx="30" cy="32" r="2.6" fill="{accent}"/><circle cx="41" cy="28.5" r="2.2" fill="{accent}"/><circle cx="50" cy="35" r="2.4" fill="{accent}"/>'
+            f'<path d="M14 32c-5 0-6-6-11-6M66 32c5 0 6 6 11 6M30 21v-5M50 21v-5M30 43v5M50 43v5" stroke="{stroke}" stroke-width="2" stroke-linecap="round"/></svg>')
+    spore = (f'<svg width="{w}" height="{h}" viewBox="0 0 80 64" fill="none"><path d="M40 62V34M40 40c-9-2-15-9-17-19M40 40c9-2 15-9 17-19M40 34V16" stroke="{stroke}" stroke-width="{sw}" stroke-linecap="round"/>'
+             f'<circle cx="23" cy="15" r="6" fill="{accent}"/><circle cx="57" cy="15" r="6" fill="{accent}" opacity=".85"/><circle cx="40" cy="10" r="6" fill="{accent}"/>'
+             f'<circle cx="31" cy="26" r="3" fill="{fill}" stroke="{stroke}" stroke-width="1.6"/><circle cx="49" cy="26" r="3" fill="{fill}" stroke="{stroke}" stroke-width="1.6"/></svg>')
+    leaf = (f'<svg width="{w}" height="{h}" viewBox="0 0 80 64" fill="none"><path d="M12 54C13 30 32 10 68 10c0 36-16 52-40 52-7 0-12-3-16-8z" fill="{fill}" stroke="{stroke}" stroke-width="{sw}" stroke-linejoin="round"/>'
+            f'<path d="M20 52C32 42 46 30 62 18M32 42c-4-2-8-7-9-12M44 32c-3-3-5-8-5-13" stroke="{stroke}" stroke-width="1.8" stroke-linecap="round"/><circle cx="40" cy="40" r="3" fill="{accent}"/></svg>')
+    return f'<div class="hero-art">{bact}{spore}{leaf}</div>'
 
 st.set_page_config(page_title="LPC Regulatory Watch", page_icon=str(ASSETS / "lallemand_logo.svg"), layout="wide", initial_sidebar_state="expanded")
 
@@ -66,21 +87,48 @@ def lang_key(base: str) -> str:
 
 st.markdown(f"""
 <style>
-  section[data-testid="stSidebar"] {{ min-width: 300px; }}
+  section[data-testid="stSidebar"] {{ min-width: 280px; margin:10px 0 10px 10px; height:calc(100vh - 20px); border-radius:18px; background:#fff;
+                                      box-shadow:0 10px 30px rgba(33,37,41,.10), 0 1px 2px rgba(33,37,41,.06); border:1px solid #e6e8ea; }}
+  section[data-testid="stSidebar"] > div:first-child {{ border-radius:18px; }}
+  section[data-testid="stSidebar"] [data-testid="stButton"] button {{ justify-content:flex-start; text-align:left; }}
+  section[data-testid="stSidebar"] [data-testid="stButton"] button p {{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:220px; font-size:.9rem; }}
+  section[data-testid="stSidebar"] [data-testid="stExpander"] details {{ border:none; background:transparent; }}
+  section[data-testid="stSidebar"] [data-testid="stExpander"] summary {{ padding:.3rem 0; }}
+  section[data-testid="stSidebar"] [data-testid="stExpander"] summary p {{ font-size:.78rem; letter-spacing:.12em; text-transform:uppercase; color:#6b767d; }}
+  [data-testid="stChatMessage"] {{ background:transparent; padding:.25rem 0; gap:.5rem; }}
+  [data-testid="stChatMessageAvatarUser"] {{ display:none; }}
+  [data-testid="stChatMessageAvatarCustom"] {{ background:{RED}; border:none; border-radius:50%; width:30px; height:30px; margin-top:2px; }}
+  [data-testid="stChatMessageAvatarCustom"] span {{ color:#fff !important; font-size:18px; }}
+  [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) [data-testid="stChatMessageContent"] {{ margin-left:auto; flex:0 1 auto; max-width:78%; background:#e7eaed; border-radius:18px; padding:.6rem 1rem; }}
+  [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarCustom"]) [data-testid="stChatMessageContent"] {{ padding:.25rem 0 0; }}
+  .hero-art {{ display:flex; justify-content:center; align-items:flex-end; gap:34px; margin-top:2vh; }}
+  .chat-map-cap {{ text-align:center; color:#6b767d; font-size:.82rem; margin:-.2rem 0 1rem; }}
+  .lpc-brand .mark {{ display:flex; align-items:center; }}
+  .sb-art {{ display:flex; gap:4px; align-items:flex-end; }}
+  .sb-art svg {{ width:26px; height:21px; }}
+  .ans-head {{ font-size:1.02rem; line-height:1.55; margin:0 0 .5rem; color:{INK}; }}
+  .hero-sub {{ text-align:center; color:#5b6770; margin:-.2rem 0 1.6rem; font-size:1rem; }}
+  .st-key-starters [data-testid="stButton"] button {{ min-height:66px; white-space:normal; text-align:left; border-radius:14px; border:1px solid #d7d9db; background:#fff; justify-content:flex-start; padding:.6rem .9rem; }}
+  .st-key-starters [data-testid="stButton"] button:hover {{ border-color:{RED}; background:#fff; }}
+  .st-key-starters [data-testid="stButton"] button p, .st-key-starters [data-testid="stButton"] button div {{ font-size:.92rem; line-height:1.3; white-space:normal !important; overflow:visible !important; text-overflow:clip; text-align:left; }}
+  .st-key-starters [data-testid="stButton"] button [data-testid="stIconMaterial"] {{ color:{RED}; font-size:1.3rem; margin-right:.2rem; }}
+  section[data-testid="stSidebar"] .st-key-tools [data-testid="stButton"] button [data-testid="stIconMaterial"] {{ color:{RED}; }}
+  .lpc-status {{ font-size:.74rem; color:#6b767d; line-height:1.5; margin-top:10px; }}
+  .lpc-status .ok {{ color:#2fd27a; }}
   section[data-testid="stSidebar"] .block-container {{ padding-top: 1.2rem; }}
   section[data-testid="stSidebar"] [data-testid="stRadio"] label p {{ font-size: 0.95rem; }}
   section[data-testid="stSidebar"] [data-testid="stRadio"] > div {{ gap: 0.15rem; }}
   .lpc-logo {{ width:170px; margin:0 0 6px -4px; }}
   .lpc-logo svg {{ width:100%; height:auto; display:block; }}
   .lpc-brand {{ display:flex; align-items:center; gap:12px; margin-bottom:10px; }}
-  .lpc-brand .t1 {{ font-size:1.05rem; font-weight:700; letter-spacing:.02em; color:#fff; line-height:1.1; }}
-  .lpc-brand .t2 {{ font-size:.78rem; color:#c9d0d4; letter-spacing:.12em; text-transform:uppercase; }}
+  .lpc-brand .t1 {{ font-size:1.05rem; font-weight:700; letter-spacing:.02em; color:{INK}; line-height:1.1; }}
+  .lpc-brand .t2 {{ font-size:.74rem; color:#6b767d; letter-spacing:.12em; text-transform:uppercase; }}
   .lpc-card {{ background:{SLATE_DARK}; border:1px solid #4a575f; border-radius:8px; padding:10px 12px; margin:8px 0 12px; font-size:.82rem; color:#dfe4e7; }}
   .lpc-card b {{ color:#fff; }}
   .lpc-card .ok {{ color:#2fd27a; font-weight:600; }}
   .lpc-card .off {{ color:#f5c842; font-weight:600; }}
-  .lpc-section {{ font-size:.72rem; letter-spacing:.14em; text-transform:uppercase; color:#aab3b8; margin:14px 0 4px; }}
-  .lpc-list {{ font-size:.84rem; color:#e6eaec; line-height:1.55; margin:0; padding-left:0; list-style:none; }}
+  .lpc-section {{ font-size:.72rem; letter-spacing:.14em; text-transform:uppercase; color:#8a949a; margin:14px 0 4px; }}
+  .lpc-list {{ font-size:.84rem; color:{INK}; line-height:1.55; margin:0; padding-left:0; list-style:none; }}
   .lpc-list li::before {{ content:""; display:inline-block; width:6px; height:6px; border-radius:50%; background:{RED}; margin-right:8px; vertical-align:middle; }}
   .badge {{ display:inline-block; padding:2px 9px; border-radius:999px; font-size:.78rem; font-weight:600; color:#fff; }}
   .kpi {{ background:{GREY_LIGHT}; border-left:4px solid {RED}; border-radius:6px; padding:10px 12px; margin-bottom:16px; }}
@@ -97,12 +145,8 @@ st.markdown(f"""
   .lpc-menu-list a:hover {{ color:{RED}; }}
   [class*="st-key-chat_sugg_"] [data-testid="stButtonGroup"] {{ flex-wrap:wrap; row-gap:6px; }}
   [class*="st-key-chat_sugg_"] [data-testid="stButtonGroup"] button {{ white-space:normal; text-align:left; line-height:1.25; }}
-  .st-key-chat_box [data-testid="stChatMessage"] {{ padding:.6rem .7rem; }}
-  .st-key-chat_box [data-testid="stChatMessage"] p {{ font-size:.92rem; }}
   @media (max-width: 1100px) {{
     .st-key-home_kpis [data-testid="stColumn"] {{ flex:1 1 30% !important; min-width:30% !important; }}
-    .st-key-home_cols [data-testid="stHorizontalBlock"] {{ flex-wrap:wrap; }}
-    .st-key-home_cols [data-testid="stColumn"] {{ flex:1 1 100% !important; min-width:100% !important; }}
   }}
   .ccard {{ border:1px solid #d7d9db; border-radius:8px; padding:12px 14px; background:#fff; min-height:150px; }}
   .ccard h4 {{ margin:0 0 6px; font-size:1rem; color:{INK}; }}
@@ -170,7 +214,7 @@ def map_status(active: int, withdrawn: int, expired: int, pending: int, coverage
     return "m.nosource" if coverage == "source_not_collected" else "m.notfound"
 
 
-def status_map(df: pd.DataFrame, key: str, height: int = 540, size_col: str | None = None) -> str | None:
+def status_map(df: pd.DataFrame, key: str, height: int = 540, size_col: str | None = None, interactive: bool = True) -> str | None:
     """Slate world map in the brand palette: coloured country fills + halo markers sized by `size_col`.
     `df["Statut"]` holds map status KEYS (m.*); labels are translated at render time. Returns the clicked ISO-3 or None."""
     fig = go.Figure()
@@ -203,6 +247,9 @@ def status_map(df: pd.DataFrame, key: str, height: int = 540, size_col: str | No
                       font=dict(color="#e6eaec", family="Segoe UI, Arial"),
                       legend=dict(orientation="h", y=0.01, x=0.5, xanchor="center", bgcolor="rgba(43,54,61,.75)", bordercolor="#56636b", borderwidth=1, font=dict(size=12)),
                       clickmode="event+select", dragmode=False, hoverlabel=dict(bgcolor="#1f272c", bordercolor="#2fd27a", font=dict(color="#eef1f2", size=12)))
+    if not interactive:
+        st.plotly_chart(fig, use_container_width=True, key=key, theme=None, config={"displayModeBar": False, "scrollZoom": False, "staticPlot": False})
+        return None
     ev = st.plotly_chart(fig, use_container_width=True, key=key, on_select="rerun", selection_mode="points", theme=None,
                          config={"displayModeBar": False, "scrollZoom": False})
     try:
@@ -240,22 +287,76 @@ except Exception as e:  # noqa: BLE001
     st.error(t("api.down", api=API, err=e))
     st.stop()
 
+# ---------------------------------------------------------------------------------- conversations (threads)
+def threads() -> list[dict]:
+    return st.session_state.setdefault("threads", [])
+
+
+def current_thread() -> dict:
+    """The active thread; a fresh one is created when none is active."""
+    ts = threads()
+    th = next((x for x in ts if x["id"] == st.session_state.get("thread_id")), None)
+    if th is None:
+        th = {"id": st.session_state.get("thread_seq", 0) + 1, "title": None, "messages": [], "ctx": None}
+        st.session_state["thread_seq"] = th["id"]
+        ts.insert(0, th)
+        st.session_state["thread_id"] = th["id"]
+    return th
+
+
+def go_chat(thread_id: int | None = None):
+    """Back to the assistant, optionally on a given thread (applied at the start of the next run)."""
+    if thread_id is not None:
+        st.session_state["thread_id"] = thread_id
+    st.session_state["goto_chat"] = True
+    st.rerun()
+
+
+def queue_question(q: str):
+    """Append the user's message to the active thread and let the next run answer it (so the bubble shows immediately)."""
+    th = current_thread()
+    th["messages"].append({"role": "user", "content": q})
+    th["title"] = th["title"] or (q[:60] + ("…" if len(q) > 60 else ""))
+    st.session_state["chat_pending"] = q
+
+
+st.session_state.setdefault("page", "page.chat")
+if st.session_state.pop("goto_chat", False):
+    st.session_state["page"] = "page.chat"
+
 with st.sidebar:
     logo = (ASSETS / "lallemand_logo.svg").read_text(encoding="utf-8") if (ASSETS / "lallemand_logo.svg").exists() else ""
-    st.markdown(f'<div class="lpc-logo">{logo}</div><div class="lpc-brand"><div><div class="t1">Regulatory Watch</div><div class="t2">{t("app.subtitle")}</div></div></div>',
-                unsafe_allow_html=True)
-    ai_txt = f'<span class="ok">{t("sb.ai_on")}</span> · {health.get("aiProvider")}' if health.get("aiEnabled") else f'<span class="off">{t("sb.ai_off")}</span>'
-    st.markdown(f'<div class="lpc-card"><b>{health.get("registrations")}</b> {t("sb.records")} · v{health.get("version")}<br>{t("sb.ai")} : {ai_txt}<br>'
-                f'{t("sb.last")} : {fmt_dt(health.get("lastSnapshotAt"))}</div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="lpc-section">{t("sb.nav")}</div>', unsafe_allow_html=True)
-    page = st.radio(t("sb.nav"), PAGES, format_func=t, label_visibility="collapsed", key=lang_key("page"))
-    st.session_state["page"] = page
-    with st.expander(t("sb.about")):
+    st.markdown(f'<div class="lpc-logo">{logo}</div><div class="lpc-brand"><div class="mark">{microbe_art(SLATE, GREY_LIGHT, RED, 26).replace("hero-art", "sb-art")}</div>'
+                f'<div><div class="t1">Regulatory Watch</div><div class="t2">{t("app.subtitle")}</div></div></div>', unsafe_allow_html=True)
+    if st.button(t("chat.new"), key="new_thread", use_container_width=True, type="primary", icon=":material/add:"):
+        if current_thread()["messages"]:
+            st.session_state["thread_id"] = None  # a fresh thread; empty ones are reused
+        go_chat()
+    th_cur = current_thread()
+    history = [x for x in threads() if x["messages"]]
+    if history:
+        st.markdown(f'<div class="lpc-section">{t("sb.threads")}</div>', unsafe_allow_html=True)
+        for x in history[:15]:
+            active = x["id"] == th_cur["id"] and st.session_state["page"] == "page.chat"
+            if st.button(x["title"] or "…", key=f"thread_{x['id']}", use_container_width=True, type="secondary" if active else "tertiary"):
+                go_chat(x["id"])
+    st.markdown("")
+    with st.expander(t("sb.tools"), expanded=st.session_state["page"] != "page.chat", icon=":material/monitoring:"):
+        with st.container(key="tools"):
+            for tool in TOOLS:
+                if st.button(t(tool), key=f"tool_{tool}", use_container_width=True, icon=TOOL_ICONS[tool], type="secondary" if st.session_state["page"] == tool else "tertiary"):
+                    st.session_state["page"] = tool
+                    st.rerun()
+    with st.expander(t("sb.about"), icon=":material/info:"):
         st.markdown(f'<div class="lpc-section">{t("sb.pilots")}</div><ul class="lpc-list"><li>LALSTOP CONTANS WG</li><li>LALSTOP G46 WG</li><li>LALGUARD M52 OD</li></ul>'
                     f'<div class="lpc-section">{t("sb.sources")}</div><ul class="lpc-list"><li>Santé Canada — PPID</li><li>US EPA — PPLS</li><li>ANSES — E-Phy</li><li>MAPA — AGROFIT</li></ul>'
                     f'<div class="lpc-section">{t("sb.limits")}</div>', unsafe_allow_html=True)
         for k in ("sb.lim1", "sb.lim2", "sb.lim3", "sb.lim4", "sb.lim5"):
             st.markdown(f"- {t(k)}")
+    ai_txt = f'<span class="ok">{t("sb.ai_on")}</span> · {health.get("aiProvider")}' if health.get("aiEnabled") else t("sb.ai_off")
+    st.markdown(f'<div class="lpc-status"><b>{health.get("registrations")}</b> {t("sb.records")} · {t("sb.ai")} {ai_txt}<br>{t("sb.last")} : {fmt_dt(health.get("lastSnapshotAt"))} · v{health.get("version")}</div>',
+                unsafe_allow_html=True)
+page = st.session_state["page"]
 
 
 # ---------------------------------------------------------------------------------- top-right menu (language, links)
@@ -317,10 +418,30 @@ def country_detail_table(regs: list[dict]) -> pd.DataFrame:
                           t("collected"): fmt_dt(r["collectedAt"]), "URL": r["sourceUrl"]} for r in regs])
 
 
+def overview_rows(ov: dict) -> pd.DataFrame:
+    """Map rows (one per country) from GET /overview."""
+    rows = []
+    for c in ov["countries"]:
+        if c["countryCode"] not in ISO3:
+            continue
+        prods = sorted({r["productName"] for r in c["registrations"]})
+        rows.append({"iso3": ISO3[c["countryCode"]], t("country"): cname(c["countryCode"]),
+                     "Statut": map_status(c["active"], c["withdrawn"], c["expired"], c["pending"], c["coverage"]),
+                     t("registrations"): c["active"] + c["withdrawn"] + c["expired"] + c["pending"] + c["unknown"], t("ov.col.actives"): c["active"],
+                     t("ov.col.withdrawn"): c["withdrawn"] + c["expired"], t("ov.col.pending"): c["pending"], t("products"): c["products"], t("uses"): c["usesCount"],
+                     t("ov.col.expiring"): c["expiringSoon"], t("m.other_in_store"): c.get("totalInStore", 0),
+                     t("source"): c["sourceId"] or t("none"), t("collected"): fmt_dt(c["collectedAt"]),
+                     t("ov.col.list"): (", ".join(prods[:6]) + (" …" if len(prods) > 6 else "")) or "—"})
+    return pd.DataFrame(rows)
+
+
 # ---------------------------------------------------------------------------------- assistant (chat) helpers
-BOT_AVATAR, USER_AVATAR = ":material/support_agent:", ":material/person:"
 ANSWER_COLS = [("country", "country"), ("product", "product"), ("registrationNumber", "number"), ("status", "status"), ("statusOriginal", "status_orig"),
                ("expiry", "expires"), ("relationship", "ask.item.relationship"), ("detail", "ask.item.detail"), ("sourceId", "source"), ("collectedAt", "collected")]
+MAP_INTENTS = {"registration_lookup", "ingredient_search", "country_portfolio"}
+FOLLOW_UPS = {"registration_lookup": ["chat.fu_uses", "chat.fu_sisters", "chat.fu_sources"], "use_comparison": ["chat.fu_sisters", "chat.fu_quality", "chat.fu_countries"],
+              "sister_product": ["chat.fu_countries", "chat.fu_uses"], "source": ["chat.fu_uses", "chat.fu_quality"], "data_quality": ["chat.fu_countries", "chat.fu_uses"],
+              "ingredient_search": ["chat.fu_sources"]}
 
 
 def answer_status(v: str | None) -> str | None:
@@ -330,10 +451,46 @@ def answer_status(v: str | None) -> str | None:
     return {"not_found_in_source": t("m.notfound"), "source_not_collected": t("m.nosource")}.get(v or "", v)
 
 
-def render_answer(ans: dict):
-    """One assistant turn: headline, only the useful rows, caveats; evidence, meta and raw facts folded away."""
+def answer_map(ans: dict, key: str):
+    """Small world map built from the facts of a country-type answer (found / not found / no source / related only)."""
+    if ans.get("intent") not in MAP_INTENTS:
+        return
+    agg: dict[str, dict] = {}
+    for f in ans.get("facts") or []:
+        cc = f.get("country")
+        if cc not in ISO3:
+            continue
+        d = agg.setdefault(cc, {"active": 0, "withdrawn": 0, "expired": 0, "pending": 0, "related": 0, "coverage": "found"})
+        if f["type"] == "registration" and f.get("statusNormalized") in d:
+            d[f["statusNormalized"]] += 1
+        elif f["type"] in ("coverage", "portfolio"):
+            d["coverage"] = f.get("coverage") or "found"
+        elif f["type"] == "related_registration":
+            d["related"] += 1
+    if not agg:
+        return
+    rows = [{"iso3": ISO3[cc], t("country"): cname(cc), "Statut": map_status(d["active"], d["withdrawn"], d["expired"], d["pending"], d["coverage"], d["related"]),
+             t("registrations"): d["active"] + d["withdrawn"] + d["expired"] + d["pending"]} for cc, d in agg.items()]
+    status_map(pd.DataFrame(rows), key, height=270, size_col=t("registrations"), interactive=False)
+
+
+def _typed(text: str, delay: float = 0.018):
+    """Word-by-word generator for st.write_stream (the 'typing' feel of a new answer)."""
+    for w in text.split(" "):
+        yield w + " "
+        time.sleep(delay)
+
+
+def render_answer(ans: dict, key: str, stream: bool = False):
+    """One assistant turn: the answer sentence (streamed when new), a map when the question is about countries, only the useful
+    rows, caveats; evidence, meta and raw facts folded away under 'Sources'."""
     sa = ans.get("structured") or {}
-    st.markdown(f"**{sa.get('headline') or t('ask.answer')}**")
+    head = sa.get("headline") or t("ask.answer")
+    if stream:
+        st.write_stream(_typed(head))
+    else:
+        st.markdown(f'<p class="ans-head">{head}</p>', unsafe_allow_html=True)
+    answer_map(ans, f"{key}_map")
     items = sa.get("items") or []
     if items:
         rows = [{t(lbl): (answer_status(it.get(k)) if k == "status" else it.get(k)) for k, lbl in ANSWER_COLS if any(x.get(k) for x in items)} for it in items]
@@ -341,7 +498,7 @@ def render_answer(ans: dict):
     for cv in sa.get("caveats") or []:
         st.markdown(f'<div class="warn">• {cv}</div>', unsafe_allow_html=True)
     other = [w for w in (ans.get("warningsLocalized") or ans["warnings"]) if w not in (sa.get("caveats") or [])]
-    with st.expander(t("chat.details", n=len(ans["evidence"]))):
+    with st.expander(t("chat.sources", n=len(ans["evidence"]))):
         st.caption(t("ask.meta", intent=ans["intent"], tools=", ".join(ans["toolsUsed"]) or "—", model=ans["model"] or t("ask.det")))
         for w in other:
             st.markdown(f'<div class="warn">• {w}</div>', unsafe_allow_html=True)
@@ -354,86 +511,97 @@ def render_answer(ans: dict):
         st.json(ans["facts"], expanded=False)
 
 
-FOLLOW_UPS = {"registration_lookup": ["chat.fu_uses", "chat.fu_sisters", "chat.fu_sources"], "use_comparison": ["chat.fu_sisters", "chat.fu_quality", "chat.fu_countries"],
-              "sister_product": ["chat.fu_countries", "chat.fu_uses"], "source": ["chat.fu_uses", "chat.fu_quality"], "data_quality": ["chat.fu_countries", "chat.fu_uses"],
-              "ingredient_search": ["chat.fu_sources"]}
-
-
-def chat_suggestions(cc: str | None) -> list[str]:
-    """Quick questions: follow-ups on the last answer, a question about the country selected on the map, starters."""
+def chat_suggestions(th: dict) -> list[str]:
+    """Follow-up questions about the last answer, never one already asked in this thread."""
     lang = st.session_state["lang"]
-    last = next((m for m in reversed(st.session_state["chat"]) if m["role"] == "assistant" and m.get("ans")), None)
+    last = next((m for m in reversed(th["messages"]) if m["role"] == "assistant" and m.get("ans")), None)
     out: list[str] = []
-    last_intent = last["ans"].get("intent") if last else None
     if last and (last["ans"].get("context") or {}).get("productIds"):
-        out += [t(k) for k in FOLLOW_UPS.get(last_intent, [])]
-    if cc:
-        cin = COUNTRY_IN.get(lang, COUNTRY_IN["en"]).get(cc, cc)
-        out.append(t("chat.sugg_country", cin=cin))
-        if not last or last_intent == "country_portfolio":
-            out.append(t("chat.sugg_country_pilot", cin=cin))
-    asked = {m["content"] for m in st.session_state["chat"] if m["role"] == "user"}
-    out = [s for s in out if s not in asked]  # never suggest a question already asked in this thread
+        out += [t(k) for k in FOLLOW_UPS.get(last["ans"].get("intent"), [])]
+    asked = {m["content"] for m in th["messages"] if m["role"] == "user"}
+    out = [x for x in out if x not in asked]
     if len(out) < 2:
-        out += [s for s in EXAMPLES.get(lang, EXAMPLES["fr"])[:3] if s not in asked]
-    return list(dict.fromkeys(out))[:4]
+        out += [x for x in EXAMPLES.get(lang, EXAMPLES["fr"])[:4] if x not in asked and x not in out]
+    return out[:3]
 
 
-def chat_panel(cc: str | None):
-    """Conversational assistant: every turn goes through POST /ask with the previous `context` (follow-ups keep the thread)."""
+def chat_page():
+    """ChatGPT-like assistant: centred thread, pinned input, starter cards on an empty thread, streamed answers."""
     lang = st.session_state["lang"]
-    st.session_state.setdefault("chat", [])
-    h1, h2 = st.columns([3.6, 1.2])
-    h1.caption(t("chat.caption"))
-    if h2.button(t("chat.clear"), key="chat_clear", use_container_width=True):
-        st.session_state["chat"], st.session_state["chat_ctx"], st.session_state["chat_pending"] = [], None, None
-        st.rerun()
-    box = st.container(height=540, border=True, key="chat_box")
-    with box:
-        if not st.session_state["chat"]:
-            with st.chat_message("assistant", avatar=BOT_AVATAR):
-                st.markdown(t("chat.hello"))
-        for m in st.session_state["chat"]:
+    th = current_thread()
+    msgs = th["messages"]
+    st.markdown("<style>section.stMain .block-container, [data-testid=\"stBottomBlockContainer\"] { max-width: 900px; }</style>", unsafe_allow_html=True)
+    if not msgs:
+        st.markdown("<style>section.stMain h1 { text-align:center; margin-top:.4rem; font-size:2rem; }</style>", unsafe_allow_html=True)
+        st.markdown(microbe_art(SLATE, GREY_LIGHT, RED, 56), unsafe_allow_html=True)
+        st.title(t("chat.hero"))
+        st.markdown(f'<p class="hero-sub">{t("chat.hero_sub")}</p>', unsafe_allow_html=True)
+        ov = api_get("/overview", {"scope": "pilots", "months": 12})
+        if "__404__" not in ov:
+            clicked = status_map(overview_rows(ov), f"chat_map_{th['id']}", 380, size_col=t("registrations"))
+            st.markdown(f'<p class="chat-map-cap">{t("chat.map_caption", n=ov["totals"]["registrations"], c=ov["totals"]["countriesFound"])}</p>', unsafe_allow_html=True)
+            if clicked and st.session_state.get("chat_map_last") != (th["id"], clicked):
+                st.session_state["chat_map_last"] = (th["id"], clicked)
+                cc = ISO3_TO_CC[clicked]
+                queue_question(t("chat.sugg_country", cin=COUNTRY_IN.get(lang, COUNTRY_IN["en"]).get(cc, cc)))
+                st.rerun()
+        with st.container(key="starters"):
+            cols = st.columns(2)
+            for i, ex in enumerate(EXAMPLES.get(lang, EXAMPLES["fr"])[:4]):
+                if cols[i % 2].button(ex, key=f"starter_{i}_{lang}", use_container_width=True, icon=STARTER_ICONS[i % len(STARTER_ICONS)]):
+                    queue_question(ex)
+                    st.rerun()
+    else:
+        for i, m in enumerate(msgs):
             if m["role"] == "user":
-                with st.chat_message("user", avatar=USER_AVATAR):
+                with st.chat_message("user"):
                     st.markdown(m["content"])
             else:
                 with st.chat_message("assistant", avatar=BOT_AVATAR):
                     if m.get("error"):
                         st.error(m["error"])
                     else:
-                        render_answer(m["ans"])
+                        render_answer(m["ans"], key=f"ans_{th['id']}_{i}")
+                    if i == len(msgs) - 1 and not st.session_state.get("chat_pending"):
+                        sugg = chat_suggestions(th)
+                        pick = st.pills(t("chat.suggest"), sugg, selection_mode="single", key=f"chat_sugg_{th['id']}_{i}_{lang}", label_visibility="collapsed",
+                                        format_func=lambda q: f":material/arrow_forward: {q}") if sugg else None
+                        if pick:
+                            queue_question(pick)
+                            st.rerun()
         pending = st.session_state.get("chat_pending")
         if pending:
             with st.chat_message("assistant", avatar=BOT_AVATAR):
+                ans = None
                 with st.spinner(t("ask.spinner")):
                     hist = [{"role": m["role"], "content": m["content"] if m["role"] == "user" else (((m.get("ans") or {}).get("structured") or {}).get("headline") or "")}
-                            for m in st.session_state["chat"][:-1]][-6:]
+                            for m in msgs[:-1]][-6:]
                     try:
-                        ans = api_post("/ask", {"question": pending, "language": lang, "context": st.session_state.get("chat_ctx"), "history": hist})
-                        st.session_state["chat_ctx"] = ans.get("context")
-                        st.session_state["chat"].append({"role": "assistant", "ans": ans})
+                        ans = api_post("/ask", {"question": pending, "language": lang, "context": th.get("ctx"), "history": hist})
                     except httpx.HTTPError as e:  # noqa: BLE001 - the API refused or failed: say so, keep the thread
-                        st.session_state["chat"].append({"role": "assistant", "error": t("ask.error", err=e)})
+                        msgs.append({"role": "assistant", "error": t("ask.error", err=e)})
+                if ans:
+                    th["ctx"] = ans.get("context")
+                    render_answer(ans, key=f"ans_{th['id']}_{len(msgs)}", stream=True)
+                    msgs.append({"role": "assistant", "ans": ans})
             st.session_state["chat_pending"] = None
             st.rerun()
-    components.html("""<script>
-      const w = window.parent.document.querySelector('.st-key-chat_box');
-      if (w) { for (const el of [w, ...w.querySelectorAll('div')]) { if (el.scrollHeight > el.clientHeight + 4) { el.scrollTop = el.scrollHeight; break; } } }
-    </script>""", height=0)
-    sugg = chat_suggestions(cc)
-    pick = st.pills(t("chat.suggest"), sugg, selection_mode="single", key=f"chat_sugg_{len(st.session_state['chat'])}_{lang}", label_visibility="collapsed") if sugg else None
+    disclaimer_box()
     typed = st.chat_input(t("chat.placeholder"), key="chat_in")
-    q = (typed or pick or "").strip()
-    if q:
-        st.session_state["chat"].append({"role": "user", "content": q})
-        st.session_state["chat_pending"] = q
+    if typed and typed.strip():
+        queue_question(typed.strip())
         st.rerun()
 
 
 # ---------------------------------------------------------------------------------- pages
-if page == "page.home":
-    st.title(t("home.title"))
+if page != "page.chat":
+    if st.button(t("chat.back"), key="back_chat", type="tertiary", icon=":material/arrow_back:"):
+        go_chat()
+if page == "page.chat":
+    chat_page()
+
+elif page == "page.overview":
+    st.title(t("ov.title"))
     c1, c2, c3 = st.columns([2.2, 2, 1])
     scope_keys = ["ov.scope.pilots", "ov.scope.lallemand", "ov.scope.all", "ov.scope.product"]
     with c1:
@@ -456,41 +624,31 @@ if page == "page.home":
     for col, (v, lbl) in zip(k, [(tt["sourcesConnected"], t("ov.k.sources")), (tt["countriesFound"], t("ov.k.countries")), (tt["products"], t("products")),
                                   (tt["registrations"], t("registrations")), (tt["active"], t("ov.k.active")), (tt["expiringSoon"], t("ov.k.expiring", m=ov["months"]))]):
         col.markdown(f'<div class="kpi"><div class="v">{v}</div><div class="l" title="{lbl}">{lbl}</div></div>', unsafe_allow_html=True)
-    rows = []
-    for c in ov["countries"]:
-        if c["countryCode"] not in ISO3:
-            continue
-        prods = sorted({r["productName"] for r in c["registrations"]})
-        rows.append({"iso3": ISO3[c["countryCode"]], t("country"): cname(c["countryCode"]),
-                     "Statut": map_status(c["active"], c["withdrawn"], c["expired"], c["pending"], c["coverage"]),
-                     t("registrations"): c["active"] + c["withdrawn"] + c["expired"] + c["pending"] + c["unknown"], t("ov.col.actives"): c["active"],
-                     t("ov.col.withdrawn"): c["withdrawn"] + c["expired"], t("ov.col.pending"): c["pending"], t("products"): c["products"], t("uses"): c["usesCount"],
-                     t("ov.col.expiring"): c["expiringSoon"], t("m.other_in_store"): c.get("totalInStore", 0),
-                     t("source"): c["sourceId"] or t("none"), t("collected"): fmt_dt(c["collectedAt"]),
-                     t("ov.col.list"): (", ".join(prods[:6]) + (" …" if len(prods) > 6 else "")) or "—"})
-    df = pd.DataFrame(rows)
-    with st.container(key="home_cols"):
-        left, right = st.columns([1.15, 1], gap="medium")
-    with left:
-        clicked = status_map(df, "ov_map", 500, size_col=t("registrations"))
-        st.caption(t("ov.caption"))
-        sel_iso = country_picker(df, clicked, "ov", t("registrations"))
-        cc = ISO3_TO_CC[sel_iso]
-        c = next(x for x in ov["countries"] if x["countryCode"] == cc)
-        st.markdown(f"#### {cname(cc)} ({cc}) — {c['sourceId'] or t('none_country')}" + (f" · {t('collected').lower()} {fmt_dt(c['collectedAt'])}" if c["collectedAt"] else ""))
-        if c["registrations"]:
-            st.dataframe(country_detail_table(c["registrations"]), hide_index=True, use_container_width=True, column_config=LINK)
-        elif c["coverage"] == "not_found_in_source":
-            st.info(t("ov.notfound", src=c["sourceId"], at=fmt_dt(c["collectedAt"]), n=c.get("totalInStore", 0)))
-        else:
-            st.warning(t("ov.nosource"))
-        with st.expander(t("ov.table")):
-            view = df.drop(columns=["iso3"]).copy()
-            view["Statut"] = view["Statut"].map(t)
-            view = view.rename(columns={"Statut": t("status")})
-            st.dataframe(view, hide_index=True, use_container_width=True)
-    with right:
-        chat_panel(cc)
+    df = overview_rows(ov)
+    clicked = status_map(df, "ov_map", 540, size_col=t("registrations"))
+    st.caption(t("ov.caption"))
+    sel_iso = country_picker(df, clicked, "ov", t("registrations"))
+    cc = ISO3_TO_CC[sel_iso]
+    c = next(x for x in ov["countries"] if x["countryCode"] == cc)
+    h1, h2 = st.columns([3, 1.4])
+    h1.markdown(f"#### {cname(cc)} ({cc}) — {c['sourceId'] or t('none_country')}" + (f" · {t('collected').lower()} {fmt_dt(c['collectedAt'])}" if c["collectedAt"] else ""))
+    ask_q = t("chat.sugg_country", cin=COUNTRY_IN.get(st.session_state["lang"], COUNTRY_IN["en"]).get(cc, cc))
+    if h2.button(t("chat.ask_about"), key="ask_country", use_container_width=True, icon=":material/forum:", help=ask_q):
+        if current_thread()["messages"]:
+            st.session_state["thread_id"] = None
+        queue_question(ask_q)
+        go_chat()
+    if c["registrations"]:
+        st.dataframe(country_detail_table(c["registrations"]), hide_index=True, use_container_width=True, column_config=LINK)
+    elif c["coverage"] == "not_found_in_source":
+        st.info(t("ov.notfound", src=c["sourceId"], at=fmt_dt(c["collectedAt"]), n=c.get("totalInStore", 0)))
+    else:
+        st.warning(t("ov.nosource"))
+    with st.expander(t("ov.table")):
+        view = df.drop(columns=["iso3"]).copy()
+        view["Statut"] = view["Statut"].map(t)
+        view = view.rename(columns={"Statut": t("status")})
+        st.dataframe(view, hide_index=True, use_container_width=True)
     disclaimer_box(ov["disclaimer"])
 
 elif page == "page.compare":
