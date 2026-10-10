@@ -30,3 +30,10 @@ def test_withdrawn_use_is_never_authorised():
     assert use_withdrawn(SimpleNamespace(use_status_original="Withdrawn"))
     assert not use_withdrawn(SimpleNamespace(use_status_original="Autorisé"))
     assert not use_withdrawn(SimpleNamespace(use_status_original=None))
+
+
+def test_withdrawn_use_warning_is_localized():
+    from lpc_regwatch.api.ask import localize_warning
+    w = "FR 2230771: 3 withdrawn use(s) excluded from the authorised uses."
+    assert localize_warning(w, "fr") == "FR 2230771 : 3 usage(s) retiré(s) (« Retrait » dans la source) exclu(s) des usages autorisés."
+    assert localize_warning(w, "en") == w

@@ -881,6 +881,9 @@ PROFILE_WORDS = {"fr": (", formulation {f}", ", titulaire {h}"), "en": (", formu
 
 # English warning templates (API contract, tests) -> French / Portuguese wording for the caveats shown to the reader.
 WARN_I18N: list[tuple[re.Pattern, dict[str, str]]] = [
+    (re.compile(r"^(?P<cc>\w\w) (?P<num>\S+): (?P<n>\d+) withdrawn use\(s\) excluded from the authorised uses\.$"),
+     {"fr": "{cc} {num} : {n} usage(s) retiré(s) (« Retrait » dans la source) exclu(s) des usages autorisés.",
+      "pt": "{cc} {num}: {n} uso(s) retirado(s) excluído(s) dos usos autorizados."}),
     (re.compile(r"^(?P<name>.+?) \((?P<cc>\w\w)\): not found in (?P<src>\S+) as of (?P<date>\d{4}-\d\d-\d\d) - this is not proof of no registration\.$"),
      {"fr": "{name} ({cc}) : non trouvé dans {src} au {date} — ce n'est pas une preuve d'absence d'homologation.",
       "pt": "{name} ({cc}): não encontrado em {src} em {date} — isto não prova ausência de registro."}),
@@ -994,7 +997,7 @@ def localize_warning(w: str, lang: str) -> str:
 
 
 CAVEAT_KEYS = ("Context taken", "not proof", "dose is not", "two independent lists", "AI model", "hypotheses", "no source connected", "only the first", "Scope 'Lallemand'",
-               "was not applied", "No advice", "EPPO code", "No disease", "Alternatives share", "no target", "No declared relation", "products match")
+               "was not applied", "No advice", "EPPO code", "No disease", "Alternatives share", "no target", "No declared relation", "products match", "withdrawn use")
 
 
 def scope_summary(session: Session, lang: str, sources: list[dict]) -> str:
