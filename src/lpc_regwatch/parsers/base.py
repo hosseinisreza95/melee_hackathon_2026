@@ -119,12 +119,9 @@ def pilot_name_index() -> dict[str, str]:
         for r in csv.DictReader(f):
             if r["relationship_type"] in ("canonical_name", "historical_or_market_name"):
                 idx[norm_name(r["name_variant"])] = r["product_id"]
-    # official equivalences discovered in the sources (same registration carries both names); see matching.py
-    p = ROOT / "data" / "product_equivalences_observed.csv"
-    if p.exists():
-        with p.open(encoding="utf-8-sig", newline="") as f:
-            for r in csv.DictReader(f):
-                idx[norm_name(r["name_variant"])] = r["product_id"]
+    # NOTE (LPC answer 2026-10-10): a registration that carries a pilot name as alternate name (e.g. CA 32404
+    # 'PRESTOP WG' with application history 'LALSTOP G46 WG') is NOT merged into the pilot product; it stays a
+    # distinct, related product. Only the kit's canonical and historical names map to a pilot id.
     return idx
 
 

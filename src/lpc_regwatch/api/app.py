@@ -129,6 +129,14 @@ def aliases(productId: str, relationship: str | None = None, s: Session = Depend
     return Q.aliases_for(s, p.product_id, relationship)
 
 
+@app.get("/products/{productId}/related", tags=["extensions"], summary="Distinct products linked to this one (sister, related) with their registrations")
+def related(productId: str, countries: str | None = None, s: Session = Depends(db)):
+    p = Q.resolve_product(s, productId)
+    if p is None:
+        raise HTTPException(404, {"message": f"Unknown product '{productId}'.", "disclaimer": DISCLAIMER})
+    return {"productId": p.product_id, "items": Q.related_products(s, p.product_id, _countries(countries) if countries else None), "disclaimer": DISCLAIMER}
+
+
 @app.get("/products/{productId}/quality", tags=["extensions"], summary="Missing or uncertain fields per registration")
 def quality(productId: str, s: Session = Depends(db)):
     p = Q.resolve_product(s, productId)

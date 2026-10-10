@@ -109,6 +109,7 @@ class ComparisonResponse(Camel):
     disclaimer: str
     coverage: list[CountryCoverage] = Field(default_factory=list)  # ext
     commercialName: str | None = None  # ext
+    relatedProducts: list[dict] = Field(default_factory=list)  # ext: distinct linked products (sister, related), never merged
 
 
 class AliasOut(Camel):  # ext

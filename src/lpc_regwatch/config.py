@@ -28,7 +28,7 @@ class Settings:
     raw_dir: Path = Path(os.getenv("RAW_DIR", ROOT / "data" / "raw"))
     # AI provider: any OpenAI-compatible endpoint (OpenAI, Gemini OpenAI-compat, Azure OpenAI, local)
     ai_provider: str = os.getenv("AI_PROVIDER", "openai")
-    ai_model: str = os.getenv("AI_MODEL", "gpt-4o-mini")
+    ai_model: str = os.getenv("AI_MODEL", "gpt-5-mini")
     # Accepted key names: AI_API_KEY (documented), OPENAI_API_KEY, OPEN_AI (team convention). Never logged.
     ai_api_key: str = os.getenv("AI_API_KEY") or os.getenv("OPENAI_API_KEY") or os.getenv("OPEN_AI") or ""
     ai_base_url: str | None = os.getenv("AI_BASE_URL") or None

@@ -33,7 +33,13 @@ class LLMClient:
     # ------------------------------------------------------------------ primitives
     def chat(self, messages: list[dict], tools: list[dict] | None = None, temperature: float = 0.0,
              response_format: dict | None = None, max_tokens: int = 1500) -> Any:
-        kw: dict[str, Any] = {"model": self.model, "messages": messages, "temperature": temperature, "max_tokens": max_tokens}
+        reasoning = self.model.startswith(("gpt-5", "o1", "o3", "o4"))  # reasoning models: fixed temperature, max_completion_tokens
+        kw: dict[str, Any] = {"model": self.model, "messages": messages}
+        if reasoning:
+            kw["max_completion_tokens"] = max(max_tokens * 4, 4000)  # reasoning tokens count against the limit
+        else:
+            kw["temperature"] = temperature
+            kw["max_tokens"] = max_tokens
         if tools:
             kw["tools"] = tools
             kw["tool_choice"] = "auto"

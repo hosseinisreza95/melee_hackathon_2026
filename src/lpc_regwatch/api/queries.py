@@ -155,6 +155,30 @@ def quality_warnings(regs: list[dict]) -> list[str]:
     return list(dict.fromkeys(w))
 
 
+RELATED_KINDS = ("related_product", "confirmed_sister_product", "related_formulation", "sister_product_candidate")
+
+
+def related_products(session: Session, product_id: str, countries: list[str] | None = None) -> list[dict]:
+    """Other products linked to this one (LPC statements, official name links, kit hypotheses, data hypotheses) with
+    their own registrations. They are shown next to the product, never merged into it."""
+    out = []
+    seen = set()
+    for a in session.query(ProductAlias).filter(ProductAlias.product_id == product_id):
+        if a.relationship_type.value not in RELATED_KINDS:
+            continue
+        target = resolve_product(session, a.alias_name)
+        if target is None or target.product_id == product_id or target.product_id in seen:
+            continue
+        seen.add(target.product_id)
+        regs = [r for r in target.registrations if not countries or r.country_code in countries]
+        out.append({"productId": target.product_id, "commercialName": target.commercial_name, "relationship": a.relationship_type.value,
+                    "reviewStatus": a.review_status.value, "confidence": a.confidence, "evidence": a.evidence,
+                    "activeEntityNormalized": target.active_entity_normalized,
+                    "registrations": [registration_dict(r, False) for r in sorted(regs, key=lambda r: (r.country_code, r.registration_number or ""))]})
+    order = {k: i for i, k in enumerate(RELATED_KINDS)}
+    return sorted(out, key=lambda d: (order[d["relationship"]], d["commercialName"]))
+
+
 def compare(session: Session, product_id: str, countries: list[str], max_uses_per_registration: int | None = None) -> dict:
     p = session.get(Product, product_id)
     regs = [registration_dict(r, True, max_uses_per_registration) for r in
@@ -163,8 +187,16 @@ def compare(session: Session, product_id: str, countries: list[str], max_uses_pe
             .order_by(Registration.country_code, Registration.registration_number)]
     cov, warnings = coverage_for(session, product_id, countries, regs)
     warnings += quality_warnings(regs)
+    related = related_products(session, product_id, countries)
+    found = {x["countryCode"] for x in regs}
+    for rp in related:
+        for r in rp["registrations"]:
+            if r["countryCode"] not in found:
+                warnings.append(f"{COUNTRY_NAMES.get(r['countryCode'], r['countryCode'])} ({r['countryCode']}): no registration of this product, "
+                                f"but related product '{rp['commercialName']}' ({rp['relationship']}, {rp['reviewStatus']}) has n° {r['registrationNumber']} "
+                                f"- a distinct product, not an equivalent.")
     return {"productId": product_id, "commercialName": p.commercial_name if p else None, "countries": countries,
-            "registrations": regs, "coverage": cov, "warnings": warnings, "disclaimer": DISCLAIMER}
+            "registrations": regs, "coverage": cov, "warnings": list(dict.fromkeys(warnings)), "disclaimer": DISCLAIMER, "relatedProducts": related}
 
 
 # --------------------------------------------------------------------------- aliases / sisters

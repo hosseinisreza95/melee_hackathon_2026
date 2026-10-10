@@ -97,9 +97,8 @@ def test_us_parser_and_loader_export(session, tmp_path):
            "sites": [{"site": "POINSETTIA (SOIL TREATMENT)"}], "pests": [{"pest": "BOTRYTIS"}, {"pest": "PYTHIUM"}], "transfer_history": []}
     snap = _snap(session, "US-EPA-PPLS", {"ppls_64137-13.json": json.dumps(rec).encode(), "ppls_64296-10.json": b'{"items": []}'}, tmp_path, kind="api_json")
     b = UsEpaPplsParser(session).parse(snap)
-    # 'PRESTOP (WG)' resolves to the pilot id once data/product_equivalences_observed.csv (written by matching) exists,
-    # otherwise to its own deterministic id; both are correct depending on pipeline stage.
-    assert len(b.registrations) == 1 and b.registrations[0]["product_id"] in ("P-LPC-G46", "P-PRESTOP-WG")
+    # LPC (2026-10-10): PRESTOP WG is a distinct product from LALSTOP G46 WG -> its own id, never the pilot id
+    assert len(b.registrations) == 1 and b.registrations[0]["product_id"] == "P-PRESTOP-WG"
     pid = b.registrations[0]["product_id"]
     assert b.registrations[0]["status_normalized"] == "active" and b.registrations[0]["approval_date"] is None
     assert b.uses[0]["target_name_original"] == "BOTRYTIS; PYTHIUM" and b.uses[0]["pairing"] == "unpaired_lists"

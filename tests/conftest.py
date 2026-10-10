@@ -1,8 +1,9 @@
-"""Shared fixture: a small but realistic canonical database (3 pilot products, 4 countries, aliases, uses)
-built from scratch in a temporary SQLite file, and a FastAPI test client bound to it.
+"""Shared fixture: a small but realistic canonical database (3 pilot products, related products, 4 countries, aliases,
+uses) built from scratch in a temporary SQLite file, and a FastAPI test client bound to it.
 
-Values mirror real official records (numbers, statuses, dates as collected on 2026-10-09) so the gold tests
-assert the behaviour the jury will see, but nothing here depends on network access or on the live DB.
+Values mirror real official records (numbers, statuses, dates as collected on 2026-10-09) and LPC's answers of
+2026-10-10 (PRESTOP WG is a distinct related product; PRESTOP a confirmed sister; LALFRESH S a related product),
+so the gold tests assert the behaviour the jury will see, but nothing here depends on network access or on the live DB.
 """
 import datetime as dt
 import sys
@@ -38,7 +39,13 @@ def _use(s, uid, rid, crop, target, url, dose=None, unit=None, pairing="source_p
     s.add(AuthorizedUse(use_id=uid, registration_id=rid, crop_name_original=crop, crop_name_normalized=crop_n, eppo_crop_code=eppo,
                         eppo_crop_status="to_verify" if eppo else "unmapped", target_name_original=target, dose_value=dose, dose_unit_original=unit,
                         phi_days=phi, max_applications=maxapp, restrictions_original=restr, pairing=pairing, source_record_url=url, collected_at=T,
-                        raw_document_id=1, extraction_method=method, evidence_excerpt=f"{crop} | {target} | {dose} {unit}", confidence=1.0 if method != ExtractionMethod.llm_pdf else 0.8))
+                        raw_document_id=1, extraction_method=method, evidence_excerpt=f"{crop} | {target} | {dose} {unit}",
+                        confidence=1.0 if method != ExtractionMethod.llm_pdf else 0.8))
+
+
+def _alias(aid, pid, name, cc, rel, conf, evidence, review, url=None):
+    return ProductAlias(alias_id=aid, product_id=pid, alias_name=name, country_code=cc, relationship_type=rel, confidence=conf,
+                        evidence=evidence, source_record_url=url, review_status=review)
 
 
 def build_fixture_db(path: Path) -> str:
@@ -59,6 +66,10 @@ def build_fixture_db(path: Path) -> str:
                 active_entity_normalized="Metarhizium brunneum F52", strain="F52", formulation_code="OD"),
         Product(product_id="P-PRESTOP", commercial_name="PRESTOP", active_entity_original="CLONOSTACHYS ROSEA STRAIN J1446",
                 active_entity_normalized="Clonostachys rosea J1446", strain="J1446"),
+        Product(product_id="P-PRESTOP-WG", commercial_name="PRESTOP WG", active_entity_original="CLONOSTACHYS ROSEA STRAIN J1446",
+                active_entity_normalized="Clonostachys rosea J1446", strain="J1446", formulation_code="WG"),
+        Product(product_id="P-PRIMASTOP-BIOFUNGICIDE-POWDER", commercial_name="PRIMASTOP BIOFUNGICIDE POWDER", active_entity_original="Clonostachys rosea strain J1446 (32%)",
+                active_entity_normalized="Clonostachys rosea J1446", strain="J1446"),
         Product(product_id="P-KAMOI-PRO", commercial_name="Kamoi Pro", active_entity_original="Clonostachys rosea, cepa CPQBA 040-11 DRM 07 (200 g/kg)",
                 active_entity_normalized="Clonostachys rosea CPQBA 040-11 DRM 07", strain="CPQBA 040-11 DRM 07"),
     ])
@@ -78,17 +89,21 @@ def build_fixture_db(path: Path) -> str:
          "Coniothyrium minitans Souche CON/M/91-08 1000000000000 UFC/kg", "DANSTAR FERMENT AG", dt.datetime(2001, 4, 6), None, 3)
     _use(s, "U-R-FR-9900189-1", "R-FR-9900189", "Traitements généraux", "Champignons (autres que pythiacées)", FR_URL, dose=4.0, unit="kg/ha", maxapp=1,
          restr="Également autorisé sous abri. Efficacité montrée sur Sclerotinia sclerotiorum.", crop_n="All crops")
-    # G46: FR only (+ CA under PRESTOP WG name merged) ; PRESTOP sister candidate
+    # G46: FR only; PRESTOP WG (CA + US) is a distinct related product; PRESTOP a confirmed sister; PRIMASTOP a data hypothesis
     _reg(s, "R-FR-2230771", "P-LPC-G46", "FR", "2230771", "FR-EPHY", FR_URL, "AUTORISE", RegStatus.active, "Clonostachys rosea souche J1446 1000000000 UFC/g",
          "DANSTAR FERMENT AG", dt.datetime(2023, 1, 26), None, 3)
     _use(s, "U-R-FR-2230771-1", "R-FR-2230771", "Fraisier", "Pourriture grise et sclérotinioses", FR_URL, dose=0.25, unit="kg/ha", phi=1, maxapp=4, crop_n="Strawberry", eppo="FRAAN")
     _use(s, "U-R-FR-2230771-2", "R-FR-2230771", "Vigne", "Pourriture grise", FR_URL, dose=0.5, unit="kg/ha", phi=1, maxapp=4, crop_n="Grapevine", eppo="VITVI")
-    _reg(s, "R-CA-32404", "P-LPC-G46", "CA", "32404", "CA-PPID", CA_URL.format(n=32404), "Full Registration", RegStatus.active,
+    _reg(s, "R-CA-32404", "P-PRESTOP-WG", "CA", "32404", "CA-PPID", CA_URL.format(n=32404), "Full Registration", RegStatus.active,
          "CLONOSTACHYS ROSEA STRAIN J1446", "DANSTAR FERMENT AG", dt.datetime(2015, 9, 1), dt.datetime(2026, 12, 31), 1)
     _use(s, "U-R-CA-32404-1", "R-CA-32404", "STRAWBERRY", "BOTRYTIS CINEREA", CA_URL.format(n=32404), pairing="unpaired_lists", crop_n="Strawberry", eppo="FRAAN")
+    _reg(s, "R-US-64137-13", "P-PRESTOP-WG", "US", "64137-13", "US-EPA-PPLS", US_URL.format(n="64137-13"), "Active", RegStatus.active,
+         "Clonostachys rosea strain J1446 (93%)", "DANSTAR FERMENT AG / LALLEMAND PLANT CARE", None, None, 2, ExtractionMethod.json_parser)
     _reg(s, "R-CA-28820", "P-PRESTOP", "CA", "28820", "CA-PPID", CA_URL.format(n=28820), "Full Registration", RegStatus.active,
          "CLONOSTACHYS ROSEA STRAIN J1446", "DANSTAR FERMENT AG", dt.datetime(2008, 1, 1), dt.datetime(2028, 12, 31), 1)
     _reg(s, "R-US-64137-11", "P-PRESTOP", "US", "64137-11", "US-EPA-PPLS", US_URL.format(n="64137-11"), "Inactive", RegStatus.withdrawn,
+         "Clonostachys rosea strain J1446 (32%)", "DANSTAR FERMENT AG / LALLEMAND PLANT CARE", None, None, 2, ExtractionMethod.json_parser)
+    _reg(s, "R-US-64137-8", "P-PRIMASTOP-BIOFUNGICIDE-POWDER", "US", "64137-8", "US-EPA-PPLS", US_URL.format(n="64137-8"), "Inactive", RegStatus.withdrawn,
          "Clonostachys rosea strain J1446 (32%)", "DANSTAR FERMENT AG / LALLEMAND PLANT CARE", None, None, 2, ExtractionMethod.json_parser)
     _reg(s, "R-BR-27520", "P-KAMOI-PRO", "BR", "27520", "BR-AGROFIT", BR_URL, "TRUE", RegStatus.active,
          "Clonostachys rosea, cepa CPQBA 040-11 DRM 07 (Produto Microbiológico) (200 g/kg)", "Agrivalle Brasil", None, None, 4)
@@ -102,16 +117,22 @@ def build_fixture_db(path: Path) -> str:
     _reg(s, "R-US-64137-33", "P-LPC-M52", "US", "64137-33", "US-EPA-PPLS", US_URL.format(n="64137-33"), "Active", RegStatus.active,
          "Metarhizium brunneum (formerly known as Metarhizium anisopliae) Strain F52 (11%)", "DANSTAR FERMENT AG / LALLEMAND PLANT CARE", None, None, 2, ExtractionMethod.json_parser)
     s.add_all([
-        ProductAlias(alias_id="A-G46-PRESTOP-WG-CA", product_id="P-LPC-G46", alias_name="PRESTOP WG", country_code="CA", relationship_type=AliasRelation.alternate_name,
-                     confidence=1.0, evidence="Official equivalence: registration 32404 (CA) carries both 'PRESTOP WG' and 'LALSTOP G46 WG'",
-                     source_record_url=CA_URL.format(n=32404), review_status=ValidationStatus.automatically_extracted),
-        ProductAlias(alias_id="A-G46-PRESTOP-KIT", product_id="P-LPC-G46", alias_name="PRESTOP", country_code="FR", relationship_type=AliasRelation.sister_product_candidate,
-                     confidence=0.85, evidence="LPC starter kit PNM-004: same microorganism/strain family; registration number differs", review_status=ValidationStatus.to_verify),
-        ProductAlias(alias_id="A-CONTANS-HIST", product_id="P-LPC-CONTANS", alias_name="CONTANS WG", country_code="CA", relationship_type=AliasRelation.historical_name,
-                     confidence=1.0, evidence="PPID application 2007-4323 (registrant PROPHYTA)", source_record_url=CA_URL.format(n=29066),
-                     review_status=ValidationStatus.automatically_extracted),
-        ProductAlias(alias_id="A-M52-MET52", product_id="P-LPC-M52", alias_name="MET52 EC", country_code="US", relationship_type=AliasRelation.historical_name,
-                     confidence=1.0, evidence="PPLS inactive_brand_names", source_record_url=US_URL.format(n="64137-33"), review_status=ValidationStatus.automatically_extracted),
+        _alias("A-G46-PRESTOP-WG-CA", "P-LPC-G46", "PRESTOP WG", "CA", AliasRelation.related_product, 1.0,
+               "LPC answer (2026-10-10): PRESTOP WG (CA 32404) is not the same product as LALSTOP G46 WG; related product. Its registration carries 'LALSTOP G46 WG' as alternate name.",
+               ValidationStatus.validated, CA_URL.format(n=32404)),
+        _alias("A-G46-PRESTOP-LPC", "P-LPC-G46", "PRESTOP", "FR", AliasRelation.confirmed_sister_product, 1.0,
+               "LPC answer (2026-10-10): sister product (AMM 2120177), same strain, different formulation and content; kit PNM-004", ValidationStatus.validated),
+        _alias("A-G46-LALFRESH-LPC", "P-LPC-G46", "LALFRESH S", "FR", AliasRelation.related_product, 1.0,
+               "LPC answer (2026-10-10): not a second brand; distinct AMM 2230264, post-harvest positioning", ValidationStatus.validated),
+        _alias("A-G46-PRIMASTOP-US", "P-LPC-G46", "PRIMASTOP BIOFUNGICIDE POWDER", "US", AliasRelation.sister_product_candidate, 0.8,
+               "Same active entity 'Clonostachys rosea J1446' (species + strain) in US [US 64137-8]; different commercial name and registration -> hypothesis",
+               ValidationStatus.to_verify, US_URL.format(n="64137-8")),
+        _alias("A-PRESTOPWG-G46-US", "P-PRESTOP-WG", "LALSTOP G46 WG", "US", AliasRelation.alternate_name, 1.0, "PPLS altbrandnames",
+               ValidationStatus.automatically_extracted, US_URL.format(n="64137-13")),
+        _alias("A-CONTANS-HIST", "P-LPC-CONTANS", "CONTANS WG", "CA", AliasRelation.historical_name, 1.0, "PPID application 2007-4323 (registrant PROPHYTA)",
+               ValidationStatus.automatically_extracted, CA_URL.format(n=29066)),
+        _alias("A-M52-MET52", "P-LPC-M52", "MET52 EC", "US", AliasRelation.historical_name, 1.0, "PPLS inactive_brand_names",
+               ValidationStatus.automatically_extracted, US_URL.format(n="64137-33")),
     ])
     s.commit()
     s.close()
@@ -129,12 +150,12 @@ def api_client(fixture_db_url, monkeypatch):
     from fastapi.testclient import TestClient
 
     import lpc_regwatch.api.app as appmod
+    import lpc_regwatch.api.ask as askmod
+    from lpc_regwatch.config import Settings
 
     eng = dbsession.get_engine(fixture_db_url)
     Session = sessionmaker(bind=eng, expire_on_commit=False)
     monkeypatch.setattr(appmod, "get_session", lambda: Session())
-    import lpc_regwatch.api.ask as askmod
-    from lpc_regwatch.config import Settings
     monkeypatch.setattr(askmod, "settings", Settings(ai_api_key=""))  # deterministic path in tests (frozen dataclass -> replace)
     with TestClient(appmod.app) as c:
         yield c

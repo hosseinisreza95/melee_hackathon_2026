@@ -172,18 +172,23 @@ def test_brazil_absence_is_reported_as_not_found_not_withdrawn(real_client):
 def test_pilot_products_resolve_to_one_id_across_three_markets(real_client):
     client, _ = real_client
     expected = {"P-LPC-CONTANS": {"CA": "29066", "US": "64137-34", "FR": "9900189"},
-                "P-LPC-G46": {"CA": "32404", "US": "64137-13", "FR": "2230771"},
+                "P-LPC-G46": {"FR": "2230771"},  # LPC 2026-10-10: PRESTOP WG (CA 32404, US 64137-13) is a distinct related product
                 "P-LPC-M52": {"CA": "30829", "US": "64137-33", "FR": "2150990"}}
     for pid, want in expected.items():
         d = client.get("/compare", params={"productId": pid, "countries": "CA,US,FR"}).json()
         got = {r["countryCode"]: r["registrationNumber"] for r in d["registrations"]}
         assert got == want, pid
         assert all(r["statusNormalized"] == "active" for r in d["registrations"])
+    g46 = client.get("/compare", params={"productId": "P-LPC-G46", "countries": "CA,US,FR"}).json()
+    rel = {r["commercialName"]: r for r in g46["relatedProducts"]}
+    assert {x["registrationNumber"] for x in rel["PRESTOP WG"]["registrations"]} == {"32404", "64137-13"}
+    assert rel["PRESTOP WG"]["relationship"] == "related_product" and rel["PRESTOP WG"]["reviewStatus"] == "validated"
+    assert rel["PRESTOP"]["relationship"] == "confirmed_sister_product" and rel["LALFRESH S"]["relationship"] == "related_product"
 
 
 def test_search_finds_pilots_through_every_known_name(real_client):
     client, _ = real_client
-    for q, pid in [("CONTANS", "P-LPC-CONTANS"), ("PRESTOP WG", "P-LPC-G46"), ("MET52", "P-LPC-M52"), ("Coniothyrium", "P-LPC-CONTANS"),
+    for q, pid in [("CONTANS", "P-LPC-CONTANS"), ("PRESTOP WG", "P-PRESTOP-WG"), ("MET52", "P-LPC-M52"), ("Coniothyrium", "P-LPC-CONTANS"),
                    ("LALGUARD M52 OD", "P-LPC-M52"), ("TICK-EX", "P-LPC-M52")]:
         items = client.get("/products", params={"q": q}).json()["items"]
         assert pid in {p["productId"] for p in items}, q

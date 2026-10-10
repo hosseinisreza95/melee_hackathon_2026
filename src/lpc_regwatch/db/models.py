@@ -55,6 +55,7 @@ class AliasRelation(str, enum.Enum):
     sister_product_candidate = "sister_product_candidate"
     confirmed_sister_product = "confirmed_sister_product"
     related_formulation = "related_formulation"
+    related_product = "related_product"  # distinct product sharing strain/name history (LPC answer 2026-10-10); never merged
 
 
 def _utcnow() -> dt.datetime:

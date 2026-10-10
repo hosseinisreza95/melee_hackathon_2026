@@ -148,6 +148,21 @@ if page == "Comparaison":
                 else:
                     st.markdown("⬜ **source non connectée**  \n_inconnu, pas « non homologué »_")
         warnings_box(data["warnings"])
+        if data.get("relatedProducts"):
+            st.markdown("### Produits liés (produits distincts — jamais fusionnés)")
+            st.caption("`related_product` et `confirmed_sister_product` = affirmés par LPC ou par un nom officiel sur le même enregistrement · "
+                       "`related_formulation` = même souche, autre formulation · `sister_product_candidate` = hypothèse à confirmer.")
+            rel_rows = []
+            for rp in data["relatedProducts"]:
+                regs = rp["registrations"] or [None]
+                for r in regs:
+                    rel_rows.append({"Produit lié": rp["commercialName"], "Relation": rp["relationship"], "Statut de revue": rp["reviewStatus"],
+                                     "Confiance": rp["confidence"], "Pays": r["countryCode"] if r else "—", "N°": r["registrationNumber"] if r else "—",
+                                     "Statut": STATUS_BADGE.get(r["statusNormalized"], r["statusNormalized"]) if r else "aucun enregistrement dans les pays choisis",
+                                     "Expire": (r["expirationDate"] or "—") if r else "—", "Source": r["evidence"]["sourceId"] if r else "—",
+                                     "Collecté le": fmt_dt(r["evidence"]["collectedAt"]) if r else "—", "URL": r["evidence"]["sourceUrl"] if r else None,
+                                     "Preuve de la relation": rp["evidence"]})
+            st.dataframe(pd.DataFrame(rel_rows), hide_index=True, use_container_width=True, column_config={"URL": st.column_config.LinkColumn("URL", display_text="source")})
         st.markdown("### Usages autorisés (valeur originale · valeur normalisée · preuve)")
         frames = [uses_table(r) for r in data["registrations"] if r["uses"]]
         if frames:
@@ -189,34 +204,73 @@ if page == "Comparaison":
 
 elif page == "Carte":
     st.title("Carte des homologations")
-    pid = product_picker("map")
-    data = api_get("/compare", {"productId": pid, "countries": ",".join(ALL_COUNTRIES)})
-    if "__404__" in data:
-        st.error(data["__404__"]["message"])
-        st.stop()
-    rows = []
-    for c in data["coverage"]:
-        cc = c["countryCode"]
-        regs = [r for r in data["registrations"] if r["countryCode"] == cc]
-        if c["coverage"] == "found":
-            status = "active" if any(r["statusNormalized"] == "active" for r in regs) else regs[0]["statusNormalized"]
-            label = f"{len(regs)} enregistrement(s) · {status}"
-        elif c["coverage"] == "not_found_in_source":
-            status, label = "non trouvé dans la source", c["sourceId"]
-        else:
-            status, label = "source non connectée", "aucune source"
-        rows.append({"iso3": ISO3[cc], "Pays": COUNTRY_LABEL.get(cc, cc), "Statut": status, "Détail": label, "Usages": sum(r["usesCount"] for r in regs)})
+    mode = st.radio("Vue", ["Un produit (et ses produits liés)", "Empreinte d'un micro-organisme (tous produits)"], horizontal=True)
+    color_map = {"active": "#2e7d32", "actif (produit lié seulement)": "#7cb342", "withdrawn": "#c62828", "expired": "#ef6c00", "pending": "#f9a825",
+                 "unknown": "#9e9e9e", "non trouvé dans la source": "#bdbdbd", "source non connectée": "#eeeeee"}
+    rows, title, warnings = [], "", []
+    if mode.startswith("Un produit"):
+        pid = product_picker("map")
+        data = api_get("/compare", {"productId": pid, "countries": ",".join(ALL_COUNTRIES)})
+        if "__404__" in data:
+            st.error(data["__404__"]["message"])
+            st.stop()
+        title, warnings = data.get("commercialName") or pid, data["warnings"]
+        related_by_cc: dict[str, list] = {}
+        for rp in data.get("relatedProducts", []):
+            for r in rp["registrations"]:
+                related_by_cc.setdefault(r["countryCode"], []).append((rp, r))
+        for c in data["coverage"]:
+            cc = c["countryCode"]
+            regs = [r for r in data["registrations"] if r["countryCode"] == cc]
+            rel = related_by_cc.get(cc, [])
+            if c["coverage"] == "found":
+                status = "active" if any(r["statusNormalized"] == "active" for r in regs) else regs[0]["statusNormalized"]
+                detail = "; ".join(f"n° {r['registrationNumber']} ({r['statusOriginal']}, expire {r['expirationDate'] or '—'}, {r['usesCount']} usages)" for r in regs)
+            elif rel:
+                status = "actif (produit lié seulement)" if any(r["statusNormalized"] == "active" for _, r in rel) else rel[0][1]["statusNormalized"]
+                detail = "produit absent ; liés : " + "; ".join(f"{rp['commercialName']} n° {r['registrationNumber']} ({rp['relationship']})" for rp, r in rel)
+            elif c["coverage"] == "not_found_in_source":
+                status, detail = "non trouvé dans la source", f"{c['sourceId']} collecté {fmt_dt(c['collectedAt'])} — ≠ non homologué"
+            else:
+                status, detail = "source non connectée", "aucune source officielle connectée pour ce marché"
+            rows.append({"iso3": ISO3[cc], "Pays": COUNTRY_LABEL.get(cc, cc), "Statut": status, "Détail": detail,
+                         "Usages": sum(r["usesCount"] for r in regs), "Liés": "; ".join(f"{rp['commercialName']} ({r['registrationNumber']})" for rp, r in rel) or "—",
+                         "Source": c["sourceId"] or "—", "Collecté le": fmt_dt(c["collectedAt"])})
+    else:
+        species = st.text_input("Micro-organisme (genre espèce)", "Clonostachys rosea")
+        crop = st.text_input("Culture (optionnel, mot de la culture tel qu'écrit ou normalisé)", "")
+        data = api_get(f"/active-entities/{species}/registrations", {"crop": crop} if crop else None)
+        title, warnings = f"Produits contenant {species}" + (f" sur « {crop} »" if crop else ""), data["warnings"]
+        by_cc: dict[str, list] = {}
+        for r in data["items"]:
+            by_cc.setdefault(r["countryCode"], []).append(r)
+        src_cov = api_get("/sources")["items"]
+        covered = {s["countryOrRegion"] for s in src_cov if s["registrations"]}
+        for cc in ALL_COUNTRIES:
+            regs = by_cc.get(cc, [])
+            if regs:
+                status = "active" if any(r["statusNormalized"] == "active" for r in regs) else regs[0]["statusNormalized"]
+                detail = "; ".join(f"{r['productName']} n° {r['registrationNumber']} [{r['activeEntityNormalized']}] {r['statusNormalized']}" for r in regs[:12])
+            elif cc in covered:
+                status, detail = "non trouvé dans la source", "aucun produit avec ce micro-organisme dans la source collectée — ≠ absence d'homologation"
+            else:
+                status, detail = "source non connectée", "aucune source officielle connectée pour ce marché"
+            rows.append({"iso3": ISO3[cc], "Pays": COUNTRY_LABEL.get(cc, cc), "Statut": status, "Détail": detail, "Produits": len({r["productId"] for r in regs}),
+                         "Souches": "; ".join(sorted({(r["activeEntityNormalized"] or "").replace(species, "").strip() or "—" for r in regs})) or "—"})
     df = pd.DataFrame(rows)
-    color_map = {"active": "#2e7d32", "withdrawn": "#c62828", "expired": "#ef6c00", "pending": "#f9a825", "unknown": "#9e9e9e",
-                 "non trouvé dans la source": "#bdbdbd", "source non connectée": "#eeeeee"}
-    fig = px.choropleth(df, locations="iso3", color="Statut", hover_name="Pays", hover_data={"Détail": True, "Usages": True, "iso3": False},
-                        color_discrete_map=color_map, projection="natural earth", title=data.get("commercialName"))
-    fig.update_layout(margin=dict(l=0, r=0, t=40, b=0), legend_title="Statut (normalisé)", height=520)
+    hover = {c: True for c in df.columns if c not in ("iso3", "Pays")}
+    hover["iso3"] = False
+    fig = px.choropleth(df, locations="iso3", color="Statut", hover_name="Pays", hover_data=hover, color_discrete_map=color_map,
+                        projection="natural earth", title=title, category_orders={"Statut": list(color_map)})
+    fig.update_geos(showcountries=True, countrycolor="#cfd8dc", showcoastlines=False, landcolor="#f5f5f5", bgcolor="rgba(0,0,0,0)")
+    fig.update_layout(margin=dict(l=0, r=0, t=48, b=0), legend_title="Statut (normalisé)", height=560, paper_bgcolor="rgba(0,0,0,0)")
     st.plotly_chart(fig, use_container_width=True)
-    st.caption("Gris clair = produit absent de la source officielle collectée (≠ non homologué) · blanc = marché sans source connectée dans ce prototype.")
+    st.caption("Vert foncé = produit homologué · vert clair = seulement un produit lié (sœur / formulation liée, produit distinct) · "
+               "gris = absent de la source officielle collectée (≠ non homologué) · blanc = marché sans source connectée. Survolez un pays pour les numéros, statuts et dates.")
+    st.markdown("#### Détail par pays")
     st.dataframe(df.drop(columns=["iso3"]), hide_index=True, use_container_width=True)
-    warnings_box(data["warnings"])
-    disclaimer_box(data["disclaimer"])
+    warnings_box(warnings)
+    disclaimer_box(None)
 
 elif page == "Question":
     st.title("Question en langage naturel")

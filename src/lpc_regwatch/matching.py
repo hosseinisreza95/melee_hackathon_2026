@@ -1,10 +1,13 @@
 """Step 3: normalisation of stored rows + product identity across markets + sister-product hypotheses.
 
 Three strictly separated levels of certainty (MAPPING_README, SPEC M5/N5):
-1. `merge_official_equivalents`: two names on the SAME official registration (EPA altbrandnames, PPID
-   application history, E-Phy seconds noms commerciaux) are one product -> registrations are re-pointed to
-   the pilot product id and the equivalence is persisted in data/product_equivalences_observed.csv so the
-   next parse is idempotent. Evidence = the official field that states it.
+1. `link_official_equivalents`: a registration that carries a pilot name as alternate/historical name
+   (EPA altbrandnames, PPID application history) links its product to the pilot as `related_product`
+   with the official field as evidence - it is NOT merged (LPC, 2026-10-10: PRESTOP WG CA 32404 is a
+   distinct product from LALSTOP G46 WG). E-Phy "seconds noms commerciaux" stay plain alternate names
+   of the same AMM.
+   `load_curated_relations`: statements made by LPC (data/lpc_curated_relations.csv) are applied last and
+   override hypotheses with the same name.
 2. `load_starter_candidates`: hypotheses provided by LPC in product_name_mapping.csv -> aliases with the kit's
    confidence and review_status (never upgraded by us).
 3. `propose_sister_candidates`: same canonical species AND same strain, different registration/name ->
@@ -13,9 +16,7 @@ Three strictly separated levels of certainty (MAPPING_README, SPEC M5/N5):
 from __future__ import annotations
 
 import csv
-import datetime as dt
 import logging
-from pathlib import Path
 
 from sqlalchemy.orm import Session
 
@@ -26,7 +27,6 @@ from .parsers.base import norm_name, pilot_name_index, slug
 from .pilots import pilot_product_ids
 
 log = logging.getLogger(__name__)
-EQUIV_FILE = ROOT / "data" / "product_equivalences_observed.csv"
 LALLEMAND = ("DANSTAR", "LALLEMAND")
 
 
@@ -60,83 +60,68 @@ def apply_normalization(session: Session) -> dict[str, int]:
     return stats
 
 
-# --------------------------------------------------------------------------- 1. official equivalences
-def _read_equivalences() -> list[dict]:
-    if not EQUIV_FILE.exists():
-        return []
-    with EQUIV_FILE.open(encoding="utf-8-sig", newline="") as f:
-        return list(csv.DictReader(f))
-
-
-def _write_equivalences(rows: list[dict]) -> None:
-    cols = ["product_id", "name_variant", "relationship_type", "country", "registration_id", "evidence", "source_record_url", "detected_at"]
-    with EQUIV_FILE.open("w", encoding="utf-8", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=cols)
-        w.writeheader()
-        w.writerows(rows)
-
-
-def merge_official_equivalents(session: Session) -> list[str]:
-    """Re-point non-pilot products to a pilot product when an OFFICIAL alias on the same registration names it."""
+# --------------------------------------------------------------------------- 1. official name links (no merge)
+def link_official_equivalents(session: Session) -> list[str]:
+    """A non-pilot product whose OFFICIAL alias (same registration) is a pilot name becomes a `related_product`
+    of that pilot - never merged (LPC answer 2026-10-10: PRESTOP WG CA 32404 is not LALSTOP G46 WG)."""
     pilots = set(pilot_product_ids())
     pilot_idx = pilot_name_index()
-    equivalences = _read_equivalences()
-    known = {(e["product_id"], norm_name(e["name_variant"])) for e in equivalences}
-    merged: list[str] = []
+    out: list[str] = []
     for prod in list(session.query(Product).filter(~Product.product_id.in_(pilots))):
-        target_pid = None
-        witness: ProductAlias | None = None
         for a in prod.aliases:
-            if a.relationship_type in (AliasRelation.alternate_name, AliasRelation.historical_name):
-                pid = pilot_idx.get(norm_name(a.alias_name))
-                if pid in pilots:
-                    target_pid, witness = pid, a
-                    break
-        if not target_pid:
-            continue
-        pilot = session.get(Product, target_pid)
-        regs = list(prod.registrations)
-        for r in regs:
-            pilot.registrations.append(r)  # moves the row between ORM collections (plain FK edit would be nulled on delete)
-            session.add(ChangeLog(entity_type="registration", entity_id=r.registration_id, field="product_id",
-                                  old_value=prod.product_id, new_value=target_pid, from_snapshot_id=None, to_snapshot_id=r.snapshot_id))
-        # the former primary name becomes an official alternate name of the pilot product
-        for r in regs:
-            key = (target_pid, norm_name(prod.commercial_name))
-            evidence = (f"Official equivalence: registration {r.registration_number} ({r.country_code}) carries both "
-                        f"'{prod.commercial_name}' and '{witness.alias_name}' ({witness.evidence})")
-            aid = f"A-{target_pid}-{slug(prod.commercial_name)}-{r.country_code}"
-            if session.get(ProductAlias, aid) is None and norm_name(prod.commercial_name) != norm_name(pilot.commercial_name):
-                session.add(ProductAlias(alias_id=aid, product_id=target_pid, alias_name=prod.commercial_name, country_code=r.country_code,
-                                         relationship_type=AliasRelation.alternate_name, confidence=1.0, evidence=evidence,
-                                         source_record_url=r.source_record_url, review_status=ValidationStatus.automatically_extracted))
-            if key not in known:
-                equivalences.append({"product_id": target_pid, "name_variant": prod.commercial_name, "relationship_type": "official_alternate_name",
-                                     "country": r.country_code, "registration_id": r.registration_id, "evidence": evidence,
-                                     "source_record_url": r.source_record_url, "detected_at": dt.datetime.now(dt.timezone.utc).isoformat()})
-                known.add(key)
-        # move remaining aliases, then drop the duplicate product
-        for a in list(prod.aliases):
-            if norm_name(a.alias_name) == norm_name(pilot.commercial_name):
-                session.delete(a)
+            if a.relationship_type not in (AliasRelation.alternate_name, AliasRelation.historical_name):
                 continue
-            new_id = f"A-{target_pid}-{slug(a.alias_name)}-{a.country_code or 'XX'}"
-            if session.get(ProductAlias, new_id) is None:
-                a.alias_id = new_id
-                pilot.aliases.append(a)
-            else:
-                session.delete(a)
-        session.flush()
-        session.expire(prod, ["registrations", "aliases"])
-        if pilot.formulation_code is None and prod.formulation_code:
-            pilot.formulation_code = prod.formulation_code
-        session.delete(prod)
-        merged.append(f"{prod.product_id} -> {target_pid} (witness: '{witness.alias_name}' {witness.relationship_type.value})")
+            pid = pilot_idx.get(norm_name(a.alias_name))
+            if pid not in pilots:
+                continue
+            pilot = session.get(Product, pid)
+            regs = list(prod.registrations)
+            if not regs:
+                continue
+            cc = regs[0].country_code
+            aid = f"A-{pid}-{slug(prod.commercial_name)}-{cc}"
+            existing = session.get(ProductAlias, aid)
+            evidence = (f"Official registration {regs[0].registration_number} ({cc}) of '{prod.commercial_name}' also carries the name "
+                        f"'{a.alias_name}' ({a.evidence}). Distinct product, not merged (LPC guidance 2026-10-10).")
+            if existing is None:
+                session.add(ProductAlias(alias_id=aid, product_id=pid, alias_name=prod.commercial_name, country_code=cc,
+                                         relationship_type=AliasRelation.related_product, confidence=0.9, evidence=evidence,
+                                         source_record_url=regs[0].source_record_url, review_status=ValidationStatus.to_verify))
+                out.append(f"{pilot.commercial_name} <- related: {prod.commercial_name} ({cc} {regs[0].registration_number})")
+            break
     session.commit()
-    if merged:
-        _write_equivalences(equivalences)
-        pilot_name_index.cache_clear()
-    return merged
+    return out
+
+
+def load_curated_relations(session: Session) -> int:
+    """Relations stated by LPC itself (data/lpc_curated_relations.csv): they override kit hypotheses and automatic links
+    with the same alias name on the same product, and are the only rows allowed to be `validated` without a review log entry."""
+    path = ROOT / "data" / "lpc_curated_relations.csv"
+    if not path.exists():
+        return 0
+    n = 0
+    with path.open(encoding="utf-8-sig", newline="") as f:
+        for r in csv.DictReader(f):
+            if session.get(Product, r["product_id"]) is None:
+                continue
+            rel = AliasRelation(r["relationship_type"])
+            same = [a for a in session.query(ProductAlias).filter(ProductAlias.product_id == r["product_id"])
+                    if norm_name(a.alias_name) == norm_name(r["alias_name"])]
+            if same:
+                a = same[0]
+                for extra in same[1:]:
+                    session.delete(extra)
+                a.relationship_type, a.confidence, a.evidence = rel, float(r["confidence"]), r["evidence"]
+                a.review_status, a.country_code = ValidationStatus(r["review_status"]), r["country_code"] or a.country_code
+                a.source_record_url = r["source_record_url"] or a.source_record_url
+            else:
+                session.add(ProductAlias(alias_id=f"A-{r['product_id']}-{slug(r['alias_name'])}-LPC", product_id=r["product_id"],
+                                         alias_name=r["alias_name"], country_code=r["country_code"] or None, relationship_type=rel,
+                                         confidence=float(r["confidence"]), evidence=r["evidence"], source_record_url=r["source_record_url"] or None,
+                                         review_status=ValidationStatus(r["review_status"])))
+            n += 1
+    session.commit()
+    return n
 
 
 # --------------------------------------------------------------------------- 2. starter hypotheses
@@ -207,8 +192,9 @@ def propose_sister_candidates(session: Session) -> list[str]:
 
 def run_all(session: Session) -> dict:
     report: dict = {}
-    report["merged"] = merge_official_equivalents(session)
     report["normalization"] = apply_normalization(session)
+    report["official_links"] = link_official_equivalents(session)
     report["starter_candidates_added"] = load_starter_candidates(session)
     report["sister_candidates"] = propose_sister_candidates(session)
+    report["lpc_curated_relations"] = load_curated_relations(session)  # last: LPC's own statements win
     return report

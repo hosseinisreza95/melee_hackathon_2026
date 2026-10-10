@@ -126,7 +126,7 @@
   <h2><small>Résultats mesurés</small>Ce que la base contient ce soir</h2>
   <div class="grid g4">
     <div class="card r"><div class="num" data-count="4">0</div><div>sources officielles, 3 régions</div></div>
-    <div class="card r"><div class="num" data-count="3">0</div><div>produits pilotes retrouvés dans 3 pays chacun, sous un seul identifiant</div></div>
+    <div class="card r"><div class="num" data-count="3">0</div><div>produits pilotes retrouvés, chacun sous un seul identifiant, avec leurs produits liés (PRESTOP WG, PRESTOP, LALFRESH S, M52 GR) distincts</div></div>
     <div class="card r"><div class="num" data-count="232" id="n-reg">0</div><div>enregistrements, 6 300+ usages, 134 noms et hypothèses avec preuve</div></div>
     <div class="card r"><div class="num" data-count="100">0</div><div>% des lignes réglementaires avec source, URL, date et statut de validation</div></div>
   </div>
@@ -177,15 +177,16 @@
 
 <!-- 8 -->
 <section class="slide">
-  <h2><small>Produits sœurs</small>Fait officiel, hypothèse du kit, hypothèse des données : trois niveaux, jamais mélangés</h2>
+  <h2><small>Produits sœurs et liés</small>Fait officiel, décision LPC, hypothèse du kit, hypothèse des données : jamais mélangés</h2>
   <table>
     <tr><th>Nom</th><th>Relation</th><th>Preuve</th><th>Confiance</th><th>Statut</th></tr>
-    <tr class="r"><td>PRESTOP WG (CA 32404, US 64137-13)</td><td><span class="tag ok">alternate_name</span></td><td>le même enregistrement officiel porte les deux noms (historique PPID, altbrandnames EPA)</td><td>1.00</td><td>fait → fusionné sous LALSTOP G46 WG</td></tr>
-    <tr class="r"><td>PRESTOP (FR 2120177, CA 28820)</td><td><span class="tag warn">sister_product_candidate</span></td><td>kit LPC PNM-004 : même souche J1446, formulation et n° différents</td><td>0.85</td><td>to_verify</td></tr>
+    <tr class="r"><td>PRESTOP WG (CA 32404, US 64137-13)</td><td><span class="tag info">related_product</span></td><td>l'enregistrement porte aussi le nom « LALSTOP G46 WG » (historique PPID, altbrandnames EPA) — mais LPC confirme : produit distinct, <b>jamais fusionné</b></td><td>1.00</td><td>validated (réponse LPC 10/10)</td></tr>
+    <tr class="r"><td>PRESTOP (FR 2120177, CA 28820)</td><td><span class="tag ok">confirmed_sister_product</span></td><td>hypothèse du kit PNM-004 confirmée par LPC : même souche J1446, formulation et teneur différentes</td><td>1.00</td><td>validated (réponse LPC 10/10)</td></tr>
+    <tr class="r"><td>LALFRESH S (FR 2230264)</td><td><span class="tag info">related_product</span></td><td>même souche et teneur, mais AMM distincte et usage post-récolte : pas une seconde marque (LPC)</td><td>1.00</td><td>validated</td></tr>
     <tr class="r"><td>PRIMASTOP BIOFUNGICIDE POWDER (US 64137-8)</td><td><span class="tag warn">sister_product_candidate</span></td><td>même <i>Clonostachys rosea</i> J1446, même titulaire, autre n°</td><td>0.80</td><td>to_verify</td></tr>
     <tr class="r"><td>Kamoi Pro (BR 27520, Agrivalle)</td><td><span class="tag gray">pas candidat</span></td><td>même espèce mais souche CPQBA 040-11 ≠ J1446 — l'espèce seule ne suffit jamais</td><td>—</td><td>—</td></tr>
   </table>
-  <p class="r muted" style="margin-top:16px">La revue se fait dans l'interface ; la décision et son auteur sont journalisés. Un candidat n'est jamais affiché comme équivalent avant validation.</p>
+  <p class="r muted" style="margin-top:16px">Les réponses de LPC sont des <b>données</b> (CSV versionné, preuve citée dans l'API), pas du code. La revue se fait dans l'interface ; décision et auteur sont journalisés. Un candidat n'est jamais affiché comme équivalent avant validation.</p>
 </section>
 
 <!-- 9 -->

@@ -38,16 +38,42 @@ INTENTS = {
     "expiry": [r"expir", r"échéance", r"echeance", r"renouvel", r"renew", r"fin de validité"],
     "source": [r"source", r"preuve", r"evidence", r"d'où", r"provenance", r"citation", r"url"],
     "changes": [r"chang", r"nouveaut", r"what's new", r"modif", r"diff"],
-    "ingredient_search": [r"contenant", r"containing", r"à base de", r"based on", r"microorganism", r"micro-organisme", r"souche", r"strain", r"espèce"],
-    "use_comparison": [r"compar", r"usages?", r"uses", r"dose", r"culture", r"crop", r"cible", r"target", r"restriction", r"différence"],
-    "registration_lookup": [r"homologu", r"registered", r"enregistr", r"autoris", r"approved", r"quels pays", r"which countr", r"où ", r"where"],
+    "ingredient_search": [r"contenant", r"containing", r"contain", r"à base de", r"based on", r"microorganism", r"micro-organisme", r"souche", r"strain", r"espèce", r"species", r"same active", r"même (?:micro|substance|matière)"],
+    "use_comparison": [r"compar", r"usages?", r"\buses?\b", r"dose", r"culture", r"crop", r"cible", r"target", r"restriction", r"différence", r"difference", r"label", r"étiquette", r"délai"],
+    "registration_lookup": [r"homologu", r"register", r"enregistr", r"autoris", r"approv", r"quels pays", r"which countr", r"où ", r"where", r"status", r"statut", r"licen"],
 }
-SPECIES = ["Coniothyrium minitans", "Clonostachys rosea", "Gliocladium catenulatum", "Metarhizium brunneum", "Metarhizium anisopliae",
-           "Beauveria bassiana", "Trichoderma", "Bacillus", "Streptomyces", "Cordyceps javanica"]
-CROP_WORDS = {"tomate": "Tomato", "tomato": "Tomato", "tomatoes": "Tomato", "fraise": "Strawberry", "fraisier": "Strawberry", "strawberry": "Strawberry",
-              "laitue": "Lettuce", "lettuce": "Lettuce", "vigne": "Grapevine", "grape": "Grapevine", "soja": "Soybean", "soybean": "Soybean",
-              "concombre": "Cucumber", "cucumber": "Cucumber", "pomme de terre": "Potato", "potato": "Potato", "poivron": "Sweet pepper", "pepper": "Sweet pepper",
-              "colza": "Oilseed rape", "canola": "Oilseed rape", "carotte": "Carrot", "carrot": "Carrot", "oignon": "Onion", "onion": "Onion"}
+SPECIES_STATIC = ["Coniothyrium minitans", "Clonostachys rosea", "Gliocladium catenulatum", "Metarhizium brunneum", "Metarhizium anisopliae",
+                  "Beauveria bassiana", "Trichoderma", "Bacillus", "Streptomyces", "Cordyceps javanica"]
+# French/English words that appear in questions but are not EPPO aliases (fruit name -> crop concept id)
+CROP_EXTRA = {"fraise": "strawberry", "fraises": "strawberry", "raisin": "grapevine", "grape": "grapevine", "grapes": "grapevine", "pomme": "apple",
+              "pommes": "apple", "poire": "pear", "pêche": "peach", "cerise": "cherry", "tomates": "tomato", "salade": "lettuce", "salad": "lettuce",
+              "tomatoes": "tomato", "potatoes": "potato", "onions": "onion", "carrots": "carrot", "cucumbers": "cucumber", "lettuces": "lettuce"}
+
+
+def species_in_db(session: Session) -> list[str]:
+    """Genus+species present in the store (any product), so questions about any micro-organism resolve, not only the pilots."""
+    out = set(SPECIES_STATIC)
+    for (ae,) in session.query(Product.active_entity_normalized).filter(Product.active_entity_normalized.isnot(None)):
+        w = ae.split()
+        if len(w) >= 2:
+            out.add(f"{w[0]} {w[1]}")
+    return sorted(out, key=len, reverse=True)
+
+
+def crop_in_question(q: str) -> str | None:
+    """Crop concept from the question using the EPPO alias index (starter languages + observed wordings) plus CROP_EXTRA."""
+    from ..normalize.eppo import _index
+
+    concepts, alias = _index("crop")
+    ql = " " + re.sub(r"[^\w\s-]", " ", q.lower()) + " "
+    best = None
+    for name, cid in list(alias.items()) + list(CROP_EXTRA.items()):
+        if len(name) >= 4 and f" {name} " in ql and (best is None or len(name) > len(best[0])):
+            best = (name, cid)
+    if best:
+        c = concepts.get(best[1])
+        return c.name_normalized if c else best[1]
+    return None
 
 
 @dataclass
@@ -69,7 +95,9 @@ def _product_index(session: Session) -> list[tuple[str, str, str]]:
         idx.append((norm_name(p.commercial_name), p.product_id, "name"))
     for a in session.query(ProductAlias):
         idx.append((norm_name(a.alias_name), a.product_id, "alias"))
-    return sorted({i for i in idx if len(i[0]) >= 4}, key=lambda t: -len(t[0]))
+    # longest first; for the same wording a product's own name wins over another product's alias (PRESTOP WG carries
+    # 'LALSTOP G46 WG' as an alternate name, but the question is about LALSTOP G46 WG itself)
+    return sorted({i for i in idx if len(i[0]) >= 4}, key=lambda t: (-len(t[0]), t[2] != "name", t[1]))
 
 
 def plan(session: Session, question: str) -> Plan:
@@ -90,8 +118,8 @@ def plan(session: Session, question: str) -> Plan:
             consumed = consumed.replace(f" {nname} ", " ")
             if kind == "name" and len(pids) >= 3:
                 break
-    species = next((s for s in SPECIES if s.lower() in q), None)
-    crop = next((v for k, v in CROP_WORDS.items() if re.search(rf"\b{k}s?\b", q)), None)
+    species = next((s for s in species_in_db(session) if s.lower() in q), None)
+    crop = crop_in_question(question)
     m = re.search(r"(\d{1,2})\s*(mois|months?)", q)
     months = int(m.group(1)) if m else 12
     unresolved = []
@@ -158,7 +186,7 @@ def run_tools(session: Session, pl: Plan) -> tuple[list[dict], list[dict], list[
                               "crop": u["cropOriginal"], "cropNormalized": u["cropNormalized"], "target": u["targetOriginal"], "dose": u["doseValue"],
                               "doseUnit": u["doseUnitOriginal"], "pairing": u["pairing"]})
         if not sp:
-            warnings.append("No micro-organism species recognised in the question (known: " + ", ".join(SPECIES) + ").")
+            warnings.append("No micro-organism species recognised in the question (known species are those present in the store, e.g. " + ", ".join(SPECIES_STATIC[:5]) + ").")
         elif not rows:
             warnings.append(f"No product with '{sp}'" + (f" on crop '{pl.crop}'" if pl.crop else "") + " in the collected sources - not proof of absence.")
         if pl.crop:
@@ -199,6 +227,14 @@ def run_tools(session: Session, pl: Plan) -> tuple[list[dict], list[dict], list[
         for c in cmp_["coverage"]:
             if c["coverage"] != "found":
                 facts.append({"type": "coverage", "product": pname, "country": c["countryCode"], "coverage": c["coverage"], "note": c["note"]})
+        for rp in cmp_["relatedProducts"]:
+            for r in rp["registrations"]:
+                facts.append({"type": "related_registration", "product": pname, "relatedProduct": rp["commercialName"], "relationship": rp["relationship"],
+                              "reviewStatus": rp["reviewStatus"], "country": r["countryCode"], "registrationNumber": r["registrationNumber"],
+                              "statusNormalized": r["statusNormalized"], "statusOriginal": r["statusOriginal"], "sourceId": r["evidence"]["sourceId"],
+                              "sourceUrl": r["evidence"]["sourceUrl"], "collectedAt": r["evidence"]["collectedAt"].isoformat(),
+                              "validationStatus": r["evidence"]["validationStatus"]})
+                evidence.append(r["evidence"])
         warnings += cmp_["warnings"]
     return facts, evidence, warnings, tools
 
@@ -236,6 +272,14 @@ def template_answer(pl: Plan, facts: list[dict], warnings: list[str], language: 
         for f in facts:
             if f["type"] == "coverage":
                 lines.append(f"{f['product']} — {Q.COUNTRY_NAMES.get(f['country'], f['country'])} ({f['country']}): {f['note']}")
+        rel = [f for f in facts if f["type"] == "related_registration"]
+        if rel:
+            lines.append("")
+            lines.append("Produits liés (produits distincts, jamais fusionnés) :" if fr else "Related products (distinct products, never merged):")
+            for f in rel:
+                lines.append(f"  {f['relatedProduct']} [{f['relationship']}, {f['reviewStatus']}] — {Q.COUNTRY_NAMES.get(f['country'], f['country'])} "
+                             f"({f['country']}): {'n°' if fr else 'no.'} {f['registrationNumber']}, {f['statusNormalized']} (« {f['statusOriginal']} »), "
+                             f"{f['sourceId']} {f['collectedAt'][:10]}")
         uses = [f for f in facts if f["type"] == "use"]
         if uses:
             lines.append("")

@@ -12,8 +12,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from lpc_regwatch.db.models import (AliasRelation, AuthorizedUse, ExtractionMethod, Product, ProductAlias, RawDocument,  # noqa: E402
                                     RegStatus, Registration, Snapshot, ValidationStatus)
 from lpc_regwatch.db.session import init_db  # noqa: E402
-from lpc_regwatch.matching import (apply_normalization, load_starter_candidates, merge_official_equivalents,  # noqa: E402
-                                   propose_sister_candidates)
+from lpc_regwatch.matching import (apply_normalization, link_official_equivalents, load_curated_relations,  # noqa: E402
+                                   load_starter_candidates, propose_sister_candidates)
 from lpc_regwatch.normalize import canonical_active_entity, normalize_crop, normalize_dose, normalize_target  # noqa: E402
 
 NOW = dt.datetime(2026, 10, 9, 12, 0, tzinfo=dt.timezone.utc)
@@ -77,9 +77,7 @@ def _reg(rid, pid, cc, number, active, holder="DANSTAR FERMENT AG", snap=1):
                         collected_at=NOW, snapshot_id=snap, extraction_method=ExtractionMethod.csv_parser, evidence_excerpt="e")
 
 
-def test_official_alias_merges_product_and_persists_equivalence(session, tmp_path, monkeypatch):
-    import lpc_regwatch.matching as m
-    monkeypatch.setattr(m, "EQUIV_FILE", tmp_path / "eq.csv")
+def test_official_alias_links_product_as_related_without_merging(session):
     pilot = Product(product_id="P-LPC-G46", commercial_name="LALSTOP G46 WG", active_entity_original="Clonostachys rosea strain J1446")
     other = Product(product_id="P-PRESTOP-WG", commercial_name="PRESTOP WG", active_entity_original="CLONOSTACHYS ROSEA STRAIN J1446")
     session.add_all([pilot, other])
@@ -89,15 +87,18 @@ def test_official_alias_merges_product_and_persists_equivalence(session, tmp_pat
                              relationship_type=AliasRelation.historical_name, confidence=1.0, evidence="PPID application 2020-1232",
                              review_status=ValidationStatus.automatically_extracted))
     session.commit()
-    merged = merge_official_equivalents(session)
-    assert merged and session.get(Product, "P-PRESTOP-WG") is None
-    reg = session.get(Registration, "R-CA-32404")
-    assert reg.product_id == "P-LPC-G46"
+    out = link_official_equivalents(session)
+    assert out and session.get(Product, "P-PRESTOP-WG") is not None  # never merged (LPC 2026-10-10)
+    assert session.get(Registration, "R-CA-32404").product_id == "P-PRESTOP-WG"
     names = {a.alias_name: a for a in session.get(Product, "P-LPC-G46").aliases}
-    assert "PRESTOP WG" in names and names["PRESTOP WG"].relationship_type == AliasRelation.alternate_name
-    assert "Official equivalence" in names["PRESTOP WG"].evidence
-    rows = (tmp_path / "eq.csv").read_text(encoding="utf-8").strip().splitlines()
-    assert len(rows) == 2 and rows[1].startswith("P-LPC-G46,PRESTOP WG,official_alternate_name,CA")
+    assert names["PRESTOP WG"].relationship_type == AliasRelation.related_product and names["PRESTOP WG"].review_status == ValidationStatus.to_verify
+    assert "carries the name 'LALSTOP G46 WG'" in names["PRESTOP WG"].evidence
+    # LPC's own statement then upgrades the same alias to validated, still as a related product
+    assert load_curated_relations(session) >= 3
+    names = {a.alias_name: a for a in session.get(Product, "P-LPC-G46").aliases}
+    assert names["PRESTOP WG"].review_status == ValidationStatus.validated and names["PRESTOP WG"].relationship_type == AliasRelation.related_product
+    assert names["PRESTOP"].relationship_type == AliasRelation.confirmed_sister_product and names["LALFRESH S"].relationship_type == AliasRelation.related_product
+    assert len([a for a in session.get(Product, "P-LPC-G46").aliases if a.alias_name == "PRESTOP WG"]) == 1  # no duplicate
 
 
 def test_sister_candidate_requires_species_and_strain_and_stays_hypothesis(session):

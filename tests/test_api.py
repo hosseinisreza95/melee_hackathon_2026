@@ -16,11 +16,12 @@ def test_health(api_client):
 def test_search_by_name_alias_and_active_entity(api_client):
     assert api_client.get("/products", params={"q": "contans"}).json()["items"][0]["productId"] == "P-LPC-CONTANS"
     by_alias = api_client.get("/products", params={"q": "PRESTOP WG"}).json()["items"]
-    assert [p["productId"] for p in by_alias][0] == "P-LPC-G46" and by_alias[0]["matchedOn"] == "alias"
+    ids = [p["productId"] for p in by_alias]
+    assert ids[0] == "P-PRESTOP-WG" and "P-LPC-G46" in ids  # distinct product first, pilot reachable through its alias
     by_hist = api_client.get("/products", params={"q": "MET52"}).json()["items"]
     assert any(p["productId"] == "P-LPC-M52" for p in by_hist)
     by_ae = api_client.get("/products", params={"q": "Clonostachys rosea"}).json()["items"]
-    assert {p["productId"] for p in by_ae} >= {"P-LPC-G46", "P-PRESTOP", "P-KAMOI-PRO"}
+    assert {p["productId"] for p in by_ae} >= {"P-LPC-G46", "P-PRESTOP", "P-PRESTOP-WG", "P-KAMOI-PRO"}
     empty = api_client.get("/products", params={"q": "FOOBARIX 3000"}).json()
     assert empty["items"] == [] and "not proof of no registration" in empty["warnings"][0].lower()
 
@@ -82,6 +83,20 @@ def test_aliases_sister_candidates_are_hypotheses(api_client):
     cand = [a for a in al if a["relationshipType"] == "sister_product_candidate"]
     assert cand and all(a["reviewStatus"] in ("to_verify", "automatically_extracted") for a in cand)
     assert all(a["evidence"] for a in al)
+    confirmed = [a for a in al if a["relationshipType"] == "confirmed_sister_product"]
+    assert confirmed and confirmed[0]["aliasName"] == "PRESTOP" and "LPC answer" in confirmed[0]["evidence"]
+
+
+def test_related_products_are_listed_not_merged(api_client):
+    d = api_client.get("/compare", params={"productId": "P-LPC-G46", "countries": "CA,US,FR"}).json()
+    assert {r["countryCode"] for r in d["registrations"]} == {"FR"}  # LPC: PRESTOP WG (CA/US) is a distinct product
+    rel = {r["commercialName"]: r for r in d["relatedProducts"]}
+    assert rel["PRESTOP WG"]["relationship"] == "related_product" and {x["countryCode"] for x in rel["PRESTOP WG"]["registrations"]} == {"CA", "US"}
+    assert rel["PRESTOP"]["relationship"] == "confirmed_sister_product" and rel["PRESTOP"]["reviewStatus"] == "validated"
+    assert rel["PRIMASTOP BIOFUNGICIDE POWDER"]["relationship"] == "sister_product_candidate"
+    assert any("related product 'PRESTOP WG'" in w and "distinct product" in w for w in d["warnings"])
+    r2 = api_client.get("/products/LALSTOP G46 WG/related", params={"countries": "CA"}).json()
+    assert {x["commercialName"] for x in r2["items"] if x["registrations"]} == {"PRESTOP WG", "PRESTOP"}  # both have a CA registration
 
 
 def test_expiring_and_sources_and_export(api_client):
@@ -100,10 +115,10 @@ def test_expiring_and_sources_and_export(api_client):
 
 def test_review_changes_status_and_is_logged(api_client):
     before = api_client.get("/products/P-LPC-G46/aliases").json()
-    target = next(a for a in before if a["aliasName"] == "PRESTOP")
+    target = next(a for a in before if a["aliasName"] == "PRIMASTOP BIOFUNGICIDE POWDER")
     r = api_client.post("/review", json={"entityType": "alias", "entityId": target["aliasId"], "newStatus": "rejected", "reviewer": "RA tester", "note": "different formulation"})
     assert r.status_code == 200 and r.json()["oldStatus"] == "to_verify"
-    after = next(a for a in api_client.get("/products/P-LPC-G46/aliases").json() if a["aliasName"] == "PRESTOP")
+    after = next(a for a in api_client.get("/products/P-LPC-G46/aliases").json() if a["aliasName"] == "PRIMASTOP BIOFUNGICIDE POWDER")
     assert after["reviewStatus"] == "rejected"
     log = api_client.get("/review/log").json()
     assert log[0]["entityId"] == target["aliasId"] and log[0]["reviewer"] == "RA tester"

@@ -62,10 +62,15 @@ def test_T03_uncertain_fields_are_listed_not_hidden(api_client):
 def test_T04_sister_products_are_hypotheses(api_client):
     d = _ask(api_client, GOLD["T04"]["question_fr"].rstrip(" ?") + " de LALSTOP G46 WG ?")
     assert d["intent"] == "sister_product"
-    cands = [f for f in d["facts"] if f["type"] == "alias" and f["relationshipType"] == "sister_product_candidate"]
-    assert cands and cands[0]["aliasName"] == "PRESTOP" and cands[0]["confidence"] == 0.85 and cands[0]["reviewStatus"] == "to_verify" and cands[0]["evidence"]
+    al = [f for f in d["facts"] if f["type"] == "alias"]
+    cands = [f for f in al if f["relationshipType"] == "sister_product_candidate"]
+    assert cands and cands[0]["aliasName"] == "PRIMASTOP BIOFUNGICIDE POWDER" and cands[0]["reviewStatus"] == "to_verify" and cands[0]["evidence"]
+    confirmed = [f for f in al if f["relationshipType"] == "confirmed_sister_product"]
+    assert confirmed and confirmed[0]["aliasName"] == "PRESTOP" and confirmed[0]["reviewStatus"] == "validated" and "LPC answer" in confirmed[0]["evidence"]
+    related = [f for f in al if f["relationshipType"] == "related_product"]
+    assert {f["aliasName"] for f in related} == {"PRESTOP WG", "LALFRESH S"}  # LPC: distinct products, never merged
     assert "hypoth" in d["answer"].lower() or "à confirmer" in d["answer"].lower()
-    assert "confirm" not in d["answer"].lower().replace("à confirmer", "").replace("to confirm", "")  # never 'confirmed'
+    assert "sister_product_candidate, confiance 0.8, statut to_verify" in d["answer"]  # hypothesis shown with its status, not as a fact
     assert any("hypotheses" in w for w in d["warnings"])
 
 
@@ -99,6 +104,23 @@ def test_ingredient_question_on_a_crop(api_client):
     regs = [f for f in d["facts"] if f["type"] == "registration"]
     assert {(f["country"], f["registrationNumber"]) for f in regs} == {("FR", "2230771"), ("CA", "32404")}
     assert all("Clonostachys rosea" in f["activeEntityNormalized"] for f in regs)
+    assert {f["product"] for f in regs} == {"LALSTOP G46 WG", "PRESTOP WG"}  # two distinct products on strawberry
+
+
+def test_other_products_countries_and_crops_like_the_jury_will(api_client):
+    """LPC said they will test the same intents with other products, countries and crops."""
+    d = _ask(api_client, "Where is PRESTOP registered and with which status?", "en")
+    regs = [f for f in d["facts"] if f["type"] == "registration"]
+    assert {(f["country"], f["statusNormalized"]) for f in regs} == {("CA", "active"), ("US", "withdrawn")}
+    d2 = _ask(api_client, "Which products containing Metarhizium brunneum are registered on strawberries in France?", "en")
+    regs2 = [f for f in d2["facts"] if f["type"] == "registration"]
+    assert [(f["country"], f["registrationNumber"]) for f in regs2] == [("FR", "2150990")]
+    d3 = _ask(api_client, "Kamoi Pro est-il homologué au Brésil et au Canada ?")
+    regs3 = [f for f in d3["facts"] if f["type"] == "registration"]
+    assert [(f["country"], f["registrationNumber"]) for f in regs3] == [("BR", "27520")]
+    assert any(f["type"] == "coverage" and f["country"] == "CA" and f["coverage"] == "not_found_in_source" for f in d3["facts"])
+    d4 = _ask(api_client, "Quels produits à base de Clonostachys rosea sont autorisés sur vigne ?")
+    assert [(f["country"], f["registrationNumber"]) for f in d4["facts"] if f["type"] == "registration"] == [("FR", "2230771")]
 
 
 def test_expiry_question(api_client):
