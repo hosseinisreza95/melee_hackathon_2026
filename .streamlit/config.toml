@@ -1,0 +1,27 @@
+# Streamlit theme aligned with the Lallemand Plant Care web identity (lallemandplantcare.com):
+# slate #36434b, Lallemand red #e30327, light greys #ebeced / #cdd0d2, dark text #212529.
+[theme]
+base = "light"
+primaryColor = "#e30327"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f1f3f4"
+textColor = "#212529"
+linkColor = "#36434b"
+font = "sans-serif"
+baseRadius = "6px"
+borderColor = "#d7d9db"
+showWidgetBorder = true
+
+[theme.sidebar]
+backgroundColor = "#36434b"
+secondaryBackgroundColor = "#2b363d"
+textColor = "#eef1f2"
+linkColor = "#ffffff"
+borderColor = "#4a575f"
+
+[server]
+headless = true
+enableXsrfProtection = false
+
+[browser]
+gatherUsageStats = false

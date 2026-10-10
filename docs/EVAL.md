@@ -65,3 +65,33 @@ What the AI rows look like downstream: `pairing=llm_paired`, `extraction_method=
 
 `python scripts/evaluate_submission.py output/submission.json` → **70 / 70** automatic points (structure, traceability, disclaimer, warnings,
 M365 documentation, known limitations), locally and in the server pipeline. Qualitative criteria remain with the jury.
+
+## 4. Step-by-step evaluation run (`scripts/evaluate_pipeline.py`, 2026-10-10, key configured)
+
+The script re-measures every step on the current database and writes `output/evaluation_report.json`. Two runs: the laptop
+(SQLite, gpt-5 / gpt-5-mini) and the server container (PostgreSQL, same models).
+
+| Step | Measure | Laptop | Server |
+|---|---|---|---|
+| 1 Collectors | snapshots failed | 0 / 4 | 0 / 8 (two nights) |
+| 2 Parsers | registrations · uses | 232 · 6 407 | 232 · 6 410 |
+| 2 Parsers | traceability violations (URL, excerpt, date, originals, synthetic) | 0 | 0 |
+| 3 Normalisation | use rows with an EPPO crop code | 15 % (label rows added many crop groups) | 15 % |
+| 3 Normalisation | doses converted to kg/ha or L/ha | 41 / 215 (all FR area doses) | 41 / 218 |
+| 3 Normalisation | registrations with status `unknown` · genus-only codes | 0 · none | 0 · none |
+| 4 Matching | pilots per country | CONTANS CA/US/FR · G46 FR (+5 related) · M52 CA/US/FR (+7 related) | same |
+| 4 Matching | hypotheses validated without review log | 0 | 0 |
+| 5 Labels (gpt-5) | rows accepted (verbatim / partial) | 71 (66 / 5) | 74 (63 / 11) |
+| 5 Labels | label crops matching an EPA site token | CONTANS 100 %, PRESTOP WG 100 %, M52 OD 59 % (label crop groups are broader than EPA sites) | 100 % / 100 % / 47 % |
+| 6 /ask deterministic | 13 questions (gold + jury-style + adversarial), required facts present, no forbidden claim, coverage explained | 13 / 13 | 13 / 13 |
+| 6 /ask with gpt-5-mini | same checks on the final answer | 13 / 13 · 9 phrased by the model, 3 rejected by the guard, 1 without facts | 13 / 13 · 10 phrased, 2 rejected |
+| 7 Submission | organiser evaluator | 70 / 70 | 70 / 70 |
+
+Reading the guard rejections: in T04 (sister products), J05 (expiry) and J07 (M52 on grapevine) the model's text contained a number
+absent from the facts (a day count or a dose rewritten); the deterministic draft was served instead and the warning says so.
+A re-run of the same questions later passed the guard — gpt-5-mini is not deterministic, which is exactly why the deterministic
+path, not the model, is the contract.
+
+Run-to-run variability of gpt-5 on labels: the same three PDFs produced 85 rows on the server run and 71 on the laptop run
+(CONTANS 28 vs 19, M52 OD 34 vs 29, PRESTOP WG 12 vs 23). Every stored row still passes the grounding gate; what varies is
+recall, never the presence of invented values. The cache by sha256 freezes one run until a PDF changes, and RA validates row by row.

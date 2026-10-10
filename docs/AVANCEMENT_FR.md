@@ -27,12 +27,13 @@ README sans clé personnelle, aucune donnée inventée, valeur originale conserv
 | API conforme au contrat du kit + extensions | ✅ `/health /products /registrations /compare /ask` + liés, qualité, échéances, changements, revue, export | `src/lpc_regwatch/api`, `/api/docs` |
 | Agent `/ask` ancré, sans clé et avec clé | ✅ planificateur déterministe + outils ; LLM optionnel + garde-fou | `api/ask.py` |
 | Extraction IA des étiquettes (dose CA/US) | ✅ 74 lignes acceptées / 11 rejetées, extrait vérifié mot pour mot | `extract/label_llm.py`, `docs/EVAL.md` |
-| Interface (comparaison, carte, question, revue, veille, sources) | ✅ client léger de l'API | `src/lpc_regwatch/ui/app.py` |
+| Interface (vue d'ensemble cartographique, comparaison, carte, question, revue, veille, registre interne, sources) | ✅ client léger de l'API, identité visuelle Lallemand Plant Care (logo, ardoise, rouge), carte interactive (clic pays / pastilles) | `src/lpc_regwatch/ui/app.py`, `.streamlit/config.toml` |
 | Microsoft 365 | ✅ connecteur Swagger 2.0 généré + flux Power Automate + action Copilot Studio + design Entra ID (documenté, pas de tenant) | `m365/` |
 | Modèle cible Dataverse (« qui fait foi ») | ✅ 8 tables `lpc_*` exportées (zip CSV, Excel, JSON), validées automatiquement contre `dataverse_tables.xlsx` | `src/lpc_regwatch/dataverse.py`, `docs/DATAVERSE_MAPPING.md` |
 | Registre interne LPC (liste SharePoint) | ✅ structure reçue, normalisation + rapprochement avec les sources officielles, échantillon fictif, page UI et API d'upload | `src/lpc_regwatch/registry/`, `schema/registre_interne_colonnes_LPC.md` |
 | Déploiement production | ✅ Docker Compose (PostgreSQL, API, UI, Caddy), cron quotidien, pare-feu, secrets hors Git | `infra/`, serveur 37.187.176.97 |
-| Tests | ✅ 59 tests verts en local **et** dans le conteneur de production (PostgreSQL + fichiers officiels réels) | `tests/` |
+| Tests | ✅ 66 tests verts en local **et** dans le conteneur de production (PostgreSQL + fichiers officiels réels) | `tests/` |
+| Évaluation de chaque étape | ✅ `scripts/evaluate_pipeline.py` : collecte, parseurs (0 violation de traçabilité), normalisation, correspondances, étiquettes IA, `/ask` avec et sans LLM (13/13), évaluateur 70/70 | `docs/EVAL.md`, `output/evaluation_report.json` |
 | Évaluateur de l'organisateur | ✅ 70 / 70 (local et pipeline serveur) | `scripts/build_submission.py` |
 | Pitch | ✅ 10 diapositives HTML animées, autonomes, en français | `presentation/index.html`, `/pitch/` |
 

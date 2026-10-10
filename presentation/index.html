@@ -7,19 +7,19 @@
 <meta name="description" content="Pitch du prototype d'agent IA de veille réglementaire mondiale (défi Lallemand Plant Care, Hackathon IA for Impact 2026).">
 <style>
   :root {
-    --bg: #0b1410; --bg2: #10201a; --ink: #eef5f0; --muted: #9fb3a8; --green: #35c26b; --lime: #b8f25a; --amber: #f3b23e; --red: #ef6b6b; --blue: #6cb6ff;
+    --bg: #2b363d; --bg2: #36434b; --ink: #f3f5f6; --muted: #b7c0c6; --green: #2fd27a; --lime: #e30327; --amber: #f5c842; --red: #ff4d7a; --blue: #38c6ff;
     --card: rgba(255,255,255,.05); --line: rgba(255,255,255,.12);
     --font: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font-family: var(--font); overflow: hidden; }
-  body { background: radial-gradient(1200px 700px at 80% -10%, #16342a 0%, transparent 60%), radial-gradient(900px 600px at -10% 110%, #0f2a22 0%, transparent 55%), var(--bg); }
+  body { background: radial-gradient(1200px 700px at 80% -10%, #46535b 0%, transparent 60%), radial-gradient(900px 600px at -10% 110%, #3a474f 0%, transparent 55%), var(--bg); }
   .deck { position: relative; width: 100vw; height: 100vh; }
   .slide { position: absolute; inset: 0; padding: 6vh 8vw; display: flex; flex-direction: column; justify-content: center; opacity: 0; visibility: hidden; transform: translateY(24px); transition: opacity .55s ease, transform .55s ease, visibility 0s linear .55s; pointer-events: none; }
   .slide.active { opacity: 1; visibility: visible; transform: none; pointer-events: auto; transition-delay: 0s; z-index: 1; }
   h1 { font-size: clamp(34px, 5.2vw, 72px); line-height: 1.05; margin: 0 0 18px; letter-spacing: -.02em; }
   h2 { font-size: clamp(26px, 3.4vw, 46px); margin: 0 0 22px; letter-spacing: -.02em; }
-  h2 small, .kicker { display: block; font-size: clamp(13px, 1.1vw, 16px); letter-spacing: .18em; text-transform: uppercase; color: var(--green); font-weight: 600; margin-bottom: 10px; }
+  h2 small, .kicker { display: block; font-size: clamp(13px, 1.1vw, 16px); letter-spacing: .18em; text-transform: uppercase; color: #ff8a95; font-weight: 600; margin-bottom: 10px; }
   p, li { font-size: clamp(16px, 1.45vw, 22px); line-height: 1.5; color: var(--ink); }
   .muted { color: var(--muted); }
   .grid { display: grid; gap: 18px; }
@@ -32,7 +32,7 @@
   .tag.bad { background: rgba(239,107,107,.18); color: var(--red); } .tag.info { background: rgba(108,182,255,.18); color: var(--blue); }
   .tag.gray { background: rgba(255,255,255,.08); color: var(--muted); }
   footer { position: fixed; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-between; align-items: center; padding: 10px 24px; font-size: 13px; color: var(--muted); }
-  .progress { position: fixed; top: 0; left: 0; height: 3px; background: linear-gradient(90deg, var(--green), var(--lime)); width: 0; transition: width .4s ease; }
+  .progress { position: fixed; top: 0; left: 0; height: 3px; background: linear-gradient(90deg, var(--lime), #ff6b7a); width: 0; transition: width .4s ease; }
   .nav { position: fixed; right: 18px; bottom: 14px; display: flex; gap: 8px; }
   .nav button { background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 8px 14px; cursor: pointer; font-size: 14px; }
   .nav button:hover { border-color: var(--green); }
@@ -46,7 +46,7 @@
   .node b { display: block; font-size: clamp(14px, 1.2vw, 18px); margin-bottom: 4px; } .node span { font-size: clamp(11px, .95vw, 14px); color: var(--muted); }
   .node::after { content: ""; position: absolute; right: -12px; top: 50%; width: 12px; height: 2px; background: var(--line); }
   .node:last-child::after { display: none; }
-  .flowline { height: 4px; border-radius: 4px; background: linear-gradient(90deg, transparent, var(--green), var(--lime), transparent); background-size: 200% 100%; animation: flow 2.2s linear infinite; margin: 14px 0 6px; opacity: .8; }
+  .flowline { height: 4px; border-radius: 4px; background: linear-gradient(90deg, transparent, var(--lime), var(--green), transparent); background-size: 200% 100%; animation: flow 2.2s linear infinite; margin: 14px 0 6px; opacity: .8; }
   @keyframes flow { from { background-position: 200% 0 } to { background-position: -200% 0 } }
   /* counters */
   .num { font-size: clamp(38px, 5vw, 70px); font-weight: 800; letter-spacing: -.03em; color: var(--lime); line-height: 1; }
@@ -65,8 +65,8 @@
   .cols { display: grid; grid-template-columns: 1.1fr .9fr; gap: 28px; align-items: start; }
   ul { margin: 0; padding-left: 22px; } li { margin: 6px 0; }
   .title-wrap { max-width: 1100px; }
-  .brand { display: inline-flex; align-items: center; gap: 10px; color: var(--green); font-weight: 700; letter-spacing: .12em; text-transform: uppercase; font-size: 14px; margin-bottom: 16px; }
-  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--lime); box-shadow: 0 0 18px var(--lime); animation: pulse 2s infinite; }
+  .brand { display: inline-flex; align-items: center; gap: 10px; color: #ff8a95; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; font-size: 14px; margin-bottom: 16px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--lime); box-shadow: 0 0 14px var(--lime); animation: pulse 2s infinite; }
   .sources { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 18px 0; }
   .src { padding: 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); }
   .src b { display: block; } .src span { font-size: 13px; color: var(--muted); }
