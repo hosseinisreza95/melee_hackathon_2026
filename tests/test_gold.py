@@ -205,5 +205,6 @@ def test_partial_product_names_and_unrelated_follow_ups(api_client):
     d3 = api_client.post("/ask", json={"question": "Quel est le prix du blé en 2026 ?", "language": "fr", "context": d["context"]}).json()
     assert not [f for f in d3["facts"] if f["type"] == "registration"] and not any("Context taken" in w for w in d3["warnings"])
     assert any("No known product name" in w for w in d3["warnings"])  # honest 'no data', not the previous answer
-    d4 = api_client.post("/ask", json={"question": "Et en France ?", "language": "fr", "context": d["context"]}).json()
+    assert d3["context"]["productIds"] == ["P-LPC-CONTANS"]  # but the thread keeps its subject for the next follow-up
+    d4 = api_client.post("/ask", json={"question": "Et en France ?", "language": "fr", "context": d3["context"]}).json()
     assert d4["context"]["productIds"] == ["P-LPC-CONTANS"] and d4["context"]["countries"] == ["FR"]  # real follow-ups still work

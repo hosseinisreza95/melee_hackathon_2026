@@ -1360,6 +1360,11 @@ def ask(session: Session, question: str, language: str = "fr", context: dict | N
         except (LLMUnavailable, ValueError) as e:
             kind = str(e).split(":", 1)[0].strip() or "error"
             warnings.append(f"AI provider unavailable ({kind}); deterministic answer shown, built from the same facts.")
+    # the thread keeps its subject across an unrelated or unknown question ('quel est le prix du blé ?' then 'et ses usages ?')
+    ctx_out = {"productIds": pl.product_ids, "countries": pl.countries, "species": pl.species, "crop": pl.crop, "intent": pl.intent}
+    if (context and not pl.product_ids and not pl.species and (context.get("productIds") or context.get("species"))
+            and pl.intent in PRODUCT_INTENTS and pl.intent != "target_search" and not pl.inherited):
+        ctx_out = {**context, "intent": pl.intent}
     # dedupe evidence by (source url, snapshot)
     seen = set()
     ev = []
@@ -1371,5 +1376,5 @@ def ask(session: Session, question: str, language: str = "fr", context: dict | N
     return {"answer": text, "evidence": ev[:50], "warnings": list(dict.fromkeys(warnings)), "disclaimer": DISCLAIMER,
             "facts": facts[:200], "intent": pl.intent, "toolsUsed": list(dict.fromkeys(tools)), "model": model,
             "structured": structured.model_dump(), "warningsLocalized": [localize_warning(w, det_lang) for w in dict.fromkeys(warnings)],
-            "context": {"productIds": pl.product_ids, "countries": pl.countries, "species": pl.species, "crop": pl.crop, "intent": pl.intent},
+            "context": ctx_out,
             "language": answer_lang, "extraIntents": pl.extra_intents}
