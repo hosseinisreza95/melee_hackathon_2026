@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Regulatory Watch — Lallemand Plant Care</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { --red:#e30327; --ink:#36434b; --muted:#5b6770; --line:#b8babc; --bg:#ffffff; }
+  html, body { margin:0; height:100%; background:#1f262b; font-family:"Open Sans", "Segoe UI", Arial, sans-serif; color:var(--ink); overflow:hidden; }
+  #stage { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; }
+  .deck { position:relative; flex:none; width:960px; height:540px; transform-origin:center center; background:var(--bg); box-shadow:0 20px 60px rgba(0,0,0,.45); overflow:hidden; }
+  .slide { position:absolute; inset:0; opacity:0; visibility:hidden; transition:opacity .55s ease; background:var(--bg); }
+  .slide.active { opacity:1; visibility:visible; }
+  .pad { position:absolute; inset:0; padding:56px 78px; box-sizing:border-box; }
+  .kicker { font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--red); font-weight:400; }
+  h1 { font-weight:800; color:var(--ink); margin:0; line-height:1.08; }
+  h2 { font-weight:800; color:var(--ink); margin:0; line-height:1.15; }
+  p { margin:0; line-height:1.55; }
+  .rule { height:2.5px; width:118px; background:var(--red); margin:18px 0 0; }
+  .photo { position:absolute; top:0; bottom:0; background-size:cover; background-position:center; }
+  u { text-decoration:underline; text-decoration-thickness:3px; text-underline-offset:5px; }
+  /* staged entrance */
+  .a { opacity:0; transform:translateY(16px); }
+  .active .a { animation:up .7s cubic-bezier(.2,.7,.2,1) forwards; animation-delay:calc(var(--i, 0) * 120ms + 120ms); }
+  @keyframes up { to { opacity:1; transform:none; } }
+  .active .grow { animation:grow .8s cubic-bezier(.2,.7,.2,1) forwards; animation-delay:calc(var(--i, 0) * 120ms + 220ms); transform-origin:left; transform:scaleX(0); }
+  @keyframes grow { to { transform:scaleX(1); } }
+  .active .ken { animation:ken 14s ease-out forwards; }
+  @keyframes ken { from { transform:scale(1.06); } to { transform:scale(1); } }
+  /* slide 1 */
+  .s1 .photo { right:0; width:534px; left:auto; }
+  .s1 .pad { width:534px; }
+  /* slide 2 */
+  .s2 .photo { left:0; width:320px; }
+  .s2 .pad { left:320px; padding:52px 48px 52px 48px; }
+  .s2 .item { padding:14px 0 28px; border-bottom:1px solid #e3e5e6; }
+  .s2 .item:last-child { border-bottom:none; }
+  .s2 .item h3 { margin:0 0 10px; font-size:20px; font-weight:800; }
+  .s2 .item p { font-size:14px; }
+  /* slide 3 */
+  .cols3 { display:grid; grid-template-columns:repeat(3, 1fr); gap:38px; }
+  .step .num { color:var(--red); font-size:13px; font-weight:600; padding-bottom:8px; border-bottom:1.5px solid var(--red); }
+  .step h3 { margin:14px 0 8px; font-size:20px; font-weight:800; }
+  .step p { font-size:14px; }
+  /* slide 4 architecture */
+  .s4 .pad { padding:36px 48px; }
+  .arch { position:absolute; left:48px; right:48px; top:128px; bottom:12px; display:flex; justify-content:center; }
+  .arch svg { height:100%; width:auto; max-width:100%; }
+  .arch text { font-family:"Open Sans", "Segoe UI", Arial, sans-serif; }
+  .arch .th { font-size:14px; font-weight:700; }
+  .arch .ts { font-size:12px; }
+  .arch .arr { stroke:#5F5E5A; stroke-width:1.5; fill:none; }
+  .arch .frame { fill:#FAFAF8; stroke:#B4B2A9; }
+  .arch .teal rect { fill:#E1F5EE; stroke:#0F6E56; } .arch .teal .th { fill:#085041; } .arch .teal .ts { fill:#0F6E56; }
+  .arch .purple rect { fill:#EEEDFE; stroke:#534AB7; } .arch .purple .th { fill:#3C3489; } .arch .purple .ts { fill:#534AB7; }
+  .arch .coral rect { fill:#FAECE7; stroke:#993C1D; } .arch .coral .th { fill:#712B13; } .arch .coral .ts { fill:#993C1D; }
+  .arch .gray rect { fill:#F1EFE8; stroke:#5F5E5A; } .arch .gray .th { fill:#444441; } .arch .gray .ts { fill:#5F5E5A; }
+  .arch .lbl { fill:#2C2C2A; }
+  .arch .n { opacity:0; transform:translateY(10px); }
+  .active .arch .n { animation:up .6s cubic-bezier(.2,.7,.2,1) forwards; animation-delay:calc(var(--i, 0) * 90ms + 300ms); }
+  .arch .arr { stroke-dasharray:1; stroke-dashoffset:1; }
+  .active .arch .arr { animation:draw .5s ease-out forwards; animation-delay:calc(var(--i, 0) * 90ms + 420ms); }
+  @keyframes draw { to { stroke-dashoffset:0; } }
+  /* slide 5 */
+  .s5 { background:var(--ink); }
+  .s5 h1 { color:#fff; font-size:48px; }
+  .s5 .rule { width:204px; height:4.5px; }
+  /* slide 6 */
+  .s6 .left { position:absolute; left:56px; top:150px; width:400px; }
+  .s6 .right { position:absolute; left:532px; right:56px; top:70px; }
+  .s6 .row { display:grid; grid-template-columns:44px 1fr; gap:0 10px; padding:6px 0 10px; border-bottom:1px solid #b8babc; }
+  .s6 .row:last-child { border-bottom:none; }
+  .s6 .row .n { color:var(--red); font-size:11.7px; font-weight:600; padding-top:4px; text-align:center; }
+  .s6 .row h3 { margin:0 0 6px; font-size:16.8px; font-weight:800; line-height:1.15; }
+  .s6 .row p { font-size:11.7px; }
+  .s6 .foot { position:absolute; left:56px; right:56px; bottom:48px; }
+  .s6 .foot .small { font-size:8.8px; color:var(--ink); margin-bottom:12px; }
+  .s6 .foot .strong { font-size:11.7px; font-weight:700; }
+  /* slide 7 */
+  .s7 .cols { display:grid; grid-template-columns:repeat(3, 1fr); position:absolute; left:78px; right:78px; top:220px; }
+  .s7 .col { padding:18px 18px 40px; border-left:1px solid #e3e5e6; }
+  .s7 .col:first-child { border-left:none; }
+  .s7 .col h3 { margin:0; font-size:19px; font-weight:800; line-height:1.15; }
+  .s7 .col .rule { width:60px; height:2px; margin:12px 0 18px; }
+  .s7 .col p { font-size:15px; }
+  /* slide 8 */
+  .s8 .list { margin-top:30px; }
+  .s8 .it { display:grid; grid-template-columns:48px 1fr; gap:0 18px; padding:14px 0 30px; border-bottom:1px solid #e3e5e6; }
+  .s8 .it:last-child { border-bottom:none; }
+  .s8 .it h3 { margin:0 0 10px; font-size:20px; font-weight:800; }
+  .s8 .it p { font-size:14px; }
+  .s8 .it svg { width:30px; height:30px; stroke:var(--red); fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
+  /* chrome */
+  .nav { position:absolute; left:0; right:0; bottom:14px; display:flex; justify-content:center; gap:7px; z-index:5; }
+  .nav b { width:7px; height:7px; border-radius:50%; background:#c9ccce; cursor:pointer; transition:background .3s, transform .3s; }
+  .nav b.on { background:var(--red); transform:scale(1.25); }
+  .s5 .nav b { background:#5b6770; } .s5 .nav b.on { background:var(--red); }
+  .hint { position:fixed; right:16px; bottom:12px; color:#8b949c; font-size:12px; font-family:"Open Sans", sans-serif; pointer-events:none; animation:hide 1s ease 5s forwards; }
+  @keyframes hide { to { opacity:0; } }
+</style>
+</head>
+<body>
+<div id="stage">
+<div class="deck" id="deck">
+
+  <section class="slide s1">
+    <div class="photo ken" style="background-image:url('img/serre.jpg')"></div>
+    <div class="pad">
+      <div class="kicker a" style="--i:0; margin-top:4px">Lallemand Plant Care</div>
+      <h1 class="a" style="--i:1; font-size:48px; margin-top:116px">Regulatory Watch</h1>
+      <div class="rule grow" style="--i:2"></div>
+      <h2 class="a" style="--i:3; font-size:32px; margin-top:38px">Moins de temps à chercher, plus de temps pour <u>décider</u></h2>
+      <p class="a" style="--i:4; font-size:14px; margin-top:96px">Une preuve de concept pour les produits phytosanitaires.</p>
+    </div>
+  </section>
+
+  <section class="slide s2">
+    <div class="photo ken" style="background-image:url('img/archives.jpg')"></div>
+    <div class="pad">
+      <div class="kicker a" style="--i:0">Le besoin</div>
+      <h1 class="a" style="--i:1; font-size:32px; margin-top:8px">Trouver la bonne information, vite, et pouvoir la vérifier</h1>
+      <div style="margin-top:16px">
+        <div class="item a" style="--i:2"><h3>Des données dispersées</h3><p>Bases multiples, langues variées et réglementations à respecter.</p></div>
+        <div class="item a" style="--i:3"><h3>Une erreur coûte cher</h3><p>Retards, pertes financières et perte de confiance client.</p></div>
+        <div class="item a" style="--i:4"><h3>Les décisions attendent</h3><p>Marketing et Sales ont besoin de réponses.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide s3">
+    <div class="pad">
+      <div class="kicker a" style="--i:0">Le principe</div>
+      <h1 class="a" style="--i:1; font-size:32px; margin-top:8px; max-width:620px">Une question en langage naturel, une réponse exploitable</h1>
+      <p class="a" style="--i:2; font-size:14px; margin-top:16px">Un assistant virtuel multilingue pour les produits phytosanitaires.</p>
+      <div class="cols3" style="margin-top:112px">
+        <div class="step a" style="--i:3"><div class="num">01</div><h3>Questionner</h3><p>Dans une langue naturelle.</p></div>
+        <div class="step a" style="--i:4"><div class="num">02</div><h3>Obtenir</h3><p>Une réponse dans la langue demandée.</p></div>
+        <div class="step a" style="--i:5"><div class="num">03</div><h3>Vérifier</h3><p>Des informations comparables et vérifiables.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide s4">
+    <div class="pad">
+      <div class="kicker a" style="--i:0">L'architecture</div>
+      <h1 class="a" style="--i:1; font-size:30px; margin-top:6px">Des sources officielles à l'API : l'architecture</h1>
+      <p class="a" style="--i:2; font-size:13px; margin-top:10px">Quatre sources officielles alimentent une base canonique, exposée par une API vers les clients.</p>
+    </div>
+    <div class="arch">
+    <svg viewBox="0 0 680 640" role="img" aria-label="Architecture">
+      <defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#5F5E5A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+      <g class="teal n" style="--i:0"><rect x="50" y="20" width="130" height="56" rx="8" stroke-width="0.7"/><text class="th" x="115" y="38" text-anchor="middle" dominant-baseline="central">Santé Canada</text><text class="ts" x="115" y="58" text-anchor="middle" dominant-baseline="central">PPID, CSV quotidien</text></g>
+      <g class="teal n" style="--i:1"><rect x="200" y="20" width="130" height="56" rx="8" stroke-width="0.7"/><text class="th" x="265" y="38" text-anchor="middle" dominant-baseline="central">US EPA PPLS</text><text class="ts" x="265" y="58" text-anchor="middle" dominant-baseline="central">JSON + PDF</text></g>
+      <g class="teal n" style="--i:2"><rect x="350" y="20" width="130" height="56" rx="8" stroke-width="0.7"/><text class="th" x="415" y="38" text-anchor="middle" dominant-baseline="central">ANSES E-Phy</text><text class="ts" x="415" y="58" text-anchor="middle" dominant-baseline="central">ZIP hebdomadaire</text></g>
+      <g class="teal n" style="--i:3"><rect x="500" y="20" width="130" height="56" rx="8" stroke-width="0.7"/><text class="th" x="565" y="38" text-anchor="middle" dominant-baseline="central">MAPA AGROFIT</text><text class="ts" x="565" y="58" text-anchor="middle" dominant-baseline="central">CSV, 392 Mo</text></g>
+      <line x1="115" y1="76" x2="115" y2="108" class="arr" pathLength="1" style="--i:4" marker-end="url(#arrow)"/>
+      <line x1="265" y1="76" x2="265" y2="108" class="arr" pathLength="1" style="--i:4" marker-end="url(#arrow)"/>
+      <line x1="415" y1="76" x2="415" y2="108" class="arr" pathLength="1" style="--i:4" marker-end="url(#arrow)"/>
+      <line x1="565" y1="76" x2="565" y2="108" class="arr" pathLength="1" style="--i:4" marker-end="url(#arrow)"/>
+      <g class="n" style="--i:5"><rect class="frame" x="40" y="110" width="600" height="122" rx="12" stroke-width="0.7" stroke-dasharray="4 3"/><text class="th lbl" x="56" y="130" dominant-baseline="central">Pipeline nocturne (cron 03:30 UTC)</text></g>
+      <g class="purple n" style="--i:6"><rect x="56" y="152" width="122" height="56" rx="8" stroke-width="0.7"/><text class="th" x="117" y="170" text-anchor="middle" dominant-baseline="central">Collecteurs</text><text class="ts" x="117" y="190" text-anchor="middle" dominant-baseline="central">brut + provenance</text></g>
+      <g class="purple n" style="--i:7"><rect x="196" y="152" width="122" height="56" rx="8" stroke-width="0.7"/><text class="th" x="257" y="170" text-anchor="middle" dominant-baseline="central">Parsers</text><text class="ts" x="257" y="190" text-anchor="middle" dominant-baseline="central">originaux verbatim</text></g>
+      <g class="purple n" style="--i:8"><rect x="336" y="152" width="122" height="56" rx="8" stroke-width="0.7"/><text class="th" x="397" y="170" text-anchor="middle" dominant-baseline="central">Normalisation</text><text class="ts" x="397" y="190" text-anchor="middle" dominant-baseline="central">EPPO, unités, alias</text></g>
+      <g class="purple n" style="--i:9"><rect x="476" y="152" width="122" height="56" rx="8" stroke-width="0.7"/><text class="th" x="537" y="170" text-anchor="middle" dominant-baseline="central">Extraction PDF</text><text class="ts" x="537" y="190" text-anchor="middle" dominant-baseline="central">LLM, extrait vérifié</text></g>
+      <line x1="178" y1="180" x2="194" y2="180" class="arr" pathLength="1" style="--i:7" marker-end="url(#arrow)"/>
+      <line x1="318" y1="180" x2="334" y2="180" class="arr" pathLength="1" style="--i:8" marker-end="url(#arrow)"/>
+      <line x1="458" y1="180" x2="474" y2="180" class="arr" pathLength="1" style="--i:9" marker-end="url(#arrow)"/>
+      <line x1="340" y1="232" x2="340" y2="268" class="arr" pathLength="1" style="--i:10" marker-end="url(#arrow)"/>
+      <g class="gray n" style="--i:11"><rect x="190" y="270" width="300" height="56" rx="8" stroke-width="0.7"/><text class="th" x="340" y="288" text-anchor="middle" dominant-baseline="central">PostgreSQL 16</text><text class="ts" x="340" y="308" text-anchor="middle" dominant-baseline="central">produits, homologations, usages, snapshots</text></g>
+      <line x1="340" y1="326" x2="340" y2="364" class="arr" pathLength="1" style="--i:12" marker-end="url(#arrow)"/>
+      <g class="n" style="--i:13"><rect class="frame" x="40" y="366" width="600" height="130" rx="12" stroke-width="0.7" stroke-dasharray="4 3"/><text class="th lbl" x="56" y="386" dominant-baseline="central">API FastAPI, derrière Caddy sous /api</text></g>
+      <g class="coral n" style="--i:14"><rect x="56" y="408" width="200" height="56" rx="8" stroke-width="0.7"/><text class="th" x="156" y="426" text-anchor="middle" dominant-baseline="central">Points REST</text><text class="ts" x="156" y="446" text-anchor="middle" dominant-baseline="central">/compare, /expiring, /export</text></g>
+      <g class="coral n" style="--i:15"><rect x="276" y="408" width="340" height="56" rx="8" stroke-width="0.7"/><text class="th" x="446" y="426" text-anchor="middle" dominant-baseline="central">Agent /ask</text><text class="ts" x="446" y="446" text-anchor="middle" dominant-baseline="central">planificateur, outils SQL, gpt-5 + garde</text></g>
+      <line x1="140" y1="496" x2="140" y2="538" class="arr" pathLength="1" style="--i:16" marker-end="url(#arrow)"/>
+      <line x1="340" y1="496" x2="340" y2="538" class="arr" pathLength="1" style="--i:16" marker-end="url(#arrow)"/>
+      <line x1="540" y1="496" x2="540" y2="538" class="arr" pathLength="1" style="--i:16" marker-end="url(#arrow)"/>
+      <g class="teal n" style="--i:17"><rect x="50" y="540" width="180" height="56" rx="8" stroke-width="0.7"/><text class="th" x="140" y="558" text-anchor="middle" dominant-baseline="central">Chat Streamlit</text><text class="ts" x="140" y="578" text-anchor="middle" dominant-baseline="central">carte, fils, tableaux</text></g>
+      <g class="teal n" style="--i:18"><rect x="250" y="540" width="180" height="56" rx="8" stroke-width="0.7"/><text class="th" x="340" y="558" text-anchor="middle" dominant-baseline="central">Microsoft 365</text><text class="ts" x="340" y="578" text-anchor="middle" dominant-baseline="central">Power Automate, Copilot</text></g>
+      <g class="teal n" style="--i:19"><rect x="450" y="540" width="180" height="56" rx="8" stroke-width="0.7"/><text class="th" x="540" y="558" text-anchor="middle" dominant-baseline="central">Exports</text><text class="ts" x="540" y="578" text-anchor="middle" dominant-baseline="central">CSV, Excel, Dataverse</text></g>
+    </svg>
+    </div>
+  </section>
+
+  <section class="slide s5">
+    <div class="pad" style="padding:0 72px">
+      <h1 class="a" style="--i:0; margin-top:228px">Place à la démo</h1>
+      <div class="rule grow" style="--i:1"></div>
+    </div>
+  </section>
+
+  <section class="slide s6">
+    <div class="left">
+      <div class="kicker a" style="--i:0; font-size:8.8px">La suite du prototype</div>
+      <h1 class="a" style="--i:1; font-size:26.8px; margin-top:8px">Une première preuve de concept</h1>
+      <div class="rule grow" style="--i:2; width:103px; height:2.3px"></div>
+      <p class="a" style="--i:3; font-size:11.7px; margin-top:26px; max-width:380px">Notre prototype constitue une première preuve de concept, mais nous avons identifié plusieurs axes d'amélioration.</p>
+    </div>
+    <div class="right">
+      <div class="row a" style="--i:2"><div class="n">01</div><div><h3>Couverture des données</h3><p>Élargir la couverture des données à davantage de pays et de sources officielles.</p></div></div>
+      <div class="row a" style="--i:3"><div class="n">02</div><div><h3>Normalisation</h3><p>Améliorer la normalisation des données afin de faciliter les comparaisons entre des produits et des marchés différents.</p></div></div>
+      <div class="row a" style="--i:4"><div class="n">03</div><div><h3>Évaluation et vérification des sources</h3><p>Renforcer l'évaluation automatique des réponses et la vérification des sources.</p></div></div>
+      <div class="row a" style="--i:5"><div class="n">04</div><div><h3>Déploiement et optimisation</h3><p>Étudier les possibilités de déploiement et d'optimisation technique.</p></div></div>
+    </div>
+    <div class="foot a" style="--i:6">
+      <p class="small">Le prototype actuel utilise une API privée ; une exécution locale nécessiterait un travail supplémentaire sur le modèle, les ressources matérielles et l'architecture.</p>
+      <p class="strong">Nous ne prétendons pas avoir déjà intégré toutes les bases nationales. Notre objectif est de construire progressivement une solution plus complète, fiable et extensible.</p>
+    </div>
+  </section>
+
+  <section class="slide s7">
+    <div class="pad">
+      <div class="kicker a" style="--i:0">Les utilisateurs</div>
+      <h1 class="a" style="--i:1; font-size:44px; margin-top:6px">Trois équipes gagnent du temps</h1>
+    </div>
+    <div class="cols">
+      <div class="col a" style="--i:2"><h3>Regulatory Affairs</h3><div class="rule"></div><p>Rechercher et vérifier.</p></div>
+      <div class="col a" style="--i:3"><h3>Marketing</h3><div class="rule"></div><p>Comparer les produits entre marchés.</p></div>
+      <div class="col a" style="--i:4"><h3>Sales et International Business</h3><div class="rule"></div><p>Répondre à des interlocuteurs de plusieurs pays.</p></div>
+    </div>
+  </section>
+
+  <section class="slide s8">
+    <div class="pad">
+      <div class="kicker a" style="--i:0">Les intégrations envisagées</div>
+      <h1 class="a" style="--i:1; font-size:30px; margin-top:6px">s'intègre là où les équipes travaillent déjà</h1>
+      <div class="list">
+        <div class="it a" style="--i:2">
+          <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M7 6.5h.01M10 6.5h.01"/><path d="M9.5 15l2 2 3.5-3.5"/></svg>
+          <div><h3>API</h3><p>Pour d'autres applications.</p></div>
+        </div>
+        <div class="it a" style="--i:3">
+          <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M7 6.5h.01M10 6.5h.01"/><path d="M9.5 15l2 2 3.5-3.5"/></svg>
+          <div><h3>Microsoft 365</h3><p>Via Copilot Studio.</p></div>
+        </div>
+        <div class="it a" style="--i:4">
+          <svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h7"/><path d="M14 3v5h5"/><path d="M14 3l5 5"/><path d="M12 15h9M18 12l3 3-3 3"/></svg>
+          <div><h3>Exports</h3><p>Pour réutiliser les données.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="nav" id="nav"></div>
+</div>
+</div>
+<div class="hint">← → espace · F plein écran</div>
+
+<script>
+(function () {
+  const deck = document.getElementById('deck');
+  const slides = [...document.querySelectorAll('.slide')];
+  const nav = document.getElementById('nav');
+  let cur = 0;
+  slides.forEach((_, i) => { const b = document.createElement('b'); b.onclick = () => go(i); nav.appendChild(b); });
+  function go(i) {
+    cur = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach((s, k) => s.classList.toggle('active', k === cur));
+    [...nav.children].forEach((b, k) => b.classList.toggle('on', k === cur));
+    const s = slides[cur]; s.appendChild(nav);  // dots stay above the active slide (dark slide tints them)
+    location.hash = cur + 1;
+  }
+  function fit() {
+    const s = Math.min(innerWidth / 960, innerHeight / 540);
+    deck.style.transform = `scale(${s})`;
+  }
+  addEventListener('resize', fit); fit();
+  addEventListener('keydown', e => {
+    if (['ArrowRight', 'ArrowDown', ' ', 'PageDown'].includes(e.key)) { e.preventDefault(); go(cur + 1); }
+    else if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(e.key)) { e.preventDefault(); go(cur - 1); }
+    else if (e.key === 'Home') go(0); else if (e.key === 'End') go(slides.length - 1);
+    else if (e.key.toLowerCase() === 'f') { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen(); }
+  });
+  deck.addEventListener('click', e => { if (!e.target.closest('.nav')) go(e.clientX > innerWidth / 2 ? cur + 1 : cur - 1); });
+  let x0 = null;
+  addEventListener('touchstart', e => x0 = e.touches[0].clientX, { passive: true });
+  addEventListener('touchend', e => { if (x0 === null) return; const dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) > 40) go(dx < 0 ? cur + 1 : cur - 1); x0 = null; });
+  go((parseInt(location.hash.slice(1), 10) || 1) - 1);
+})();
+</script>
+</body>
+</html>
