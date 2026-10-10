@@ -1,4 +1,4 @@
-# LPC regulatory-watch prototype — production-style stack for the team server (cahier §15: infrastructure as code).
+# LPC regulatory watch — production-style stack for the team server (cahier §15: infrastructure as code).
 #
 #   db        PostgreSQL 16 (canonical store)
 #   api       FastAPI (schema/openapi.yaml + extensions)          -> http://<host>/api/
@@ -20,6 +20,7 @@ x-app: &app
     DATABASE_URL: postgresql+psycopg://lpc:${POSTGRES_PASSWORD:-lpc}@db:5432/lpc_regwatch
     RAW_DIR: /app/data/raw
     API_BASE_URL: http://api:8000
+    API_PUBLIC_URL: /api   # what the browser opens (behind the proxy); the UI links its API docs here
     PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost/api}
   volumes:
     - rawdata:/app/data/raw

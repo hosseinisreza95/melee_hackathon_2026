@@ -3,7 +3,7 @@
   "info": {
     "title": "LPC Regulatory Watch",
     "version": "0.1.0",
-    "description": "Regulatory-watch prototype API (official sources CA/US/FR/BR). Not an official regulatory source: every answer carries evidence (source, URL, collection time, validation status) and a disclaimer. No result is not proof of no registration.",
+    "description": "Regulatory-watch API (official sources CA/US/FR/BR). Not an official regulatory source: every answer carries evidence (source, URL, collection time, validation status) and a disclaimer. No result is not proof of no registration.",
     "contact": {
       "name": "LPC hackathon team"
     }
@@ -499,6 +499,17 @@
         "context": {
           "type": "object",
           "x-nullable": true
+        },
+        "language": {
+          "type": "string",
+          "x-nullable": true
+        },
+        "extraIntents": {
+          "type": "array",
+          "title": "Extraintents",
+          "items": {
+            "type": "string"
+          }
         }
       },
       "required": [
@@ -1140,7 +1151,7 @@
       "type": "apiKey",
       "in": "header",
       "name": "X-API-Key",
-      "description": "Not enforced by the prototype; placeholder for the Entra ID / API Management design in m365/README.md"
+      "description": "Not enforced by the tool; placeholder for the Entra ID / API Management design in m365/README.md"
     }
   },
   "security": [],

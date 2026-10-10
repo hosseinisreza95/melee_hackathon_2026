@@ -1,6 +1,6 @@
 # Regulatory Affairs validation procedure (human in the loop)
 
-The prototype never asserts regulatory validity. Every row is born `automatically_extracted` and can only be
+The tool never asserts regulatory validity. Every row is born `automatically_extracted` and can only be
 promoted by a named reviewer. This page is the procedure the RA team follows; the mechanism is `POST /review`
 (UI: *Produits sœurs & revue*) and the `review_log` table.
 

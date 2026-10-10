@@ -28,7 +28,7 @@ from .schemas import (AliasOut, Answer, AskRequest, ChangeOut, ComparisonRespons
 
 log = logging.getLogger(__name__)
 
-DESCRIPTION = """Regulatory-watch prototype for plant protection products (Lallemand Plant Care challenge).
+DESCRIPTION = """Regulatory-watch API for plant protection products (Lallemand Plant Care challenge).
 
 **This API is not an official regulatory source.** Every answer carries `evidence[]` (source id, official URL,
 collection time UTC, validation status) and a `disclaimer`. `warnings[]` lists missing or uncertain data.
@@ -296,7 +296,7 @@ def export_xlsx(productId: str | None = None, countries: str | None = None, s: S
                     src["registrations"], src["lastCollectedAt"].isoformat() if src["lastCollectedAt"] else ""])
     ws3 = wb.create_sheet("disclaimer")
     ws3.append([DISCLAIMER])
-    ws3.append([f"Generated {dt.datetime.now(dt.timezone.utc):%Y-%m-%d %H:%M} UTC by LPC regwatch prototype v{__version__}"])
+    ws3.append([f"Generated {dt.datetime.now(dt.timezone.utc):%Y-%m-%d %H:%M} UTC by LPC Regulatory Watch v{__version__}"])
     out = io.BytesIO()
     wb.save(out)
     return StreamingResponse(iter([out.getvalue()]), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

@@ -36,4 +36,4 @@ same answer, evidence and warnings as the web UI — nothing more.
 >
 > ⚠️ CA 29066: dose is not in the structured source; only the official label PDF states it. · CA 29066: the source lists crops and targets as two independent lists…
 >
-> *This prototype is not an official regulatory source. Regulatory Affairs validation is required…*
+> *This tool is not an official regulatory source. Regulatory Affairs validation is required…*

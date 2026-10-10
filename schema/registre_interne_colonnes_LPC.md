@@ -3,7 +3,7 @@
 LPC partage **uniquement la structure** de sa liste SharePoint, pas les données (informations internes). Les tests utilisent
 les sources officielles et des données fictives marquées `is_synthetic=true` (`data/synthetic/lpc_internal_registry_sample.csv`).
 
-| Colonne du registre LPC | Champ du kit | Remarque LPC | Traitement dans le prototype (`src/lpc_regwatch/registry/`) |
+| Colonne du registre LPC | Champ du kit | Remarque LPC | Traitement dans l'outil (`src/lpc_regwatch/registry/`) |
 |---|---|---|---|
 | Product_TS | product_id / produit canonique | valeur « (Unassigned Product_TS) » possible | résolu vers `product_id` par nom/alias ; « Unassigned » → aucun lien, drapeau `product_unassigned` |
 | Title | product_name_mapping.name_variant | nom enregistré dans le pays | nom utilisé pour la résolution produit et pour le rapprochement |

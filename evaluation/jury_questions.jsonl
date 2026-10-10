@@ -1,0 +1,30 @@
+{"id": "J01", "lang": "fr", "question": "Dans quels pays LALSTOP CONTANS WG est-il homologué ?", "expect": "CA 29066, US 64137-34, FR 9900189 ; BR non trouvé (≠ non homologué)"}
+{"id": "J02", "lang": "fr", "question": "Compare les usages de LALGUARD M52 OD entre la France et le Canada.", "expect": "FR 2150990 usages E-Phy avec dose ; CA 30829 cultures/cibles listes indépendantes, dose absente"}
+{"id": "J03", "lang": "fr", "question": "Quels champs sont incertains ou manquants pour LALSTOP G46 WG ?", "expect": "validation automatique, dose manquante CA/US, listes non appariées"}
+{"id": "J04", "lang": "fr", "question": "Quels sont les produits sœurs de LALSTOP G46 WG ?", "expect": "PRESTOP confirmé (LPC), PRESTOP WG et LALFRESH S produits liés distincts, jamais fusionnés"}
+{"id": "J05", "lang": "fr", "question": "Donne la source officielle de chaque donnée pour LALSTOP CONTANS WG.", "expect": "source, URL, date de collecte par enregistrement"}
+{"id": "J06", "lang": "fr", "question": "Est-ce que PRESTOP WG et LALSTOP G46 WG sont le même produit ?", "expect": "non : produits distincts (LPC), lien related_product validé, même souche J1446"}
+{"id": "J07", "lang": "fr", "question": "MITAXION G est-il un autre nom de LALGUARD M52 GR en France ?", "expect": "oui, nom alternatif validé (E-Phy)"}
+{"id": "J08", "lang": "fr", "question": "Quelle est la dose de LALSTOP G46 WG sur fraisier en France ?", "expect": "FR 2230771 : fraisier → pourriture grise 0.25 kg/ha"}
+{"id": "J09", "lang": "fr", "question": "LALSTOP CONTANS WG est-il autorisé sur laitue en France ?", "expect": "usage laitue dans FR 9900189 si présent, sinon dire non trouvé dans les usages"}
+{"id": "J10", "lang": "fr", "question": "Quels produits contre la pourriture grise sur fraisier sont homologués en France ?", "expect": "liste E-Phy (Botrytis BOTRCI) dont LALSTOP G46 WG"}
+{"id": "J11", "lang": "fr", "question": "Quels produits contiennent du cuivre en France ?", "expect": "produits cuivre E-Phy (dont BOUILLIE BORDELAISE CAFFARO WG)"}
+{"id": "J12", "lang": "fr", "question": "Quels produits Lallemand sont homologués au Brésil ?", "expect": "17 enregistrements AGROFIT titulaire Lallemand/Danstar"}
+{"id": "J13", "lang": "fr", "question": "Quelles autorisations expirent dans les 12 prochains mois ?", "expect": "liste CA/FR avec dates ; US/BR sans date"}
+{"id": "J14", "lang": "fr", "question": "Qu'est-ce qui a changé depuis la dernière collecte ?", "expect": "changements détectés ou 'aucun changement'"}
+{"id": "J15", "lang": "fr", "question": "Y a-t-il des produits Lallemand homologués en Allemagne ?", "expect": "source non connectée : inconnu, pas 'non homologué'"}
+{"id": "J16", "lang": "fr", "question": "Qui est le titulaire de l'homologation de LALGUARD M52 OD aux États-Unis ?", "expect": "titulaire US 64137-33 (DANSTAR / LALLEMAND)"}
+{"id": "J17", "lang": "fr", "question": "Quelle est la date d'expiration de LALSTOP CONTANS WG au Canada ?", "expect": "CA 29066 : 2027-12-31"}
+{"id": "J18", "lang": "en", "question": "Which products containing Trichoderma are registered in Brazil?", "expect": "AGROFIT Trichoderma products"}
+{"id": "J19", "lang": "en", "question": "What is LALGUARD M52 OD?", "expect": "profile: Metarhizium brunneum F52, formulation OD, holder, registrations CA/US/FR"}
+{"id": "J20", "lang": "en", "question": "Is there any product against apple scab in France?", "expect": "E-Phy products with target tavelure on pommier, EPPO VENTIN candidate"}
+{"id": "J21", "lang": "pt", "question": "Quais produtos Lallemand estão registrados no Brasil e contra quais pragas?", "expect": "lista + alvos"}
+{"id": "J22", "lang": "es", "question": "¿Qué es esto? Lo uso para mis manzanos; ¿puedo utilizarlo para otro cultivo? CAPTAN SC — ADAMA", "expect": "no data on CAPTAN SC; scope; captan products in FR; no advice on use"}
+{"id": "J23", "lang": "fr", "question": "je cherche un produit avec la matiere active:captana", "expect": "captane products E-Phy (MERPAN 80 WDG, SCAB 80 WG, MULTICAP…)"}
+{"id": "J24", "lang": "fr", "question": "je cherche un produit contre la tavelure de pomme", "expect": "E-Phy products against tavelure on pommier; EPPO VENTIN"}
+{"id": "J25", "lang": "fr", "question": "questce que je peut utilise comme dautre marque:Bouillie Bordelaise Caffaro WG?", "expect": "other copper products in FR; distinct products, not equivalents"}
+{"id": "J26", "lang": "fr", "question": "Dans quels pays LALSTOP CONTANS WG est-il homologué ? Et ses usages autorisés ? Quels sont ses produits sœurs ? contre quel maladi?????", "expect": "sections: countries, uses, sisters, targets (Sclerotinia)"}
+{"id": "J27", "lang": "fr", "question": "Bonjour, que peux-tu faire ?", "expect": "capabilities, sources, examples"}
+{"id": "J28", "lang": "fr", "question": "Combien de produits sont homologués en France dans ta base ?", "expect": "count FR registrations (E-Phy all)"}
+{"id": "J29", "lang": "fr", "question": "Quels produits à base de Bacillus thuringiensis sont homologués au Brésil ?", "expect": "AGROFIT Bt products"}
+{"id": "J30", "lang": "fr", "question": "Quelle est la différence entre LALSTOP G46 WG et PRESTOP ?", "expect": "distinct products, same strain, registrations per country"}

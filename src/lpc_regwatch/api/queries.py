@@ -130,7 +130,7 @@ def coverage_for(session: Session, product_id: str, countries: list[str], regs: 
             warnings.append(f"{name} ({cc}): not found in {src} as of {at:%Y-%m-%d} - this is not proof of no registration.")
         else:
             cov.append({"countryCode": cc, "sourceId": None, "collectedAt": None, "coverage": "source_not_collected",
-                        "note": f"No official source for {name} is connected in this prototype; nothing can be said about {cc}."})
+                        "note": f"No official source for {name} is connected in this tool; nothing can be said about {cc}."})
             warnings.append(f"{name} ({cc}): no source connected - unknown, not 'not registered'.")
     return cov, warnings
 
@@ -401,7 +401,19 @@ def active_entities_available(session: Session, countries: list[str] | None = No
     return sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))[:limit]
 
 
-def uses_by_target(session: Session, terms: list[str], eppo_code: str | None = None, crop: str | None = None, countries: list[str] | None = None) -> list[dict]:
+def _crop_filter(q, crop):
+    """crop: a wording or a list of wordings (concept name + source group wordings); any match on normalised or original crop."""
+    terms = [crop] if isinstance(crop, str) else list(crop or [])
+    if not terms:
+        return q
+    conds = []
+    for t in terms:
+        cl = f"%{t.strip()}%"
+        conds += [AuthorizedUse.crop_name_normalized.ilike(cl), AuthorizedUse.crop_name_original.ilike(cl)]
+    return q.filter(or_(*conds))
+
+
+def uses_by_target(session: Session, terms: list[str], eppo_code: str | None = None, crop=None, countries: list[str] | None = None) -> list[dict]:
     """Current registrations with at least one use whose target matches (EPPO code, normalised or original wording), with the matching uses."""
     conds = []
     if eppo_code:
@@ -413,9 +425,7 @@ def uses_by_target(session: Session, terms: list[str], eppo_code: str | None = N
         return []
     q = (session.query(AuthorizedUse).join(Registration).options(selectinload(AuthorizedUse.registration).selectinload(Registration.product))
          .filter(or_(*conds), Registration.is_current.is_(True)))
-    if crop:
-        cl = f"%{crop.strip()}%"
-        q = q.filter(or_(AuthorizedUse.crop_name_normalized.ilike(cl), AuthorizedUse.crop_name_original.ilike(cl)))
+    q = _crop_filter(q, crop)
     if countries:
         q = q.filter(Registration.country_code.in_(countries))
     by_reg: dict[str, dict] = {}
@@ -428,13 +438,11 @@ def uses_by_target(session: Session, terms: list[str], eppo_code: str | None = N
     return sorted(by_reg.values(), key=lambda d: (d["countryCode"], d["productName"]))
 
 
-def targets_available(session: Session, crop: str | None = None, countries: list[str] | None = None, limit: int = 15) -> list[tuple[str, int]]:
+def targets_available(session: Session, crop=None, countries: list[str] | None = None, limit: int = 15) -> list[tuple[str, int]]:
     """Most frequent targets (normalised wording) by number of registrations: guidance when a target is unknown or absent."""
     n = func.count(func.distinct(AuthorizedUse.registration_id))
     q = session.query(AuthorizedUse.target_name_normalized, n).join(Registration).filter(AuthorizedUse.target_name_normalized.isnot(None), Registration.is_current.is_(True))
-    if crop:
-        cl = f"%{crop.strip()}%"
-        q = q.filter(or_(AuthorizedUse.crop_name_normalized.ilike(cl), AuthorizedUse.crop_name_original.ilike(cl)))
+    q = _crop_filter(q, crop)
     if countries:
         q = q.filter(Registration.country_code.in_(countries))
     rows = q.group_by(AuthorizedUse.target_name_normalized).order_by(n.desc()).limit(limit + 5)

@@ -48,12 +48,12 @@ docker compose -f infra/docker-compose.yml --env-file .env exec db pg_dump -U lp
 ```
 
 Schema changes: the models are the schema. `init_db()` creates missing tables and **adds missing nullable columns**
-(additive migration, enough for this prototype). Destructive changes would need Alembic (path to production, docs/ARCHITECTURE.md).
+(additive migration, enough for this tool). Destructive changes would need Alembic (path to production, docs/ARCHITECTURE.md).
 
 ## Security notes
 
 - Only port 80 is published (plus SSH on the host). HTTPS: point a domain at the host and replace `:80` by the domain in `infra/Caddyfile`; Caddy issues the certificate automatically.
 - `.env` holds the only secrets (database password, optional AI key); it is git-ignored, `chmod 600`, and mounted as `env_file`, never baked into the image.
 - Containers run as non-root user `lpc`. Caddy strips the `Server` header and sets `X-Content-Type-Options`.
-- The API has no authentication in the prototype (public read-only data). For LPC: Entra ID in front (m365/README.md §4) and `POST /review` restricted to the Reviewer role.
+- The API has no authentication in the tool (public read-only data). For LPC: Entra ID in front (m365/README.md §4) and `POST /review` restricted to the Reviewer role.
 - Personal contact data from EPA records is redacted at ingestion; raw files contain only company names.

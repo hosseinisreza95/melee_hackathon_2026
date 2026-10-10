@@ -3,7 +3,7 @@
 Status: **documented and connector files generated; not demonstrated in a live tenant** (the team has no Power
 Platform tenant during the hackathon). Everything needed to import the API in a tenant is in this folder.
 
-The prototype exposes one REST API (FastAPI, `schema/openapi.yaml` + extensions) at `http://<host>/api`.
+The tool exposes one REST API (FastAPI, `schema/openapi.yaml` + extensions) at `http://<host>/api`.
 Microsoft 365 reaches it in three documented ways, from the simplest to the most integrated.
 
 | Path | What it gives Regulatory Affairs | Files |
@@ -21,7 +21,7 @@ FastAPI schema into `m365/apiDefinition.swagger.json` (10 operations, 15 definit
 Import steps (Power Automate → Data → Custom connectors → *New custom connector* → *Import an OpenAPI file*):
 
 1. Upload `m365/apiDefinition.swagger.json`. Host and base path are pre-filled (`37.187.176.97`, `/api`); change them to the production host.
-2. Security: the prototype is open (no key). For LPC the connector should use **OAuth 2.0 / Entra ID** (see §4); the Swagger file
+2. Security: the tool is open (no key). For LPC the connector should use **OAuth 2.0 / Entra ID** (see §4); the Swagger file
    declares an `X-API-Key` header placeholder so the connector can be created without code changes.
 3. Definition: operations `compareProductUses`, `searchProducts`, `askRegulatoryQuestion` are marked `x-ms-visibility: important`.
 4. Test tab: `GET /compare?productId=P-LPC-CONTANS&countries=CA,US,FR,BR` → JSON with `registrations[]`, `coverage[]`, `warnings[]`, `disclaimer`.
@@ -55,7 +55,7 @@ the agent cannot answer from the web (cahier §16: no uncontrolled web search).
 - The LLM key stays server-side in the API container's environment; it is never visible to Power Platform.
 - Data residency: database and raw evidence on the LPC server (PostgreSQL volume); nothing is stored in the connector.
 
-## 5. What the prototype demonstrates today
+## 5. What the tool demonstrates today
 
 - `GET /openapi.json` and `/docs` served live; the Swagger 2.0 export validated by import-time checks of Power Platform
   (unique operationIds, `in: body` parameter, 2.0 types, `x-ms-*` metadata).

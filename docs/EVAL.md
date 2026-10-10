@@ -72,6 +72,32 @@ UI: ChatGPT-like assistant (one centred thread, pinned input, starter cards, pil
 sidebar, data pages folded); every page still renders headlessly in the three languages and the chat test drives two turns through the real
 `st.chat_input`.
 
+### 2.1 Jury question set (evaluation/jury_questions.jsonl, 30 questions) and what it changed
+
+`scripts/jury_run.py` runs the questions a jury is likely to ask (the five gold questions, other products / countries / crops / species,
+holder, expiry date, dose on a crop, "is X the same product as Y", "another name of", alternatives, disease and active-substance searches,
+Spanish and Portuguese wording, a greeting, a count, a multi-part question) through `ask()` without a key and with the model, and writes
+`output/jury_answers*.json`. The first run exposed the weaknesses the user had seen (no data for non-Lallemand French products, "contre la
+tavelure" unanswered, "même produit ?" answered with a list, holder / expiry questions answered with the generic lookup, row dumps). Fixes:
+
+- **Data**: `FR_EPHY_SCOPE=all` loads every product authorised in France (1 692 registrations, 19 162 uses) plus the Lallemand ones of any
+  status, so questions about captan, Bouillie bordelaise or apple scab have real rows; CA / US stay scoped to Lallemand and related products,
+  BR to the micro-organism extract of AGROFIT, and every "no data" answer now states this coverage and the official source to check.
+- **Planner**: intents `help`, `product_profile`, `target_search` (EPPO identification through the starter list + `data/eppo_extra_aliases.csv`,
+  crop-dependent words such as tavelure / mildiou / oïdium, source wordings such as E-Phy's "Fruits à pépins" for apple), `substance_search`
+  (free wording, synonyms, stem fallback: captana → captane), `alternatives` (same active-substance wording), relation between two named
+  products (alternate name / sister / related, with LPC's evidence), holder / expiry / dose / crop focus, multi-part questions answered in
+  sections, question-language detection (fr / en / pt / es).
+- **Answer**: `StructuredAnswer.sections`, URLs for source questions, colours and sections in the UI; gpt-5 with `AI_REASONING_EFFORT=low`.
+
+All 30 deterministic answers are reviewed in `output/jury_answers.json`; the gpt-5 phrasing of the same set is in `output/jury_answers_gpt5.json`.
+
+### 2.2 RAGAS validation set (evaluation/qa_validation.jsonl, 18 questions with written ground truths)
+
+`scripts/ragas_eval.py` computes faithfulness, answer relevancy, context precision and context recall (RAGAS 0.2, OpenAI judge) on the
+assistant's answers, with the retrieved official rows (the facts) as contexts and ground truths written from the official data. Results are in
+`output/ragas_report*.json` and summarised below once the run is complete.
+
 - Deterministic path (no key): 100 % of the facts come from predefined queries; tests `tests/test_gold.py` (T01–T05 + adversarial +
   other products/countries/crops) pass offline.
 - LLM phrasing (gpt-5-mini on the server): the model receives only the facts and a deterministic draft. The grounding guard rejects any

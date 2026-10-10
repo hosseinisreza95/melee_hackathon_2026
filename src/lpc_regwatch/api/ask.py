@@ -23,7 +23,7 @@ from dataclasses import dataclass, field
 from sqlalchemy.orm import Session
 
 from ..config import DISCLAIMER, settings
-from ..db.models import Product, ProductAlias
+from ..db.models import Product, ProductAlias, Registration
 from ..llm import LLMUnavailable, get_client
 from ..parsers.base import norm_name
 from . import queries as Q
@@ -56,7 +56,7 @@ INTENTS = {
     "changes": [r"\bchang", r"nouveaut", r"what's new", r"\bmodif", r"\bdiff\b", r"mudança", r"cambio"],
     "substance_search": [r"mati[eè]re active", r"substance active", r"active (ingredient|substance)", r"ingrediente activo", r"substância ativa", r"substancia activa", r"principio activo",
                          r"\bà base de\b", r"\ba base de\b", r"\bbased on\b"],
-    "ingredient_search": [r"contenant", r"containing", r"\bcontain", r"microorganism", r"micro-organisme", r"\bsouche", r"\bstrain", r"\bespèce", r"\bspecies", r"same active",
+    "ingredient_search": [r"contenant", r"contien", r"containing", r"\bcontain", r"\bcontém\b", r"\bcontiene", r"microorganism", r"micro-organisme", r"\bsouche", r"\bstrain", r"\bespèce", r"\bspecies", r"same active",
                           r"même (?:micro|substance|matière)", r"\bcepa\b", r"\bcontendo\b", r"\bcontiene\b", r"\bcon (?:la |el )?(?:bacteria|hongo|microorganismo)"],
     "product_profile": [r"qu'?\s?est[- ]ce que c'?\s?est", r"c'?\s?est quoi", r"what is (this|it|that)\b", r"what'?s (this|it)\b", r"qué es (esto|este|eso|ese)", r"o que é (isto|isso|este)",
                         r"\bdécri[st]", r"\bdescri(be|ba|va)", r"\bprésente[- ]moi", r"\bfiche\b", r"\bprofil\b", r"\bparle[- ]moi", r"tell me about", r"\bquel (type|genre) de produit",
@@ -82,6 +82,21 @@ CROP_EXTRA = {"fraise": "strawberry", "fraises": "strawberry", "fresa": "strawbe
               "alface": "lettuce", "potatoes": "potato", "papa": "potato", "papas": "potato", "patata": "potato", "patatas": "potato", "batata": "potato", "onions": "onion",
               "cebolla": "onion", "cebola": "onion", "carrots": "carrot", "zanahoria": "carrot", "cenoura": "carrot", "cucumbers": "cucumber", "pepino": "cucumber", "pepinos": "cucumber",
               "vigne": "grapevine", "vignes": "grapevine"}
+# source wordings that cover a crop (E-Phy groups, French/English/Portuguese crop words) in addition to the concept name
+CROP_GROUPS = {"apple": ["pommier", "pomme", "fruits à pépins", "pome fruit", "maçã", "macieira", "manzano"], "pear": ["poirier", "fruits à pépins", "pome fruit", "pereira"],
+               "peach": ["pêcher", "fruits à noyau", "stone fruit", "pessegueiro"], "cherry": ["cerisier", "fruits à noyau", "stone fruit", "cerejeira"],
+               "grapevine": ["vigne", "raisin", "grape", "videira", "uva", "vid"], "strawberry": ["fraisier", "fraise", "morango", "fresa"], "lettuce": ["laitue", "salades", "alface", "lechuga"],
+               "tomato": ["tomate", "tomateiro"], "cucumber": ["concombre", "cucurbitacées à peau comestible", "pepino"], "potato": ["pomme de terre", "batata", "papa", "patata"],
+               "onion": ["oignon", "cebola", "cebolla"], "carrot": ["carotte", "cenoura", "zanahoria"], "maize": ["maïs", "corn", "milho"], "wheat": ["blé", "trigo"], "soybean": ["soja", "soy"]}
+
+
+def crop_terms(crop: str | None) -> list[str]:
+    """Wordings accepted for a crop filter: the concept name plus the group / language wordings the sources use."""
+    if not crop:
+        return []
+    return list(dict.fromkeys([crop.lower()] + CROP_GROUPS.get(crop.lower(), [])))
+
+
 # crop-dependent disease words: wording -> {crop concept id: (EPPO code candidate, display name)}; None = crop unknown
 TARGET_HINTS = {
     "tavelure": {"apple": ("VENTIN", "Venturia inaequalis (tavelure du pommier)"), "pear": ("VENTPI", "Venturia pyrina (tavelure du poirier)"), None: (None, "tavelure")},
@@ -98,7 +113,7 @@ TARGET_HINTS = {
     "powdery mildew": {"grapevine": ("UNCINE", "Erysiphe necator (grapevine powdery mildew)"), None: (None, "powdery mildew")},
     "oídio": {"grapevine": ("UNCINE", "Erysiphe necator (oídio da videira)"), None: (None, "oídio")},
 }
-PORTFOLIO_RE = re.compile(r"quels? produits?|which products?|what products?|quais produtos|qué productos|cuáles productos|liste des produits|list (?:of |the )?products|produits (?:lallemand|homologu|enregistr|autoris)"
+PORTFOLIO_RE = re.compile(r"quels? produits?|which products?|what products?|quais produtos|qué productos|cuáles productos|combien de produits|how many products|quantos produtos|cuántos productos|liste des produits|list (?:of |the )?products|produits (?:lallemand|homologu|enregistr|autoris)"
                           r"|lallemand products|produtos (?:lallemand|registrad)|productos (?:lallemand|registrad)|portefeuille|portfolio|tous les produits|all (?:the )?products|todos os produtos|todos los productos")
 ALL_COUNTRIES_RE = re.compile(r"quels pays|which countr|quais pa[ií]ses|qué países|dans quels|em quais|en qué|where|où |onde|dónde|partout|everywhere|tous les pays|all countries|todos os pa[ií]ses|todos los países")
 NO_ADVICE_RE = re.compile(r"(utilis|use it|usar|utilizar|employ|appliqu|apply).{0,40}(autre|another|other|otro|outra|différent|different)|(autre|another|other|otro|outra).{0,20}(culture|crop|cultivo|cultura)")
@@ -149,6 +164,19 @@ def crop_in_question(q: str) -> str | None:
     return None
 
 
+def _crop_word(q: str) -> str | None:
+    """The crop wording as it appears in the question (longest matching alias)."""
+    from ..normalize.eppo import _index
+
+    _, alias = _index("crop")
+    ql = " " + re.sub(r"[^\w\s-]", " ", q.lower()) + " "
+    best = None
+    for name in list(alias) + list(CROP_EXTRA):
+        if len(name) >= 3 and f" {name} " in ql and (best is None or len(name) > len(best)):
+            best = name
+    return best
+
+
 def _crop_concept_id(q: str) -> str | None:
     from ..normalize.eppo import _index
 
@@ -161,6 +189,7 @@ def _crop_concept_id(q: str) -> str | None:
     return best[1] if best else None
 
 
+GENERIC_TARGET_WORDS = {"pourriture", "mildiou", "maladie", "maladies", "disease", "doença", "enfermedad", "champignons", "insectes", "fungus", "fungi", "black", "white", "brown", "downy", "powdery", "grapevine", "tomato"}
 TARGET_LEAD = re.compile(r"(?:contre|against|contra|para (?:controlar|combatir|combater)|pour (?:lutter contre|traiter|contrôler|controler)|to control|para)\s+"
                          r"(?:la |le |les |l'|el |los |las |a |o |as |os |the |du |de la |des |do |da |de |d')?([\w'’ \-]{3,48}?)"
                          r"(?=[?.,;:!]|\s+(?:sur|on|en|em|dans|pour|para|in|au|aux|et|and|e|y|de la|du|des|of|do|da)\b|$)")
@@ -184,7 +213,13 @@ def target_in_question(q: str, crop_cid: str | None) -> tuple[list[str], str | N
             hint = (word, by_crop)
     if best and (hint is None or len(best[0]) >= len(hint[0])):
         c = concepts[best[1]]
-        terms = [t for t in {best[0], c.name_normalized.lower(), (c.scientific_name or "").lower()} if t and len(t) >= 4]
+        crop_words = set(_index("crop")[1]) | set(CROP_EXTRA)
+        terms = {best[0], c.name_normalized.lower(), (c.scientific_name or "").lower()} | {a for a, cid in alias.items() if cid == best[1]}
+        for t in list(terms):
+            head = t.split()[0] if t else ""
+            if len(head) >= 5 and head not in GENERIC_TARGET_WORDS and head not in crop_words:
+                terms.add(head)  # 'tavelure', 'venturia', 'botrytis', 'sarna' - the wording the sources use
+        terms = [t for t in terms if t and len(t) >= 4]
         return sorted(terms, key=len, reverse=True), c.eppo_code, c.scientific_name or c.name_normalized
     if hint:
         word, by_crop = hint
@@ -198,7 +233,9 @@ def target_in_question(q: str, crop_cid: str | None) -> tuple[list[str], str | N
     return [], None, None
 
 
-SUBSTANCE_LEAD = re.compile(r"(?:mati[eè]re active|substance active|active (?:ingredient|substance)|ingrediente activo|substância ativa|substancia activa|principio activo|à base de|a base de|based on)"
+FLAG_RES = {"expiry": re.compile(r"expir|échéance|echeance|\bvence|caduc|validité|validity"), "holder": re.compile(r"titulaire|\bholder\b|\btitular\b|d[ée]tenteur|registrant"),
+            "dose": re.compile(r"\bdos(e|age|is)\b"), "same_product": re.compile(r"même produit|same product|mesmo produto|mismo producto|autre nom|other name|outro nome|otro nombre|\balias\b|synonyme|synonym|sinônimo|sinónimo|nom alternatif|alternate name")}
+SUBSTANCE_LEAD = re.compile(r"(?:mati[eè]re active|substance active|active (?:ingredient|substance)|ingrediente activo|substância ativa|substancia activa|principio activo|à base de|a base de|based on|contenant|contiennent|contient|containing|contain|contendo|contém|contiene|contienen)"
                             r"\s*[:=]?\s*(?:la |le |l'|el |la |a |o |the |de |d')?([\w'’ \-]{3,40}?)(?=[?.,;:!)]|\s+(?:sur|on|en|em|dans|pour|para|in|au|aux|et|and|e|y|que|qui|which|that|homolog|registr|autoris)\b|$)")
 SUBSTANCE_SYNONYMS = {"captana": "captan", "captane": "captan", "cobre": "cuivre", "copper": "cuivre", "cuivre": "cuivre", "soufre": "sulphur", "azufre": "sulphur", "enxofre": "sulphur", "sulfur": "sulphur"}
 
@@ -208,6 +245,7 @@ def substance_in_question(q: str) -> str | None:
     if not m:
         return None
     w = re.sub(r"\s+", " ", m.group(1)).strip(" '’-:")
+    w = re.sub(r"^(?:du |de la |de l'|des |de |d'|le |la |les |l'|the |of |o |a |os |as |el |los |las |un |une |a |an )+", "", w).strip()
     return w or None
 
 
@@ -229,6 +267,8 @@ class Plan:
     substance: str | None = None
     crop_cid: str | None = None
     no_advice: bool = False
+    flags: list[str] = field(default_factory=list)  # expiry | holder | dose | same_product (what the question focuses on)
+    crop_word: str | None = None  # the crop as written in the question (for headlines); `crop` is the concept name used for filtering
 
 
 # --------------------------------------------------------------------------- 1. plan
@@ -284,23 +324,29 @@ def plan(session: Session, question: str, context: dict | None = None) -> Plan:
     species = next((s for s in species_in_db(session) if s.lower() in q), None)
     crop = crop_in_question(question)
     crop_cid = _crop_concept_id(question)
+    crop_word = _crop_word(question)
     m = re.search(r"(\d{1,2})\s*(mois|months?|meses)", q)
     months = int(m.group(1)) if m else 12
     substance = substance_in_question(question)
     tterms, tcode, tname = target_in_question(question, crop_cid)
+    flags = [k for k, rx in FLAG_RES.items() if rx.search(q)]
     if intent == "substance_search" and not substance and species:
         intent = "ingredient_search"
+    if intent == "ingredient_search" and not species and substance and not pids:
+        intent = "substance_search"  # 'quels produits contiennent du cuivre' - a substance, not a micro-organism species
     if species and not pids and intent in ("registration_lookup", "use_comparison", "substance_search", "target_search"):
         intent = "ingredient_search"
     if intent == "target_search" and not pids and not tterms:
         intent = "ingredient_search" if species else "target_search"
+    if intent == "expiry" and pids:
+        intent = "registration_lookup"  # 'quelle est la date d'expiration de X au Canada' - about one product, not the watch list
     unresolved = []
     if not pids and intent in PRODUCT_INTENTS:
         for tok in re.findall(r"\b([A-Z][A-Z0-9]{2,}(?:[ \-][A-Z0-9]{1,6})*)\b", question):  # UPPERCASE tokens look like product names
             if tok not in COUNTRY_WORDS and norm_name(tok) not in {"EPPO", "ANSES", "EPA", "USA", "LPC", "LALLEMAND", "DANSTAR"} and tok not in unresolved:
                 unresolved.append(tok)
     scope = "lallemand" if re.search(r"lallemand|danstar", q) else "all"
-    if not pids and not species and countries and PORTFOLIO_RE.search(q) and intent not in ("target_search", "substance_search"):
+    if not pids and not species and countries and PORTFOLIO_RE.search(q) and not substance and not (intent == "target_search" and tterms) and intent != "substance_search":
         intent = "country_portfolio"
         unresolved = []
     # follow-up questions ('et en France ?', 'et ses usages ?'): take the subject from the previous turn, deterministically
@@ -326,7 +372,7 @@ def plan(session: Session, question: str, context: dict | None = None) -> Plan:
         inherited.append("countries")
     extra = [i for i in intents[1:] if i in PRODUCT_INTENTS and i != intent] if pids else []
     return Plan(intent, pids, countries, species, crop, months, unresolved, scope, inherited, extra[:4], tterms, tcode, tname, substance, crop_cid,
-                bool(NO_ADVICE_RE.search(q)))
+                bool(NO_ADVICE_RE.search(q)), flags, crop_word)
 
 
 # --------------------------------------------------------------------------- 2. tools (the only data access)
@@ -352,14 +398,30 @@ def run_tools(session: Session, pl: Plan) -> tuple[list[dict], list[dict], list[
     if pl.no_advice:
         warnings.append("No advice on use: only the official label of the registered product is authoritative; a use on another crop is a regulatory decision, not a data point.")
 
+    def use_matches(u: dict) -> bool:
+        ok = True
+        if pl.crop:
+            cw = ((u.get("cropNormalized") or "") + " | " + (u.get("cropOriginal") or "")).lower()
+            ok = any(t in cw for t in crop_terms(pl.crop))
+        if ok and pl.target_terms and pl.product_ids:
+            tx = ((u.get("targetNormalized") or "") + " " + (u.get("targetOriginal") or "")).lower()
+            ok = any(t in tx for t in pl.target_terms) or (pl.target_code and u.get("eppoTargetCode") == pl.target_code)
+        return ok
+
     def add_reg(r: dict, product_name: str | None = None, uses_limit: int = 0):
+        uses = r.get("uses", [])
+        matched = [u for u in uses if use_matches(u)] if (pl.crop or (pl.target_terms and pl.product_ids)) else uses
         facts.append({"type": "registration", "product": product_name or r["productId"], "country": r["countryCode"],
                       "registrationNumber": r["registrationNumber"], "statusOriginal": r["statusOriginal"], "statusNormalized": r["statusNormalized"],
                       "authority": r["authorityName"], "holder": r["holderOriginal"], "approvalDate": r["approvalDate"], "expirationDate": r["expirationDate"],
                       "usesCount": r["usesCount"], "validationStatus": r["evidence"]["validationStatus"], "sourceId": r["evidence"]["sourceId"],
                       "sourceUrl": r["evidence"]["sourceUrl"], "collectedAt": _iso(r["evidence"]["collectedAt"])})
+        if (pl.crop or (pl.target_terms and pl.product_ids)) and uses:
+            facts[-1]["matchingUsesCount"] = len(matched)
+            facts.append({"type": "crop_check", "product": product_name or r["productId"], "country": r["countryCode"], "registrationNumber": r["registrationNumber"],
+                          "crop": pl.crop, "target": pl.target_name or (pl.target_terms[0] if pl.target_terms else None), "matchingUses": len(matched), "totalUses": len(uses)})
         evidence.append(r["evidence"])
-        for u in r.get("uses", [])[:uses_limit]:
+        for u in matched[:uses_limit]:
             facts.append({"type": "use", "country": r["countryCode"], "registrationNumber": r["registrationNumber"], "crop": u["cropOriginal"],
                           "cropNormalized": u["cropNormalized"], "eppoCropCode": u["eppoCropCode"], "target": u["targetOriginal"],
                           "targetNormalized": u["targetNormalized"], "eppoTargetCode": u.get("eppoTargetCode"), "dose": u["doseValue"], "doseUnit": u["doseUnitOriginal"],
@@ -369,6 +431,8 @@ def run_tools(session: Session, pl: Plan) -> tuple[list[dict], list[dict], list[
     def add_sources():
         tools.append("sources")
         for s in Q.store_scope(session):
+            if not s.get("registrations") and not s.get("lastCollectedAt"):
+                continue  # only the sources actually collected in this store
             facts.append({"type": "source", "sourceId": s["sourceId"], "country": s["countryOrRegion"], "officialName": s["officialName"], "registrations": s["registrations"],
                           "collectedAt": _iso(s["lastCollectedAt"]), "url": s["baseUrl"], "scope": s["scope"]})
 
@@ -395,7 +459,13 @@ def run_tools(session: Session, pl: Plan) -> tuple[list[dict], list[dict], list[
     if pl.intent == "changes":
         tools.append("changes")
         for c in Q.changes(session, 50):
-            facts.append({"type": "change", **{k: _iso(v) for k, v in c.items()}})
+            row = {"type": "change", **{k: _iso(v) for k, v in c.items()}}
+            reg = session.get(Registration, c.get("entityId")) if c.get("entityType") == "registration" or str(c.get("entityId", "")).startswith("R-") else None
+            if reg is not None:
+                row["product"] = reg.product.commercial_name
+                row["country"] = reg.country_code
+                row["registrationNumber"] = reg.registration_number
+            facts.append(row)
         if not facts:
             warnings.append("No change detected yet: change detection needs at least two collections of the same source.")
         return facts, evidence, warnings, tools
@@ -443,10 +513,10 @@ def run_tools(session: Session, pl: Plan) -> tuple[list[dict], list[dict], list[
         tools.append("uses_by_target")
         if not pl.target_terms:
             warnings.append("No disease or pest recognised in the question.")
-            facts.append({"type": "targets_available", "crop": pl.crop, "items": [{"target": t, "registrations": n} for t, n in Q.targets_available(session, pl.crop, pl.countries or None)]})
+            facts.append({"type": "targets_available", "crop": pl.crop, "items": [{"target": t, "registrations": n} for t, n in Q.targets_available(session, crop_terms(pl.crop), pl.countries or None)]})
             return facts, evidence, warnings, tools
-        rows = Q.uses_by_target(session, pl.target_terms, pl.target_code, pl.crop, pl.countries or None)
-        facts.append({"type": "target_id", "wording": pl.target_terms[0], "eppoCode": pl.target_code, "name": pl.target_name, "crop": pl.crop, "found": len(rows)})
+        rows = Q.uses_by_target(session, pl.target_terms, pl.target_code, crop_terms(pl.crop), pl.countries or None)
+        facts.append({"type": "target_id", "wording": pl.target_terms[0], "eppoCode": pl.target_code, "name": pl.target_name, "crop": pl.crop_word or pl.crop, "found": len(rows)})
         for r in rows[:40]:
             add_reg(r, r["productName"])
             facts[-1]["activeEntityOriginal"] = r.get("activeEntityOriginal")
@@ -459,7 +529,7 @@ def run_tools(session: Session, pl: Plan) -> tuple[list[dict], list[dict], list[
             warnings.append(f"EPPO code {pl.target_code} for '{pl.target_name}' is a candidate (to verify against gd.eppo.int).")
         if not rows:
             warnings.append(f"No use against '{pl.target_name or pl.target_terms[0]}'" + (f" on crop '{pl.crop}'" if pl.crop else "") + " in the collected sources - not proof of absence.")
-            facts.append({"type": "targets_available", "crop": pl.crop, "items": [{"target": t, "registrations": n} for t, n in Q.targets_available(session, pl.crop, pl.countries or None)]})
+            facts.append({"type": "targets_available", "crop": pl.crop, "items": [{"target": t, "registrations": n} for t, n in Q.targets_available(session, crop_terms(pl.crop), pl.countries or None)]})
         elif len(rows) > 40:
             warnings.append(f"{len(rows)} registrations have a use against '{pl.target_name or pl.target_terms[0]}'; only the first 40 are listed - add a country or a crop to narrow.")
         return facts, evidence, warnings, tools
@@ -513,11 +583,22 @@ def run_tools(session: Session, pl: Plan) -> tuple[list[dict], list[dict], list[
         return facts, evidence, warnings, tools
 
     all_intents = [pl.intent] + pl.extra_intents
-    uses_limit = 12 if "use_comparison" in all_intents else 0
+    uses_limit = 12 if ("use_comparison" in all_intents or pl.crop or "dose" in pl.flags or (pl.target_terms and pl.intent != "target_search")) else 0
+    if len(pl.product_ids) >= 2:  # 'are X and Y the same product?' / 'is X another name of Y?': the declared relation between them
+        tools.append("aliases_for")
+        names = {pid: (session.get(Product, pid).commercial_name if session.get(Product, pid) else pid) for pid in pl.product_ids}
+        for pa in pl.product_ids:
+            for a in Q.aliases_for(session, pa):
+                for pb in pl.product_ids:
+                    if pb != pa and norm_name(a["aliasName"]) == norm_name(names[pb]):
+                        facts.append({"type": "relation", "product": names[pa], "other": names[pb], "relationship": a["relationshipType"], "reviewStatus": a["reviewStatus"],
+                                      "country": a.get("countryCode"), "confidence": a.get("confidence"), "evidence": (a.get("evidence") or "")[:240], "sourceUrl": a.get("sourceRecordUrl")})
+        if not [f for f in facts if f["type"] == "relation"]:
+            warnings.append("No declared relation between " + " and ".join(names.values()) + " in the collected sources (no alternate name, sister or related-product link).")
     for pid in pl.product_ids:
         p = session.get(Product, pid)
         pname = p.commercial_name if p else pid
-        if pl.intent == "sister_product" and not pl.extra_intents:
+        if pl.intent == "sister_product" and not pl.extra_intents and len(pl.product_ids) == 1:
             tools.append("aliases_for")
             for a in Q.aliases_for(session, pid):
                 facts.append({"type": "alias", "product": pname, **a})
@@ -651,7 +732,12 @@ HEAD = {
            "alternatives_none": "{product} : aucun autre produit avec la même matière active ({active}) dans les sources collectées ({countries}) ; {nr} produit(s) lié(s) ou sœur(s) déclaré(s).",
            "sec_use_comparison": "Usages autorisés", "sec_sister_product": "Produits sœurs et liés", "sec_target_search": "Cibles (maladies, ravageurs)", "sec_data_quality": "Champs incertains",
            "sec_registration_lookup": "Homologations", "sec_alternatives": "Alternatives (même matière active)", "sec_product_profile": "Fiche produit", "sec_source": "Sources",
-           "eppo_code": " (EPPO {code}, à vérifier)"},
+           "eppo_code": " (EPPO {code}, à vérifier)",
+           "relation": "{a} et {b} : produits distincts — relation déclarée « {rel} » ({review}{country}) : {evidence}", "relation_alt": "{b} est un nom alternatif de {a}{country} ({review}) : {evidence}",
+           "relation_none": "{a} et {b} : aucune relation déclarée dans les sources collectées (ni nom alternatif, ni produit sœur ou lié) ; ce sont des enregistrements distincts.",
+           "holder_of": "{product} : titulaire {rows}.", "expiry_of": "{product} : {rows}.", "exp_none": "pas de date d'expiration dans la source",
+           "crop_check": "{product}{crop} : {rows}.", "crop_yes": "{cc} n° {num} : {n} usage(s) sur {crop}", "crop_no": "{cc} n° {num} : aucun usage sur {crop} dans la source",
+           "two_products": "{rows}"},
     "en": {"lookup": "{product}: {n} registration(s) found in the collected official sources for {countries}.",
            "lookup_nf": "Not found in the official source of: {countries} (≠ not registered).", "lookup_ns": "No source connected for: {countries}.",
            "lookup_none": "{product}: no registration in the collected sources (not found: {nf}; source not connected: {ns}). This is not proof of no registration.",
@@ -679,7 +765,12 @@ HEAD = {
            "alternatives_none": "{product}: no other product with the same active substance ({active}) in the collected sources ({countries}); {nr} declared related or sister product(s).",
            "sec_use_comparison": "Authorised uses", "sec_sister_product": "Sister and related products", "sec_target_search": "Targets (diseases, pests)", "sec_data_quality": "Uncertain fields",
            "sec_registration_lookup": "Registrations", "sec_alternatives": "Alternatives (same active substance)", "sec_product_profile": "Product profile", "sec_source": "Sources",
-           "eppo_code": " (EPPO {code}, to verify)"},
+           "eppo_code": " (EPPO {code}, to verify)",
+           "relation": "{a} and {b}: distinct products — declared relation '{rel}' ({review}{country}): {evidence}", "relation_alt": "{b} is an alternate name of {a}{country} ({review}): {evidence}",
+           "relation_none": "{a} and {b}: no declared relation in the collected sources (no alternate name, sister or related-product link); they are distinct registrations.",
+           "holder_of": "{product}: holder {rows}.", "expiry_of": "{product}: {rows}.", "exp_none": "no expiry date in the source",
+           "crop_check": "{product}{crop}: {rows}.", "crop_yes": "{cc} no. {num}: {n} use(s) on {crop}", "crop_no": "{cc} no. {num}: no use on {crop} in the source",
+           "two_products": "{rows}"},
     "pt": {"lookup": "{product}: {n} registro(s) encontrado(s) nas fontes oficiais coletadas para {countries}.",
            "lookup_nf": "Não encontrado na fonte oficial de: {countries} (≠ não registrado).", "lookup_ns": "Nenhuma fonte conectada para: {countries}.",
            "lookup_none": "{product}: nenhum registro nas fontes coletadas (não encontrado: {nf}; fonte não conectada: {ns}). Isto não prova ausência de registro.",
@@ -707,7 +798,12 @@ HEAD = {
            "alternatives_none": "{product}: nenhum outro produto com a mesma substância ativa ({active}) nas fontes coletadas ({countries}); {nr} produto(s) relacionado(s) ou irmão(s) declarado(s).",
            "sec_use_comparison": "Usos autorizados", "sec_sister_product": "Produtos irmãos e relacionados", "sec_target_search": "Alvos (doenças, pragas)", "sec_data_quality": "Campos incertos",
            "sec_registration_lookup": "Registros", "sec_alternatives": "Alternativas (mesma substância ativa)", "sec_product_profile": "Ficha do produto", "sec_source": "Fontes",
-           "eppo_code": " (EPPO {code}, a verificar)"},
+           "eppo_code": " (EPPO {code}, a verificar)",
+           "relation": "{a} e {b}: produtos distintos — relação declarada « {rel} » ({review}{country}): {evidence}", "relation_alt": "{b} é um nome alternativo de {a}{country} ({review}): {evidence}",
+           "relation_none": "{a} e {b}: nenhuma relação declarada nas fontes coletadas (nem nome alternativo, nem produto irmão ou relacionado); são registros distintos.",
+           "holder_of": "{product}: titular {rows}.", "expiry_of": "{product}: {rows}.", "exp_none": "sem data de vencimento na fonte",
+           "crop_check": "{product}{crop}: {rows}.", "crop_yes": "{cc} nº {num}: {n} uso(s) em {crop}", "crop_no": "{cc} nº {num}: nenhum uso em {crop} na fonte",
+           "two_products": "{rows}"},
 }
 PROFILE_WORDS = {"fr": (", formulation {f}", ", titulaire {h}"), "en": (", formulation {f}", ", holder {h}"), "pt": (", formulação {f}", ", titular {h}")}
 
@@ -797,6 +893,9 @@ WARN_I18N: list[tuple[re.Pattern, dict[str, str]]] = [
       "pt": "{n} registros têm um uso contra « {x} »; apenas os 40 primeiros são listados — acrescente um país ou uma cultura para restringir."}),
     (re.compile(r"^(?P<p>.+?): no target \(disease / pest\) recorded in its uses in the collected sources\.$"),
      {"fr": "{p} : aucune cible (maladie / ravageur) enregistrée dans ses usages des sources collectées.", "pt": "{p}: nenhum alvo (doença / praga) registrado nos seus usos nas fontes coletadas."}),
+    (re.compile(r"^No declared relation between (?P<names>.+?) in the collected sources \(no alternate name, sister or related-product link\)\.$"),
+     {"fr": "Aucune relation déclarée entre {names} dans les sources collectées (ni nom alternatif, ni produit sœur ou lié).",
+      "pt": "Nenhuma relação declarada entre {names} nas fontes coletadas (nem nome alternativo, nem produto irmão ou relacionado)."}),
     (re.compile(r"^Alternatives share the active substance wording only; they are distinct products with their own labels and conditions - not equivalents\.$"),
      {"fr": "Les alternatives partagent seulement le libellé de la matière active ; ce sont des produits distincts, avec leur propre étiquette et leurs conditions — pas des équivalents.",
       "pt": "As alternativas partilham apenas o texto da substância ativa; são produtos distintos, com rótulo e condições próprios — não equivalentes."}),
@@ -820,7 +919,7 @@ def localize_warning(w: str, lang: str) -> str:
 
 
 CAVEAT_KEYS = ("Context taken", "not proof", "dose is not", "two independent lists", "AI model", "hypotheses", "no source connected", "only the first", "Scope 'Lallemand'",
-               "was not applied", "No advice", "EPPO code", "No disease", "Alternatives share", "no target")
+               "was not applied", "No advice", "EPPO code", "No disease", "Alternatives share", "no target", "No declared relation")
 
 
 def scope_summary(session: Session, lang: str, sources: list[dict]) -> str:
@@ -860,7 +959,7 @@ def build_structured(pl: Plan, facts: list[dict], warnings: list[str], language:
     def item_from_reg(f, detail=None):
         return AnswerItem(country=f["country"], product=f.get("product"), registrationNumber=f.get("registrationNumber"), status=f.get("statusNormalized"),
                           statusOriginal=f.get("statusOriginal"), expiry=f.get("expirationDate"), detail=detail, sourceId=f.get("sourceId"),
-                          collectedAt=(f.get("collectedAt") or "")[:10] or None)
+                          collectedAt=(f.get("collectedAt") or "")[:10] or None, url=f.get("sourceUrl") if pl.intent == "source" else None)
 
     def source_items():
         return [AnswerItem(country=s.get("country"), product=s["sourceId"], detail=s.get("scope"), collectedAt=(s.get("collectedAt") or "")[:10] or None,
@@ -912,11 +1011,44 @@ def build_structured(pl: Plan, facts: list[dict], warnings: list[str], language:
                            collectedAt=(r.get("collectedAt") or "")[:10]) for r in rel[:6]]
 
     srcs = [f for f in facts if f["type"] == "source"]
+    rels = [f for f in facts if f["type"] == "relation"]
+    checks = [f for f in facts if f["type"] == "crop_check"]
+
+    def relation_headline():
+        r = rels[0]
+        country = f", {r['country']}" if r.get("country") else ""
+        if r["relationship"] == "alternate_name":
+            return H["relation_alt"].format(a=r["product"], b=r["other"], country=country, review=r["reviewStatus"], evidence=r.get("evidence") or "")
+        return H["relation"].format(a=r["product"], b=r["other"], rel=r["relationship"], review=r["reviewStatus"], country=country, evidence=r.get("evidence") or "")
+
+    def focus_headline(default: str) -> str:
+        """Headline for a question that focuses on the holder, the expiry date or a crop of a known product."""
+        if rels and ("same_product" in pl.flags or pl.intent in ("sister_product", "registration_lookup", "product_profile")):
+            return relation_headline()
+        if len(pl.product_ids) >= 2 and not rels and "same_product" in pl.flags:
+            names = [f["product"] for f in regs]
+            return H["relation_none"].format(a=names[0] if names else pl.product_ids[0], b=next((n for n in names if n != (names[0] if names else None)), pl.product_ids[-1]))
+        if "holder" in pl.flags and regs:
+            return H["holder_of"].format(product=name or "", rows="; ".join(f"{f['country']} {L['no']} {f['registrationNumber']}: {f.get('holder') or '—'}" for f in regs[:6]))
+        if "expiry" in pl.flags and regs:
+            return H["expiry_of"].format(product=name or "", rows="; ".join(f"{f['country']} {L['no']} {f['registrationNumber']} " + (f"{L['expires']} {f['expirationDate']}" if f.get("expirationDate") else L["exp_none"]) for f in regs[:6]))
+        if checks and pl.crop:
+            cw = pl.crop_word or pl.crop
+            parts = []
+            for c in checks[:6]:
+                part = (H["crop_yes"] if c["matchingUses"] else H["crop_no"]).format(cc=c["country"], num=c["registrationNumber"], n=c["matchingUses"], crop=cw)
+                uses = [u for u in facts if u["type"] == "use" and u.get("registrationNumber") == c["registrationNumber"]]
+                if uses and c["matchingUses"] <= 3:
+                    part += " (" + "; ".join(f"{u.get('crop')} → {u.get('target')}" + (f", {u['dose']} {u['doseUnit']}" if u.get("dose") is not None else f" · {L['nodose']}") for u in uses[:3]) + ")"
+                parts.append(part)
+            return H["crop_check"].format(product=name or "", crop="", rows="; ".join(parts)) + (" " + default if cov else "")
+        return default
+
     if pl.intent == "help":
         headline = H["help"].format(sources=", ".join(s["sourceId"] for s in srcs) or "CA-PPID, US-EPA-PPLS, FR-EPHY, BR-AGROFIT")
         items = source_items()
         caveats.append(H["help_caveat"])
-    elif not pl.product_ids and pl.intent in PRODUCT_INTENTS:  # unknown product: say so, explain the coverage, point to the sources
+    elif not pl.product_ids and pl.intent in PRODUCT_INTENTS and pl.intent not in ("target_search",):  # unknown product: say so, explain the coverage, point to the sources
         sq = next((f for f in facts if f["type"] == "substance_query"), None)
         names = ", ".join(pl.unresolved_names) or L["this_product"]
         headline = H["unknown"].format(names=names, scope=scope_summary(None, lang, srcs))
@@ -952,8 +1084,11 @@ def build_structured(pl: Plan, facts: list[dict], warnings: list[str], language:
         cands, items = alias_items()
         al = [f for f in facts if f["type"] == "alias"]
         n_conf = sum(1 for a in cands if a["reviewStatus"] == "validated")
-        headline = H["sisters"].format(product=al[0]["product"] if al else (name or ""), n=len(cands), nc=n_conf)
-        caveats.append(H["sisters_caveat"])
+        headline = focus_headline(H["sisters"].format(product=al[0]["product"] if al else (name or ""), n=len(cands), nc=n_conf))
+        if not rels:
+            caveats.append(H["sisters_caveat"])
+        if len(pl.product_ids) >= 2:
+            items = [item_from_reg(f, detail=f"{f.get('usesCount')} {L['uses']}" if f.get("usesCount") is not None else None) for f in regs[:12]] + items
     elif pl.intent == "alternatives":
         alts = [f for f in facts if f["type"] == "alternative"]
         prod = next((f for f in facts if f["type"] == "product"), {})
@@ -1025,11 +1160,21 @@ def build_structured(pl: Plan, facts: list[dict], warnings: list[str], language:
         headline = (H["targets_of"].format(product=name or (tg[0]["product"] if tg else ""), n=len({(f['country'], f['target']) for f in tg}), countries=", ".join(sorted({f["country"] for f in tg})) or "—")
                     if tg else H["targets_none"].format(product=name or (pl.product_ids[0] if pl.product_ids else "")))
     else:  # registration_lookup, use_comparison, source
-        items = use_items(regs) if pl.intent == "use_comparison" else [item_from_reg(f, detail=f"{f.get('usesCount')} {L['uses']}" if f.get("usesCount") is not None else None) for f in regs[:12]]
+        show_uses = pl.intent == "use_comparison" or bool(pl.crop) or "dose" in pl.flags
+        items = use_items(regs) if show_uses else [item_from_reg(f, detail=(f.get("holder") if "holder" in pl.flags else (f"{f.get('usesCount')} {L['uses']}" if f.get("usesCount") is not None else None))) for f in regs[:12]]
         items += coverage_items() + related_items()
-        headline = lookup_headline()
-        if pl.intent == "use_comparison" and regs:
-            headline = H["compare"].format(product=name or "", countries=", ".join(found), n=sum(f.get("usesCount") or 0 for f in regs))
+        if len({f["product"] for f in regs}) >= 2:  # two products compared: one clause per product, plus their declared relation
+            by_p: dict[str, list] = {}
+            for f in regs:
+                by_p.setdefault(f["product"], []).append(f)
+            headline = " ".join(H["lookup"].format(product=p, countries=", ".join(sorted({f['country'] for f in fs})), n=len(fs)) for p, fs in by_p.items())
+            if rels:
+                headline += " " + relation_headline()
+        else:
+            headline = lookup_headline()
+            if pl.intent == "use_comparison" and regs:
+                headline = H["compare"].format(product=name or "", countries=", ".join(found), n=sum(f.get("usesCount") or 0 for f in regs))
+        headline = focus_headline(headline)
     # further parts of a multi-part question
     for it in pl.extra_intents:
         if it == "use_comparison":
@@ -1057,6 +1202,8 @@ def build_structured(pl: Plan, facts: list[dict], warnings: list[str], language:
     for w in warnings:
         if len(caveats) >= 4:
             break
+        if rels and "not found in" in w:
+            continue  # a relation question: per-country coverage of each product is noise here
         if any(k in w for k in CAVEAT_KEYS):
             lw = localize_warning(w, lang)
             if lw not in caveats:
@@ -1065,7 +1212,7 @@ def build_structured(pl: Plan, facts: list[dict], warnings: list[str], language:
 
 
 # --------------------------------------------------------------------------- 5. LLM phrasing + guard
-SYSTEM = """You are the conversational assistant of a regulatory-watch prototype for plant protection products, used by Regulatory Affairs at Lallemand Plant Care.
+SYSTEM = """You are the conversational assistant of a regulatory-watch tool for plant protection products, used by Regulatory Affairs at Lallemand Plant Care.
 You receive the QUESTION, FACTS (rows from official sources, already filtered), WARNINGS and a DRAFT built deterministically (same JSON shape).
 Return a JSON object matching the schema (headline, items, sections, caveats), written in the requested language.
 Rules:

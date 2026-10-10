@@ -1,9 +1,9 @@
-# Dataverse target model (schema/dataverse_tables.xlsx) — how the prototype produces it
+# Dataverse target model (schema/dataverse_tables.xlsx) — how the tool produces it
 
 LPC: "C'est le modèle qui fait foi. Vous n'êtes pas obligés d'utiliser Dataverse, mais votre solution doit pouvoir produire ou
 exposer cette structure, sans retirer les champs de traçabilité ni les statuts de validation."
 
-The prototype exposes the eight tables with the workbook's logical names (`lpc_*`), choice CSV values and alternate keys:
+The tool exposes the eight tables with the workbook's logical names (`lpc_*`), choice CSV values and alternate keys:
 
 | How | Where |
 |---|---|

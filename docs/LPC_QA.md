@@ -1,6 +1,6 @@
 # Questions posées à LPC et réponses reçues (2026-10-10) — et ce que nous en avons fait
 
-| # | Question de l'équipe | Réponse LPC (résumé) | Conséquence dans le prototype |
+| # | Question de l'équipe | Réponse LPC (résumé) | Conséquence dans l'outil |
 |---|---|---|---|
 | 1 | Clé d'IA : tout doit-il marcher sans clé ? Testerez-vous d'autres questions que les 5 du kit ? | **Tout doit fonctionner sans clé** (au minimum consultation et comparaison) ; fournisseur d'IA remplaçable par `.env` ; **oui**, mêmes intentions avec d'autres produits, pays et cultures. | Mode sans clé complet : collecte, parseurs, normalisation, API, UI, `/ask` déterministe (`tests/test_gold.py` tourne sans clé). Détection des cultures par l'index EPPO multilingue, des espèces par la base, des produits par noms et alias de **tous** les produits ; test `test_other_products_countries_and_crops_like_the_jury_will`. |
 | 2 | Accès de test Microsoft 365 ? Sinon un connecteur prêt à importer suffit-il ? | Pas d'accès ; **un connecteur prêt à importer avec sa documentation convient**. | `m365/apiDefinition.swagger.json` + `apiProperties.json` générés depuis l'API live ; `m365/README.md`, flux Power Automate, action Copilot Studio. |

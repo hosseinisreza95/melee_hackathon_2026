@@ -21,7 +21,7 @@ from lpc_regwatch.config import settings  # noqa: E402
 from lpc_regwatch.db import get_session, init_db  # noqa: E402
 
 LIMITS = [
-    "Prototype, not an official regulatory source: Regulatory Affairs validation is required before any operational use.",
+    "Not an official regulatory source: Regulatory Affairs validation is required before any operational use.",
     "Four sources only (CA-PPID, US-EPA-PPLS, FR-EPHY, BR-AGROFIT); a product absent from them is 'not found in source', never 'not registered'.",
     "Canada and United States structured data give crops and pests as unpaired lists and no dose; doses for CA/US come only from label PDFs "
     "(AI-extracted rows are flagged extraction_method=llm_pdf, pairing=llm_paired, validation_status=automatically_extracted).",

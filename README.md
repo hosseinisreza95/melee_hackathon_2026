@@ -1,10 +1,10 @@
 # LPC Regulatory Watch — AI agent for global plant-protection registrations
 
-Prototype built in 30 h for the Lallemand Plant Care challenge (Hackathon IA for Impact 2026, Mêlée Numérique Toulouse).
+Built in 30 h for the Lallemand Plant Care challenge (Hackathon IA for Impact 2026, Mêlée Numérique Toulouse).
 It collects **official** registration data for plant protection products, stores it with full provenance, normalises
 it without ever overwriting the original wording, and answers product × country × use questions with evidence.
 
-> **Regulatory disclaimer:** this repository and any prototype built from it are not official regulatory sources.
+> **Regulatory disclaimer:** this repository and any tool built from it are not official regulatory sources.
 > Extracted information requires Regulatory Affairs validation before official, commercial or operational use.
 > **No result must not be interpreted as no registration.**
 
@@ -43,6 +43,8 @@ python scripts/build_submission.py                   # output/submission.json �
 python scripts/export_dataverse.py                   # output/dataverse/*.csv in the LPC Dataverse model, validated against schema/dataverse_tables.xlsx
 python scripts/serve_api.py                          # http://localhost:8000/docs
 streamlit run src/lpc_regwatch/ui/app.py             # http://localhost:8501
+python scripts/jury_run.py --no-llm                  # 30 jury-style questions through the assistant (output/jury_answers.json)
+python scripts/ragas_eval.py                         # RAGAS metrics on evaluation/qa_validation.jsonl (needs an AI key)
 pytest -q                                            # 90+ tests: schema, collectors (offline), parsers, normalisation, label gate, API, gold T01–T05 + jury-style questions, Dataverse/registry, headless UI in FR/EN/PT, blind real-data checks
 ```
 
@@ -85,5 +87,5 @@ schema/ evaluation/ business/ sources/ examples/   organiser starter kit (unchan
 
 ## Licence
 
-Starter kit and this prototype: see `LICENSE.md`. Source data: Open Government Licence – Canada, US federal public data,
+Starter kit and this tool: see `LICENSE.md`. Source data: Open Government Licence – Canada, US federal public data,
 Licence Ouverte (ANSES / data.gouv.fr), Creative Commons Attribution (MAPA). Attribution lines are printed by `GET /sources`.

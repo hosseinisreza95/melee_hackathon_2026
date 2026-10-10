@@ -88,13 +88,13 @@ def main(host: str, base_path: str, scheme: str) -> Path:
     swagger = {
         "swagger": "2.0",
         "info": {"title": "LPC Regulatory Watch", "version": oa["info"]["version"],
-                 "description": "Regulatory-watch prototype API (official sources CA/US/FR/BR). Not an official regulatory source: every answer "
+                 "description": "Regulatory-watch API (official sources CA/US/FR/BR). Not an official regulatory source: every answer "
                                 "carries evidence (source, URL, collection time, validation status) and a disclaimer. No result is not proof of no registration.",
                  "contact": {"name": "LPC hackathon team"}},
         "host": host, "basePath": base_path, "schemes": [scheme], "consumes": ["application/json"], "produces": ["application/json"],
         "paths": paths, "definitions": defs,
         "securityDefinitions": {"api_key": {"type": "apiKey", "in": "header", "name": "X-API-Key",
-                                             "description": "Not enforced by the prototype; placeholder for the Entra ID / API Management design in m365/README.md"}},
+                                             "description": "Not enforced by the tool; placeholder for the Entra ID / API Management design in m365/README.md"}},
         "security": [],
         "x-ms-connector-metadata": [{"propertyName": "Website", "propertyValue": f"{scheme}://{host}{base_path}/docs"},
                                     {"propertyName": "Privacy policy", "propertyValue": f"{scheme}://{host}{base_path}/sources"},

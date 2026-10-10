@@ -11,7 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from lpc_regwatch.ui.i18n import LANGS, S, tr  # noqa: E402
 
 APP = Path(__file__).resolve().parents[1] / "src" / "lpc_regwatch" / "ui" / "app.py"
-PAGES = ["page.chat", "page.overview", "page.compare", "page.map", "page.sisters", "page.watch", "page.registry", "page.sources"]
+PAGES = ["page.home", "page.chat", "page.overview", "page.compare", "page.map", "page.sisters", "page.watch", "page.registry", "page.sources"]
 
 
 def test_every_key_has_all_three_languages():
@@ -63,7 +63,7 @@ def test_every_page_renders_in_every_language(ui_http, lang, page):
     at.run()
     assert not at.exception, [str(e.value)[:300] for e in at.exception]
     title = at.title[0].value if at.title else ""
-    expected = {"page.chat": "chat.hero", "page.overview": "ov.title", "page.compare": "cmp.title", "page.map": "map.title", "page.sisters": "sis.title",
+    expected = {"page.home": "home.title", "page.chat": "chat.hero", "page.overview": "ov.title", "page.compare": "cmp.title", "page.map": "map.title", "page.sisters": "sis.title",
                 "page.watch": "watch.title", "page.registry": "reg.title", "page.sources": "src.title"}[page]
     assert title == tr(lang, expected)
     # the disclaimer is on every page, in the selected language
@@ -91,7 +91,7 @@ def test_single_language_control_switches_every_page(ui_http):
     at = AppTest.from_file(str(APP), default_timeout=60)
     at.run()
     at.segmented_control(key="lang_ctl").set_value(None).run()
-    assert not at.exception and at.session_state["lang"] == "fr" and at.title[0].value == tr("fr", "chat.hero")
+    assert not at.exception and at.session_state["lang"] == "fr" and at.title[0].value == tr("fr", "home.title")
 
 
 def test_chat_assistant_keeps_the_thread(ui_http):
@@ -101,7 +101,9 @@ def test_chat_assistant_keeps_the_thread(ui_http):
 
     at = AppTest.from_file(str(APP), default_timeout=90)
     at.run()
-    assert not at.exception
+    assert not at.exception and at.title[0].value == tr("fr", "home.title")  # landing page
+    at.button(key="home_chat").click().run()
+    assert not at.exception and at.session_state["page"] == "page.chat"
     assert at.chat_input and not at.chat_message  # empty thread: hero + starter cards, no messages yet
     starters = [b for b in at.button if b.key and b.key.startswith("starter_")]
     assert len(starters) == 4
@@ -125,3 +127,6 @@ def test_chat_assistant_keeps_the_thread(ui_http):
     assert not at.exception and at.title[0].value == tr("fr", "watch.title")
     at.button(key="back_chat").click().run()
     assert not at.exception and at.session_state["page"] == "page.chat" and len(at.chat_message) == 4
+    at.sidebar.button(key="logo_home").click().run()  # the logo returns to the landing page, the thread is kept
+    assert not at.exception and at.session_state["page"] == "page.home" and len(at.session_state["threads"][0]["messages"]) == 4
+    assert "prototype" not in " ".join(m.value for m in at.markdown).lower()

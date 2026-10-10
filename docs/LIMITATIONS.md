@@ -23,7 +23,11 @@
    real diff on the second night).
 10. **Natural-language answers** are phrased by the LLM only when a key is configured; otherwise a deterministic template
     with the same facts is returned. The guard may reject a correct phrasing that mentions a count not present in the facts.
-11. **No authentication** on the prototype API (public read-only data); the Entra ID design is documented, not built.
+12. **Source coverage is uneven by design**: France is the complete current registry (E-Phy, every AUTORISE product, `FR_EPHY_SCOPE=all`),
+    Canada and the United States are limited to Lallemand Plant Care products and their related products (search-term extracts), Brazil to the
+    micro-organism products of the AGROFIT extract. Every "no data" answer states this coverage; a full PPID / PPLS load is a configuration
+    change of the collectors, not a code change.
+11. **No authentication** on the API (public read-only data); the Entra ID design is documented, not built.
 12. **EPA site lists are very granular** (685 sites for CONTANS): the comparison table is long; filters exist in the UI.
 13. **Microsoft 365 path is documented with generated connector files, not demonstrated in a tenant** (no tenant available during the hackathon).
 14. **Label extraction quality** was checked by the grounding gate (verbatim excerpt, or excerpt start + crop + dose all verbatim) and a
