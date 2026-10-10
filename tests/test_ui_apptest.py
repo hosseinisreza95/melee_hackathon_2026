@@ -66,8 +66,8 @@ def test_every_page_renders_in_every_language(ui_http, lang, page):
     expected = {"page.home": "home.title", "page.chat": "chat.hero", "page.overview": "ov.title", "page.compare": "cmp.title", "page.map": "map.title", "page.sisters": "sis.title",
                 "page.watch": "watch.title", "page.registry": "reg.title", "page.sources": "src.title"}[page]
     assert title == tr(lang, expected)
-    # the disclaimer is on every page, in the selected language
-    assert any(tr(lang, "disclaimer") in (m.value or "") for m in at.markdown)
+    # no page shows a disclaimer banner any more (the API keeps it; the About menu states the limits)
+    assert not any((m.value or "").startswith('<div class="disclaimer">') for m in at.markdown)
 
 
 def test_single_language_control_switches_every_page(ui_http):

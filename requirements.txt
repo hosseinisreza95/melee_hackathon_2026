@@ -18,3 +18,4 @@ psycopg[binary]
 pytest
 pyyaml             # tests read schema/openapi.yaml
 python-multipart   # file upload on POST /registry/reconcile
+markdown>=3.5                 # renders docs/API_GUIDE.md at GET /guide

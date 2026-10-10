@@ -66,25 +66,13 @@ PATTERN_URI = "data:image/svg+xml;base64," + base64.b64encode(pattern_svg().enco
 LOGO_URI = "data:image/svg+xml;base64," + base64.b64encode((ASSETS / "lallemand_logo.svg").read_bytes()).decode("ascii") if (ASSETS / "lallemand_logo.svg").exists() else ""
 
 
-def microbe_art(stroke: str, fill: str, accent: str, size: int = 56) -> str:
-    """Three small micro-organism motifs (a bacterium, a conidiophore with spores, a leaf) as inline SVG in the brand colours."""
-    h = size
-    w = int(size * 1.25)
-    sw = 2.4
-    bact = (f'<svg width="{w}" height="{h}" viewBox="0 0 80 64" fill="none"><rect x="14" y="21" width="52" height="22" rx="11" fill="{fill}" stroke="{stroke}" stroke-width="{sw}"/>'
-            f'<circle cx="30" cy="32" r="2.6" fill="{accent}"/><circle cx="41" cy="28.5" r="2.2" fill="{accent}"/><circle cx="50" cy="35" r="2.4" fill="{accent}"/>'
-            f'<path d="M14 32c-5 0-6-6-11-6M66 32c5 0 6 6 11 6M30 21v-5M50 21v-5M30 43v5M50 43v5" stroke="{stroke}" stroke-width="2" stroke-linecap="round"/></svg>')
-    spore = (f'<svg width="{w}" height="{h}" viewBox="0 0 80 64" fill="none"><path d="M40 62V34M40 40c-9-2-15-9-17-19M40 40c9-2 15-9 17-19M40 34V16" stroke="{stroke}" stroke-width="{sw}" stroke-linecap="round"/>'
-             f'<circle cx="23" cy="15" r="6" fill="{accent}"/><circle cx="57" cy="15" r="6" fill="{accent}" opacity=".85"/><circle cx="40" cy="10" r="6" fill="{accent}"/>'
-             f'<circle cx="31" cy="26" r="3" fill="{fill}" stroke="{stroke}" stroke-width="1.6"/><circle cx="49" cy="26" r="3" fill="{fill}" stroke="{stroke}" stroke-width="1.6"/></svg>')
-    leaf = (f'<svg width="{w}" height="{h}" viewBox="0 0 80 64" fill="none"><path d="M12 54C13 30 32 10 68 10c0 36-16 52-40 52-7 0-12-3-16-8z" fill="{fill}" stroke="{stroke}" stroke-width="{sw}" stroke-linejoin="round"/>'
-            f'<path d="M20 52C32 42 46 30 62 18M32 42c-4-2-8-7-9-12M44 32c-3-3-5-8-5-13" stroke="{stroke}" stroke-width="1.8" stroke-linecap="round"/><circle cx="40" cy="40" r="3" fill="{accent}"/></svg>')
-    return f'<div class="hero-art">{bact}{spore}{leaf}</div>'
+
 
 st.set_page_config(page_title="LPC Regulatory Watch", page_icon=str(ASSETS / "lallemand_logo.svg"), layout="wide", initial_sidebar_state="expanded")
 
 if "lang" not in st.session_state:
     st.session_state["lang"] = "fr"
+
 
 
 def t(key: str, **fmt) -> str:
@@ -122,9 +110,10 @@ st.markdown(f"""
   [data-testid="stChatMessageAvatarUser"] {{ display:none; }}
   [data-testid="stChatMessageAvatarCustom"] {{ background:{RED}; border:none; border-radius:50%; width:30px; height:30px; margin-top:2px; }}
   [data-testid="stChatMessageAvatarCustom"] span {{ color:#fff !important; font-size:18px; }}
-  [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) [data-testid="stChatMessageContent"] {{ margin-left:auto; flex:0 1 auto; max-width:78%; background:#e7eaed; border-radius:18px; padding:.6rem 1rem; }}
+  [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) [data-testid="stChatMessageContent"] {{ margin:0 0 0 auto; flex:0 1 auto; width:auto; max-width:78%; background:#e7eaed; border-radius:18px 18px 4px 18px; padding:.6rem 1rem; }}
+  [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) [data-testid="stChatMessageContent"] p {{ margin:0; }}
   [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarCustom"]) [data-testid="stChatMessageContent"] {{ padding:.25rem 0 0; }}
-  .hero-art {{ display:flex; justify-content:center; align-items:flex-end; gap:34px; margin-top:2vh; }}
+  section.stMain h1.hero {{ margin-top:6vh; }}
   .chat-map-cap {{ text-align:center; color:#6b767d; font-size:.82rem; margin:-.2rem 0 1rem; }}
   .lpc-brand .mark {{ display:flex; align-items:center; }}
   .sb-art {{ display:flex; gap:4px; align-items:flex-end; }}
@@ -134,9 +123,9 @@ st.markdown(f"""
   .ans-sec-text {{ font-size:.95rem; color:{INK}; margin:0 0 .6rem; }}
   [data-testid="stChatMessage"] [data-testid="stDataFrame"] {{ margin:.3rem 0 .9rem; }}
   [data-testid="stChatMessage"] .warn {{ margin:.3rem 0; }}
-  [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {{ justify-content:flex-end; padding-right:0; }}
+  [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {{ justify-content:flex-end; padding-right:0; width:100%; }}
   section.stMain {{ background-image:url("{PATTERN_URI}"); background-repeat:repeat; background-size:480px 480px; }}
-  .st-key-logo_btn [data-testid="stButton"] button {{ background:url("{LOGO_URI}") no-repeat center / 160px auto; height:58px; width:100%; border:none; box-shadow:none; }}
+  .st-key-logo_btn [data-testid="stButton"] button {{ background:url("{LOGO_URI}") no-repeat center / 160px auto; height:54px; width:100%; border:none; box-shadow:none; margin-top:0; }}
   .st-key-logo_btn [data-testid="stButton"] button:hover {{ background-color:transparent; opacity:.9; }}
   .st-key-logo_btn [data-testid="stButton"] button p {{ color:transparent; font-size:0; }}
   .st-key-tools [data-testid="stButton"] button, .st-key-rail [data-testid="stButton"] button {{ justify-content:flex-start; }}
@@ -163,7 +152,10 @@ st.markdown(f"""
   section[data-testid="stSidebar"] .st-key-tools [data-testid="stButton"] button [data-testid="stIconMaterial"] {{ color:{RED}; }}
   .lpc-status {{ font-size:.74rem; color:#6b767d; line-height:1.5; margin-top:10px; }}
   .lpc-status .ok {{ color:#2fd27a; }}
-  section[data-testid="stSidebar"] .block-container {{ padding-top: 1.2rem; }}
+  section[data-testid="stSidebar"] .block-container {{ padding-top: .2rem; }}
+  [data-testid="stSidebarHeader"] {{ height:2.3rem; min-height:2.3rem; padding:.35rem .5rem 0; }}
+  [data-testid="stSidebarUserContent"] {{ padding-top:0 !important; }}
+  div[data-stale="true"], .stale-element {{ opacity:1 !important; }}
   section[data-testid="stSidebar"] [data-testid="stRadio"] label p {{ font-size: 0.95rem; }}
   section[data-testid="stSidebar"] [data-testid="stRadio"] > div {{ gap: 0.15rem; }}
   .lpc-logo {{ width:170px; margin:0 auto 6px; }}
@@ -194,6 +186,8 @@ st.markdown(f"""
   .lpc-menu-list {{ list-style:none; padding:0; margin:0; font-size:.9rem; line-height:1.8; }}
   .lpc-menu-list a {{ color:{SLATE}; text-decoration:none; }}
   .lpc-menu-list a:hover {{ color:{RED}; }}
+  .lpc-about {{ font-size:.82rem; color:{INK}; line-height:1.5; max-width:380px; }}
+  .lpc-about .muted {{ color:#6b767d; font-size:.76rem; }}
   [class*="st-key-chat_sugg_"] [data-testid="stButtonGroup"] {{ flex-wrap:wrap; row-gap:6px; }}
   [class*="st-key-chat_sugg_"] [data-testid="stButtonGroup"] button {{ white-space:normal; text-align:left; line-height:1.25; }}
   @media (max-width: 1100px) {{
@@ -240,10 +234,6 @@ def st_label(status: str) -> str:
 
 def badge(status: str) -> str:
     return f'<span class="badge" style="background:{STATUS_COLOR.get(status, GREY)}">{st_label(status)}</span>'
-
-
-def disclaimer_box(text: str | None = None):
-    st.markdown(f'<div class="disclaimer">{t("disclaimer")}</div>', unsafe_allow_html=True)
 
 
 def warnings_box(warnings: list[str]):
@@ -381,31 +371,20 @@ def go_page(p: str):
     st.rerun()
 
 
-def schedule_text() -> str:
-    sch = health.get("updateSchedule") or {}
-    freq = {"daily": t("sb.freq_daily"), "weekly": t("sb.freq_weekly")}.get(sch.get("frequency"), sch.get("cron") or "")
-    hhmm = ""
-    parts = (sch.get("cron") or "").split()
-    if len(parts) >= 2 and parts[0].isdigit() and parts[1].isdigit():
-        hhmm = f"{int(parts[1]):02d}:{int(parts[0]):02d}"
-    return t("sb.update", freq=freq, time=hhmm, next=fmt_dt(sch.get("nextRunAt")))
-
-
 with st.sidebar:
     with st.container(key="rail"):  # icon rail shown only when the sidebar is collapsed (CSS)
-        if st.button("+", key="rail_new", icon=":material/add:", help=t("chat.new")):
+        if st.button("+", key="rail_new", icon=":material/add:"):
             if current_thread()["messages"]:
                 st.session_state["thread_id"] = None
             go_chat()
         for item, icon in RAIL_ITEMS:
-            if st.button(" ", key=f"rail_{item}", icon=icon, help=t("page.chat") if item == "chat" else t(item), type="tertiary"):
+            if st.button(" ", key=f"rail_{item}", icon=icon, type="tertiary"):
                 go_page("page.chat" if item == "chat" else item)
     with st.container(key="sbfull"):
         with st.container(key="logo_btn"):
-            if st.button("Lallemand Plant Care", key="logo_home", type="tertiary", use_container_width=True, help=t("page.home")):
+            if st.button("Lallemand Plant Care", key="logo_home", type="tertiary", use_container_width=True):
                 go_page("page.home")
-        st.markdown(f'<div class="lpc-brand"><div class="mark">{microbe_art(SLATE, GREY_LIGHT, RED, 26).replace("hero-art", "sb-art")}</div>'
-                    f'<div><div class="t1">Regulatory Watch</div><div class="t2">{t("app.subtitle")}</div></div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="lpc-brand"><div><div class="t1">Regulatory Watch</div><div class="t2">{t("app.subtitle")}</div></div></div>', unsafe_allow_html=True)
         if st.button(t("chat.new"), key="new_thread", use_container_width=True, type="primary", icon=":material/add:"):
             if current_thread()["messages"]:
                 st.session_state["thread_id"] = None  # a fresh thread; empty ones are reused
@@ -418,21 +397,11 @@ with st.sidebar:
                 active = x["id"] == th_cur["id"] and st.session_state["page"] == "page.chat"
                 if st.button(x["title"] or "…", key=f"thread_{x['id']}", use_container_width=True, type="secondary" if active else "tertiary"):
                     go_chat(x["id"])
-        st.markdown("")
-        with st.expander(t("sb.tools"), expanded=st.session_state["page"] in TOOLS, icon=":material/monitoring:"):
-            with st.container(key="tools"):
-                for tool in TOOLS:
-                    if st.button(t(tool), key=f"tool_{tool}", use_container_width=True, icon=TOOL_ICONS[tool], type="secondary" if st.session_state["page"] == tool else "tertiary"):
-                        go_page(tool)
-        with st.expander(t("sb.about"), icon=":material/info:"):
-            st.markdown(f'<div class="lpc-section">{t("sb.pilots")}</div><ul class="lpc-list"><li>LALSTOP CONTANS WG</li><li>LALSTOP G46 WG</li><li>LALGUARD M52 OD</li></ul>'
-                        f'<div class="lpc-section">{t("sb.sources")}</div><ul class="lpc-list"><li>Santé Canada — PPID</li><li>US EPA — PPLS</li><li>ANSES — E-Phy</li><li>MAPA — AGROFIT</li></ul>'
-                        f'<div class="lpc-section">{t("sb.limits")}</div>', unsafe_allow_html=True)
-            for k in ("sb.lim1", "sb.lim2", "sb.lim3", "sb.lim4", "sb.lim5"):
-                st.markdown(f"- {t(k)}")
-        ai_txt = f'<span class="ok">{t("sb.ai_on")}</span> · {health.get("aiModel") or health.get("aiProvider")}' if health.get("aiEnabled") else t("sb.ai_off")
-        st.markdown(f'<div class="lpc-status"><b>{health.get("registrations")}</b> {t("sb.records")} · {t("sb.ai")} {ai_txt}<br>{t("sb.last")} : {fmt_dt(health.get("lastSnapshotAt"))}<br>'
-                    f'{schedule_text()}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="lpc-section">{t("sb.tools")}</div>', unsafe_allow_html=True)
+        with st.container(key="tools"):
+            for tool in TOOLS:
+                if st.button(t(tool), key=f"tool_{tool}", use_container_width=True, icon=TOOL_ICONS[tool], type="secondary" if st.session_state["page"] == tool else "tertiary"):
+                    go_page(tool)
 page = st.session_state["page"]
 
 
@@ -448,8 +417,11 @@ with st.container(key="lpc_topbar"):
     with st.popover("menu", icon=":material/more_vert:"):
         st.markdown(f'<div class="lpc-menu-h">{t("sb.lang")}</div>', unsafe_allow_html=True)
         st.segmented_control(t("sb.lang"), list(LANGS), format_func=lambda k: LANGS[k], key="lang_ctl", on_change=_set_lang, label_visibility="collapsed")
-        st.markdown(f'<div class="lpc-menu-h" style="margin-top:12px">{t("sb.links")}</div><ul class="lpc-menu-list"><li><a href="{API_PUBLIC}/docs" target="_blank">{t("sb.api_docs")}</a></li>'
-                    f'<li><a href="/pitch/" target="_blank">{t("sb.pitch")}</a></li></ul>', unsafe_allow_html=True)
+        st.markdown(f'<div class="lpc-menu-h" style="margin-top:12px">{t("sb.links")}</div><ul class="lpc-menu-list"><li><a href="{API_PUBLIC}/guide" target="_blank">{t("sb.guide")}</a></li>'
+                    f'<li><a href="{API_PUBLIC}/docs" target="_blank">{t("sb.swagger")}</a></li><li><a href="/pitch/" target="_blank">{t("sb.pitch")}</a></li></ul>', unsafe_allow_html=True)
+        st.markdown(f'<div class="lpc-menu-h" style="margin-top:12px">{t("sb.about")}</div><div class="lpc-about"><b>{t("sb.pilots")}</b> : LALSTOP CONTANS WG, LALSTOP G46 WG, LALGUARD M52 OD<br>'
+                    f'<b>{t("sb.sources")}</b> : Santé Canada PPID, US EPA PPLS, ANSES E-Phy, MAPA AGROFIT<br><b>{t("sb.limits")}</b> : {t("sb.lim1")} {t("sb.lim2")}<br>'
+                    f'<span class="muted">{t("disclaimer")}</span></div>', unsafe_allow_html=True)
 
 products = api_get("/products", {"limit": 500})["items"]
 prod_label = {p["productId"]: f"{p['commercialName']}  ({', '.join(p['countries']) or t('no_country')})" for p in products}
@@ -521,6 +493,19 @@ FOLLOW_UPS = {"registration_lookup": ["chat.fu_uses", "chat.fu_sisters", "chat.f
               "ingredient_search": ["chat.fu_sources"]}
 
 
+def show_table(data, **kw):
+    """st.dataframe with a visible sort hint on every header (click a header to sort, the menu offers ascending / descending)."""
+    df = data.data if hasattr(data, "data") else data
+    cfg = dict(kw.pop("column_config", None) or {})
+    for c in df.columns:
+        if c in cfg and isinstance(cfg[c], dict):
+            if not str(cfg[c].get("label") or "").endswith("⇅"):
+                cfg[c]["label"] = f"{cfg[c].get('label') or c} ⇅"
+        elif c not in cfg:
+            cfg[c] = st.column_config.Column(label=f"{c} ⇅")
+    st.dataframe(data, column_config=cfg, **kw)
+
+
 def answer_status(v: str | None) -> str | None:
     """Readable, translated status for an answer row (registration status or coverage verdict)."""
     if v in STATUS_COLOR:
@@ -580,7 +565,7 @@ def render_items(items: list[dict]):
         return
     df = answer_items_df(items)
     cfg = {t("ask.url"): st.column_config.LinkColumn(t("ask.url"), display_text=t("ask.open"))} if t("ask.url") in df.columns else None
-    st.dataframe(style_status(df), hide_index=True, use_container_width=True, column_config=cfg)
+    show_table(style_status(df), hide_index=True, use_container_width=True, column_config=cfg)
 
 
 def render_answer(ans: dict, key: str, stream: bool = False):
@@ -607,7 +592,7 @@ def render_answer(ans: dict, key: str, stream: bool = False):
         if ans["evidence"]:
             ev = pd.DataFrame([{t("source"): e["sourceId"], "URL": e["sourceUrl"], t("collected"): fmt_dt(e["collectedAt"]), t("validation"): e["validationStatus"],
                                 t("ask.excerpt"): (e.get("excerpt") or "")[:160]} for e in ans["evidence"]])
-            st.dataframe(ev, hide_index=True, use_container_width=True, column_config={"URL": st.column_config.LinkColumn("URL", display_text=t("ask.open"))})
+            show_table(ev, hide_index=True, use_container_width=True, column_config={"URL": st.column_config.LinkColumn("URL", display_text=t("ask.open"))})
         else:
             st.info(t("ask.no_evidence"))
         st.json(ans["facts"], expanded=False)
@@ -631,10 +616,10 @@ def chat_page():
     lang = st.session_state["lang"]
     th = current_thread()
     msgs = th["messages"]
-    st.markdown("<style>section.stMain .block-container, [data-testid=\"stBottomBlockContainer\"] { max-width: 900px; }</style>", unsafe_allow_html=True)
+    st.markdown("<style>section.stMain .block-container, [data-testid=\"stBottomBlockContainer\"] { max-width: 900px; } "
+                "section.stMain div[data-stale=\"true\"] { display:none !important; }</style>", unsafe_allow_html=True)  # a sent question replaces the previous view at once
     if not msgs:
-        st.markdown("<style>section.stMain h1 { text-align:center; margin-top:.4rem; font-size:2rem; }</style>", unsafe_allow_html=True)
-        st.markdown(microbe_art(SLATE, GREY_LIGHT, RED, 56), unsafe_allow_html=True)
+        st.markdown("<style>section.stMain h1 { text-align:center; margin-top:8vh; font-size:2rem; }</style>", unsafe_allow_html=True)
         st.title(t("chat.hero"))
         st.markdown(f'<p class="hero-sub">{t("chat.hero_sub")}</p>', unsafe_allow_html=True)
         ov = api_get("/overview", {"scope": "pilots", "months": 12})
@@ -687,7 +672,6 @@ def chat_page():
                     msgs.append({"role": "assistant", "ans": ans})
             st.session_state["chat_pending"] = None
             st.rerun()
-    disclaimer_box()
     typed = st.chat_input(t("chat.placeholder"), key="chat_in")
     if typed and typed.strip():
         queue_question(typed.strip())
@@ -702,8 +686,7 @@ if page not in ("page.chat", "page.home"):
 
 def home_page():
     """Landing page: what the tool is, three entries (assistant, map, data & monitoring), key figures, the pilots map."""
-    st.markdown("<style>section.stMain .block-container { max-width: 1000px; } section.stMain h1 { text-align:center; margin-top:.4rem; font-size:2.1rem; }</style>", unsafe_allow_html=True)
-    st.markdown(microbe_art(SLATE, GREY_LIGHT, RED, 56), unsafe_allow_html=True)
+    st.markdown("<style>section.stMain .block-container { max-width: 1000px; } section.stMain h1 { text-align:center; margin-top:4vh; font-size:2.1rem; }</style>", unsafe_allow_html=True)
     st.title(t("home.title"))
     st.markdown(f'<p class="home-sub">{t("home.sub")}</p>', unsafe_allow_html=True)
     with st.container(key="home_cards"):
@@ -733,9 +716,8 @@ def home_page():
             queue_question(t("chat.sugg_country", cin=COUNTRY_IN.get(st.session_state["lang"], COUNTRY_IN["en"]).get(cc, cc)))
             go_chat()
     st.markdown(f'<div class="lpc-section" style="color:#6b767d">{t("sb.sources")}</div>', unsafe_allow_html=True)
-    st.dataframe(pd.DataFrame([{t("source"): x["sourceId"], t("src.name"): x["officialName"], t("src.region"): x["countryOrRegion"], t("registrations"): x["registrations"],
+    show_table(pd.DataFrame([{t("source"): x["sourceId"], t("src.name"): x["officialName"], t("src.region"): x["countryOrRegion"], t("registrations"): x["registrations"],
                                 t("src.last"): fmt_dt(x["lastCollectedAt"])} for x in collected]), hide_index=True, use_container_width=True)
-    disclaimer_box()
 if page == "page.home":
     home_page()
 
@@ -781,7 +763,7 @@ elif page == "page.overview":
         queue_question(ask_q)
         go_chat()
     if c["registrations"]:
-        st.dataframe(country_detail_table(c["registrations"]), hide_index=True, use_container_width=True, column_config=LINK)
+        show_table(country_detail_table(c["registrations"]), hide_index=True, use_container_width=True, column_config=LINK)
     elif c["coverage"] == "not_found_in_source":
         st.info(t("ov.notfound", src=c["sourceId"], at=fmt_dt(c["collectedAt"]), n=c.get("totalInStore", 0)))
     else:
@@ -790,8 +772,7 @@ elif page == "page.overview":
         view = df.drop(columns=["iso3"]).copy()
         view["Statut"] = view["Statut"].map(t)
         view = view.rename(columns={"Statut": t("status")})
-        st.dataframe(view, hide_index=True, use_container_width=True)
-    disclaimer_box(ov["disclaimer"])
+        show_table(view, hide_index=True, use_container_width=True)
 
 elif page == "page.compare":
     st.title(t("cmp.title"))
@@ -868,7 +849,7 @@ elif page == "page.compare":
                                      t("expires"): (r["expirationDate"] or "—") if r else "—", t("source"): r["evidence"]["sourceId"] if r else "—",
                                      t("collected"): fmt_dt(r["evidence"]["collectedAt"]) if r else "—", "URL": r["evidence"]["sourceUrl"] if r else None,
                                      t("cmp.rel_evidence"): rp["evidence"]})
-            st.dataframe(pd.DataFrame(rel_rows), hide_index=True, use_container_width=True, column_config=LINK)
+            show_table(pd.DataFrame(rel_rows), hide_index=True, use_container_width=True, column_config=LINK)
         st.markdown(f"### {t('cmp.uses_h')}")
         frames = [uses_table(r) for r in data["registrations"] if r["uses"]]
         if frames:
@@ -893,7 +874,7 @@ elif page == "page.compare":
                 m = view[t("u.crop_o")].fillna("").str.contains(crop_f, case=False) | view[t("u.crop_n")].fillna("").str.contains(crop_f, case=False)
                 view = view[m]
             st.caption(t("cmp.rows_cap", n=len(view)))
-            st.dataframe(view, use_container_width=True, hide_index=True, column_config=LINK)
+            show_table(view, use_container_width=True, hide_index=True, column_config=LINK)
         else:
             st.info(t("cmp.no_uses"))
         st.markdown(f"### {t('cmp.detail_h')}")
@@ -914,7 +895,6 @@ elif page == "page.compare":
         with ex2:
             st.download_button(t("cmp.export_xlsx"), data=httpx.get(f"{API}/export.xlsx", params={"productId": pid, "countries": ",".join(countries)}, timeout=120).content,
                                file_name=f"{pid}_{'_'.join(countries)}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-        disclaimer_box(data["disclaimer"])
 
 elif page == "page.map":
     st.title(t("map.title"))
@@ -972,11 +952,10 @@ elif page == "page.map":
     sel = country_picker(df, clicked, "carte", t("registrations"))
     st.markdown(f"#### {df.set_index('iso3').loc[sel, t('country')]}")
     if detail.get(sel):
-        st.dataframe(country_detail_table(detail[sel]), hide_index=True, use_container_width=True, column_config=LINK)
+        show_table(country_detail_table(detail[sel]), hide_index=True, use_container_width=True, column_config=LINK)
     else:
         st.info(t(df.set_index("iso3").loc[sel, "Statut"]).capitalize() + " — " + t("map.nothing"))
     warnings_box(warnings)
-    disclaimer_box()
 
 elif page == "page.sisters":
     st.title(t("sis.title"))
@@ -991,7 +970,7 @@ elif page == "page.sisters":
         df = pd.DataFrame([{t("sis.name"): a["aliasName"], t("cmp.relation"): a["relationshipType"], t("country"): a["countryCode"] or "—", t("cmp.conf"): a["confidence"],
                             t("cmp.review"): a["reviewStatus"], t("sis.evidence"): a["evidence"], "URL": a["sourceRecordUrl"], "id": a["aliasId"]} for a in al])
         st.caption(t("sis.caption"))
-        st.dataframe(df.drop(columns=["id"]), hide_index=True, use_container_width=True, column_config=LINK)
+        show_table(df.drop(columns=["id"]), hide_index=True, use_container_width=True, column_config=LINK)
         st.markdown(f"### {t('sis.review_h')}")
         st.caption(t("sis.review_cap"))
         c1, c2, c3, c4 = st.columns([3, 2, 2, 3])
@@ -1011,8 +990,7 @@ elif page == "page.sisters":
         log = api_get("/review/log", {"limit": 50})
         if log:
             st.markdown(f"#### {t('sis.log')}")
-            st.dataframe(pd.DataFrame(log), hide_index=True, use_container_width=True)
-    disclaimer_box()
+            show_table(pd.DataFrame(log), hide_index=True, use_container_width=True)
 
 elif page == "page.watch":
     st.title(t("watch.title"))
@@ -1020,7 +998,7 @@ elif page == "page.watch":
     exp = api_get("/expiring", {"months": months})
     st.markdown(f"### {t('watch.exp_h', m=months, n=len(exp['items']))}")
     if exp["items"]:
-        st.dataframe(pd.DataFrame([{t("product"): r["productName"], t("country"): r["countryCode"], t("number"): r["registrationNumber"], t("watch.expires_on"): r["expirationDate"],
+        show_table(pd.DataFrame([{t("product"): r["productName"], t("country"): r["countryCode"], t("number"): r["registrationNumber"], t("watch.expires_on"): r["expirationDate"],
                                     t("watch.days_left"): r["daysLeft"], t("status"): st_label(r["statusNormalized"]), t("source"): r["evidence"]["sourceId"],
                                     "URL": r["evidence"]["sourceUrl"], t("collected"): fmt_dt(r["evidence"]["collectedAt"])} for r in exp["items"]]),
                      hide_index=True, use_container_width=True, column_config=LINK)
@@ -1029,12 +1007,11 @@ elif page == "page.watch":
     st.markdown(f"### {t('watch.changes_h', n=len(ch))}")
     st.caption(t("watch.changes_cap"))
     if ch:
-        st.dataframe(pd.DataFrame([{t("watch.detected"): fmt_dt(c["detectedAt"]), t("watch.entity"): c["entityId"], t("watch.field"): c["field"], t("watch.before"): c["oldValue"],
+        show_table(pd.DataFrame([{t("watch.detected"): fmt_dt(c["detectedAt"]), t("watch.entity"): c["entityId"], t("watch.field"): c["field"], t("watch.before"): c["oldValue"],
                                     t("watch.after"): c["newValue"], "Snapshot": f"{c['fromSnapshotId'] or '—'} → {c['toSnapshotId']}"} for c in ch]),
                      hide_index=True, use_container_width=True)
     else:
         st.info(t("watch.no_changes"))
-    disclaimer_box()
 
 elif page == "page.registry":
     st.title(t("reg.title"))
@@ -1064,7 +1041,7 @@ elif page == "page.registry":
                       t("reg.off_status"): off.get("statusNormalized") or "—", t("reg.off_exp"): off.get("expirationDate") or "—",
                       t("reg.disc_col"): "; ".join(disc) or "—", t("reg.flags"): ", ".join(x["flags"]) or "—",
                       t("source"): (x["evidence"] or {}).get("sourceId") or "—", t("collected"): fmt_dt((x["evidence"] or {}).get("collectedAt")), "URL": (x["evidence"] or {}).get("sourceUrl")})
-    st.dataframe(pd.DataFrame(table), hide_index=True, use_container_width=True, column_config=LINK)
+    show_table(pd.DataFrame(table), hide_index=True, use_container_width=True, column_config=LINK)
     with st.expander(t("reg.raw")):
         st.json(rep["rows"])
     warnings_box(rep["warnings"])
@@ -1079,7 +1056,6 @@ elif page == "page.registry":
     with e2:
         st.download_button(t("reg.dv_xlsx"), data=httpx.get(f"{API}/export/dataverse.xlsx", timeout=300).content, file_name="lpc_dataverse_export.xlsx",
                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-    disclaimer_box(rep["disclaimer"])
 
 elif page == "page.sources":
     st.title(t("src.title"))
@@ -1087,15 +1063,14 @@ elif page == "page.sources":
     df = pd.DataFrame([{t("source"): s["sourceId"], t("src.name"): s["officialName"], t("src.region"): s["countryOrRegion"], t("src.access"): s["accessMethod"],
                         t("src.format"): s["dataFormat"], t("src.licence"): s["licenseName"], t("src.limits"): s["accessAndReuseLimits"], t("registrations"): s["registrations"],
                         t("src.last"): fmt_dt(s["lastCollectedAt"]), "URL": s["baseUrl"]} for s in src["items"]])
-    st.dataframe(df, hide_index=True, use_container_width=True, column_config={"URL": st.column_config.LinkColumn("URL", display_text=t("ask.open"))})
+    show_table(df, hide_index=True, use_container_width=True, column_config={"URL": st.column_config.LinkColumn("URL", display_text=t("ask.open"))})
     st.markdown(f"### {t('src.quality_h')}")
     pid = product_picker("dq")
     dq = api_get(f"/products/{pid}/quality")
     if "__404__" not in dq:
-        st.dataframe(pd.DataFrame([{t("src.registration"): i["registrationId"], t("country"): i["countryCode"], t("status"): st_label(i["statusNormalized"]),
+        show_table(pd.DataFrame([{t("src.registration"): i["registrationId"], t("country"): i["countryCode"], t("status"): st_label(i["statusNormalized"]),
                                     t("validation"): i["validationStatus"], t("cmp.pairing"): ", ".join(i["pairing"]), t("src.missing"): "; ".join(i["missingOrUncertain"]) or "—"}
                                    for i in dq["registrations"]]), hide_index=True, use_container_width=True)
         warnings_box(dq["warnings"])
     st.markdown(f"### {t('src.export_h')}")
     st.download_button(t("src.export_all"), data=httpx.get(f"{API}/export.csv", timeout=180).content, file_name="lpc_regwatch_all.csv", mime="text/csv")
-    disclaimer_box(src["disclaimer"])

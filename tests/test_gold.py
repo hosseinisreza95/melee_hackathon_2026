@@ -190,3 +190,20 @@ def test_follow_up_questions_inherit_the_conversation_context(api_client):
     regs8 = [f for f in d8["facts"] if f["type"] == "registration"]
     assert regs8 and all(f["country"] == "CA" for f in regs8)
     assert any(w.startswith("Context taken from the conversation: Clonostachys rosea") for w in d8["warnings"]), d8["warnings"]
+
+
+def test_partial_product_names_and_unrelated_follow_ups(api_client):
+    """'contans' alone resolves to LALSTOP CONTANS WG; 'Lalguard' matches several products and asks which one; a question that
+    is not a follow-up must not inherit the previous product."""
+    d = _ask(api_client, "contans")
+    assert d["context"]["productIds"] == ["P-LPC-CONTANS"] and [f for f in d["facts"] if f["type"] == "registration"]
+    d2 = _ask(api_client, "Lalstop")
+    assert d2["intent"] == "product_search"
+    names = {f["product"] for f in d2["facts"] if f["type"] == "product_match"}
+    assert "LALSTOP CONTANS WG" in names and len(names) >= 2 and d2["evidence"] == []
+    assert "LALSTOP" in d2["structured"]["headline"]
+    d3 = api_client.post("/ask", json={"question": "Quel est le prix du blé en 2026 ?", "language": "fr", "context": d["context"]}).json()
+    assert not [f for f in d3["facts"] if f["type"] == "registration"] and not any("Context taken" in w for w in d3["warnings"])
+    assert any("No known product name" in w for w in d3["warnings"])  # honest 'no data', not the previous answer
+    d4 = api_client.post("/ask", json={"question": "Et en France ?", "language": "fr", "context": d["context"]}).json()
+    assert d4["context"]["productIds"] == ["P-LPC-CONTANS"] and d4["context"]["countries"] == ["FR"]  # real follow-ups still work

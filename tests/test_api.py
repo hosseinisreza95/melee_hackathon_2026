@@ -144,3 +144,8 @@ def test_overview_is_map_ready_and_distinguishes_coverage(api_client):
     p = api_client.get("/overview", params={"scope": "product", "productId": "PRESTOP"}).json()
     assert {c["countryCode"] for c in p["countries"] if c["coverage"] == "found"} == {"CA", "US"}
     assert api_client.get("/overview", params={"scope": "product", "productId": "NOPE"}).status_code == 404
+
+
+def test_integration_guide_is_served(api_client):
+    r = api_client.get("/guide")
+    assert r.status_code == 200 and "Power Automate" in r.text and "/api/compare" in r.text and "<table" in r.text

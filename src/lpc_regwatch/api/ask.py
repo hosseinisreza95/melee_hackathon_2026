@@ -71,6 +71,40 @@ INTENTS = {
                             r"registrad", r"quais países", r"\bonde\b", r"\bqué países", r"\bdónde\b", r"\bhomologa"],
 }
 PRODUCT_INTENTS = {"registration_lookup", "use_comparison", "sister_product", "alternatives", "data_quality", "source", "target_search", "product_profile"}
+PROBE_INTENTS = {"registration_lookup", "use_comparison", "sister_product", "alternatives", "data_quality", "source", "product_profile"}
+STOP_WORDS = set((
+    "quels quelles quel quelle est il elle sont pour la le les des de du un une en au aux et ou est-il est-elle qui que quoi comment ce cet cette ces sur avec dans par à a "
+    "the is are what which where for of in on and or to an this that these those product products produit produits produto produtos producto productos o os as um uma da do "
+    "em para com qual quais está estão el los las y es son del al qué cuál cuáles están hay homologué homologuée homologués autorisé autorisée registered registrado "
+    "autorizado homologation homologations registration registrations usage usages uses use doses dose pays country countries países marque marques brand brands sœurs "
+    "sœur sister sisters source sources preuve evidence cherche looking search je me moi my mon ma mes vous nous dis donne give tell about sur produit's info infos "
+    "informations information fiche profil détails details statut status date dates expiration titulaire holder").split())
+FOLLOW_UP_RE = re.compile(r"^(et|and|e|y|puis|aussi|also|também|además|mais|but|ok|d'accord)\b|\b(ses|son|sa|il|elle|lui|its|it|this product|that product|ce produit|celui-ci|celle-ci|seus?|suas?|ele|ela|dele|dela|su|sus|este producto|ese producto|le même|the same|o mesmo|el mismo)\b")
+
+
+def looks_like_follow_up(question: str, unresolved: list[str], intents: list[str]) -> bool:
+    """True when a question without a product name reads like a continuation of the thread ('et en France ?', 'et ses usages ?',
+    'dans quels pays est-il homologué ?'), false for a new subject or something unknown ('quel est le prix du blé ?')."""
+    if unresolved:
+        return False
+    ql = question.lower().strip()
+    if FOLLOW_UP_RE.search(ql):
+        return True
+    return len(ql.split()) <= 4 and bool(intents)
+
+
+def _probes(question: str, unresolved: list[str]) -> list[str]:
+    """Wordings to try in the product name / alias search when nothing resolved exactly: unresolved uppercase tokens, then the
+    question without stop words ('Bouillie bordelaise'), then its tail."""
+    out = [u for u in unresolved]
+    words = [w for w in re.findall(r"[\w'’-]+", question.lower()) if w not in STOP_WORDS and len(w) >= 4 and not w.isdigit()]
+    if 1 <= len(words) <= 4:
+        out.append(" ".join(words))
+    if len(words) >= 2:
+        out.append(" ".join(words[-2:]))
+    if len(words) <= 3:
+        out += [w for w in words if len(w) >= 5]
+    return list(dict.fromkeys(p for p in out if p))
 SPECIES_STATIC = ["Coniothyrium minitans", "Clonostachys rosea", "Gliocladium catenulatum", "Metarhizium brunneum", "Metarhizium anisopliae",
                   "Beauveria bassiana", "Trichoderma", "Bacillus", "Streptomyces", "Cordyceps javanica"]
 # question words that are not EPPO aliases (fruit / plural / Spanish / Portuguese wording) -> crop concept id
@@ -270,6 +304,8 @@ class Plan:
     no_advice: bool = False
     flags: list[str] = field(default_factory=list)  # expiry | holder | dose | same_product (what the question focuses on)
     crop_word: str | None = None  # the crop as written in the question (for headlines); `crop` is the concept name used for filtering
+    candidates: list[dict] = field(default_factory=list)  # product_search: several products match the wording
+    probe: str | None = None
 
 
 # --------------------------------------------------------------------------- 1. plan
@@ -347,13 +383,28 @@ def plan(session: Session, question: str, context: dict | None = None) -> Plan:
             if tok not in COUNTRY_WORDS and norm_name(tok) not in {"EPPO", "ANSES", "EPA", "USA", "LPC", "LALLEMAND", "DANSTAR"} and tok not in unresolved:
                 unresolved.append(tok)
     scope = "lallemand" if re.search(r"lallemand|danstar", q) else "all"
-    if not pids and not species and countries and PORTFOLIO_RE.search(q) and not substance and not (intent == "target_search" and tterms) and intent != "substance_search":
+    # partial or informal product names ('Bouillie bordelaise', 'contans'): name / alias search before giving up
+    cands: list[dict] = []
+    probe_used = None
+    follow_up = bool(context) and looks_like_follow_up(question, unresolved, intents)
+    if not pids and not species and intent in PROBE_INTENTS and not substance and not (countries and PORTFOLIO_RE.search(q)) and not follow_up:
+        for probe in _probes(question, unresolved):
+            found = [p for p in Q.search_products(session, probe, 25) if p.get("matchedOn") in ("name", "alias")]
+            if found:
+                cands, probe_used = found, probe
+                break
+        if len(cands) == 1:
+            pids, unresolved = [cands[0]["productId"]], []
+        elif cands:
+            intent, unresolved = "product_search", []
+    if not pids and not species and countries and PORTFOLIO_RE.search(q) and not substance and not (intent == "target_search" and tterms) and intent not in ("substance_search", "product_search"):
         intent = "country_portfolio"
         unresolved = []
     # follow-up questions ('et en France ?', 'et ses usages ?'): take the subject from the previous turn, deterministically
     inherited: list[str] = []
     ctx = context or {}
-    if ctx and not pids and not species and intent not in ("expiry", "changes", "country_portfolio", "help", "substance_search") and not (intent == "target_search" and tterms):
+    if (ctx and not pids and not species and intent not in ("expiry", "changes", "country_portfolio", "help", "substance_search", "product_search")
+            and not (intent == "target_search" and tterms) and looks_like_follow_up(question, unresolved, intents)):
         if ctx.get("productIds"):
             pids = [p for p in ctx["productIds"] if session.get(Product, p)]
             if pids:
@@ -373,7 +424,7 @@ def plan(session: Session, question: str, context: dict | None = None) -> Plan:
         inherited.append("countries")
     extra = [i for i in intents[1:] if i in PRODUCT_INTENTS and i != intent] if pids else []
     return Plan(intent, pids, countries, species, crop, months, unresolved, scope, inherited, extra[:4], tterms, tcode, tname, substance, crop_cid,
-                bool(NO_ADVICE_RE.search(q)), flags, crop_word)
+                bool(NO_ADVICE_RE.search(q)), flags, crop_word, cands if intent == "product_search" else [], probe_used)
 
 
 # --------------------------------------------------------------------------- 2. tools (the only data access)
@@ -444,6 +495,14 @@ def run_tools(session: Session, pl: Plan) -> tuple[list[dict], list[dict], list[
 
     if pl.intent == "help":
         add_sources()
+        return facts, evidence, warnings, tools
+
+    if pl.intent == "product_search":
+        tools.append("search_products")
+        for c in pl.candidates[:12]:
+            facts.append({"type": "product_match", "product": c["commercialName"], "productId": c["productId"], "countries": c.get("countries"),
+                          "activeEntity": c.get("activeEntityNormalized"), "matchedOn": c.get("matchedOn")})
+        warnings.append(f"{len(pl.candidates)} products match '{pl.probe}' in the collected sources; name the one you mean (exact commercial name) to get its registrations.")
         return facts, evidence, warnings, tools
 
     if pl.intent == "expiry":
@@ -738,7 +797,8 @@ HEAD = {
            "relation_none": "{a} et {b} : aucune relation déclarée dans les sources collectées (ni nom alternatif, ni produit sœur ou lié) ; ce sont des enregistrements distincts.",
            "holder_of": "{product} : titulaire {rows}.", "expiry_of": "{product} : {rows}.", "exp_none": "pas de date d'expiration dans la source",
            "crop_check": "{product}{crop} : {rows}.", "crop_yes": "{cc} n° {num} : {n} usage(s) sur {crop}", "crop_no": "{cc} n° {num} : aucun usage sur {crop} dans la source",
-           "two_products": "{rows}"},
+           "two_products": "{rows}",
+           "product_search": "{n} produit(s) correspondent à « {x} » dans les sources collectées : {names}. Précisez le nom exact pour obtenir ses homologations."},
     "en": {"lookup": "{product}: {n} registration(s) found in the collected official sources for {countries}.",
            "lookup_nf": "Not found in the official source of: {countries} (≠ not registered).", "lookup_ns": "No source connected for: {countries}.",
            "lookup_none": "{product}: no registration in the collected sources (not found: {nf}; source not connected: {ns}). This is not proof of no registration.",
@@ -771,7 +831,8 @@ HEAD = {
            "relation_none": "{a} and {b}: no declared relation in the collected sources (no alternate name, sister or related-product link); they are distinct registrations.",
            "holder_of": "{product}: holder {rows}.", "expiry_of": "{product}: {rows}.", "exp_none": "no expiry date in the source",
            "crop_check": "{product}{crop}: {rows}.", "crop_yes": "{cc} no. {num}: {n} use(s) on {crop}", "crop_no": "{cc} no. {num}: no use on {crop} in the source",
-           "two_products": "{rows}"},
+           "two_products": "{rows}",
+           "product_search": "{n} product(s) match '{x}' in the collected sources: {names}. Give the exact name to get its registrations."},
     "pt": {"lookup": "{product}: {n} registro(s) encontrado(s) nas fontes oficiais coletadas para {countries}.",
            "lookup_nf": "Não encontrado na fonte oficial de: {countries} (≠ não registrado).", "lookup_ns": "Nenhuma fonte conectada para: {countries}.",
            "lookup_none": "{product}: nenhum registro nas fontes coletadas (não encontrado: {nf}; fonte não conectada: {ns}). Isto não prova ausência de registro.",
@@ -804,7 +865,8 @@ HEAD = {
            "relation_none": "{a} e {b}: nenhuma relação declarada nas fontes coletadas (nem nome alternativo, nem produto irmão ou relacionado); são registros distintos.",
            "holder_of": "{product}: titular {rows}.", "expiry_of": "{product}: {rows}.", "exp_none": "sem data de vencimento na fonte",
            "crop_check": "{product}{crop}: {rows}.", "crop_yes": "{cc} nº {num}: {n} uso(s) em {crop}", "crop_no": "{cc} nº {num}: nenhum uso em {crop} na fonte",
-           "two_products": "{rows}"},
+           "two_products": "{rows}",
+           "product_search": "{n} produto(s) correspondem a « {x} » nas fontes coletadas: {names}. Indique o nome exato para obter os seus registros."},
 }
 PROFILE_WORDS = {"fr": (", formulation {f}", ", titulaire {h}"), "en": (", formulation {f}", ", holder {h}"), "pt": (", formulação {f}", ", titular {h}")}
 
@@ -894,6 +956,9 @@ WARN_I18N: list[tuple[re.Pattern, dict[str, str]]] = [
       "pt": "{n} registros têm um uso contra « {x} »; apenas os 40 primeiros são listados — acrescente um país ou uma cultura para restringir."}),
     (re.compile(r"^(?P<p>.+?): no target \(disease / pest\) recorded in its uses in the collected sources\.$"),
      {"fr": "{p} : aucune cible (maladie / ravageur) enregistrée dans ses usages des sources collectées.", "pt": "{p}: nenhum alvo (doença / praga) registrado nos seus usos nas fontes coletadas."}),
+    (re.compile(r"^(?P<n>\d+) products match '(?P<x>.+?)' in the collected sources; name the one you mean \(exact commercial name\) to get its registrations\.$"),
+     {"fr": "{n} produits correspondent à « {x} » dans les sources collectées ; indiquez celui que vous voulez (nom commercial exact) pour obtenir ses homologations.",
+      "pt": "{n} produtos correspondem a « {x} » nas fontes coletadas; indique o que pretende (nome comercial exato) para obter os seus registros."}),
     (re.compile(r"^No declared relation between (?P<names>.+?) in the collected sources \(no alternate name, sister or related-product link\)\.$"),
      {"fr": "Aucune relation déclarée entre {names} dans les sources collectées (ni nom alternatif, ni produit sœur ou lié).",
       "pt": "Nenhuma relação declarada entre {names} nas fontes coletadas (nem nome alternativo, nem produto irmão ou relacionado)."}),
@@ -920,7 +985,7 @@ def localize_warning(w: str, lang: str) -> str:
 
 
 CAVEAT_KEYS = ("Context taken", "not proof", "dose is not", "two independent lists", "AI model", "hypotheses", "no source connected", "only the first", "Scope 'Lallemand'",
-               "was not applied", "No advice", "EPPO code", "No disease", "Alternatives share", "no target", "No declared relation")
+               "was not applied", "No advice", "EPPO code", "No disease", "Alternatives share", "no target", "No declared relation", "products match")
 
 
 def scope_summary(session: Session, lang: str, sources: list[dict]) -> str:
@@ -1045,7 +1110,11 @@ def build_structured(pl: Plan, facts: list[dict], warnings: list[str], language:
             return H["crop_check"].format(product=name or "", crop="", rows="; ".join(parts)) + (" " + default if cov else "")
         return default
 
-    if pl.intent == "help":
+    if pl.intent == "product_search":
+        pm = [f for f in facts if f["type"] == "product_match"]
+        items = [AnswerItem(product=f["product"], country=", ".join(f.get("countries") or []) or None, detail=(f.get("activeEntity") or "")[:120] or None) for f in pm[:12]]
+        headline = H["product_search"].format(n=len(pl.candidates), x=pl.probe or "", names=", ".join(f["product"] for f in pm[:8]) + (" …" if len(pm) > 8 else ""))
+    elif pl.intent == "help":
         headline = H["help"].format(sources=", ".join(s["sourceId"] for s in srcs) or "CA-PPID, US-EPA-PPLS, FR-EPHY, BR-AGROFIT")
         items = source_items()
         caveats.append(H["help_caveat"])
@@ -1227,7 +1296,8 @@ Rules:
 - Never add a country, product, number, date, dose, URL or status that is not in FACTS. Never give advice on how to use a product or whether it may be used on another crop: say that only the official label is authoritative and report the registered uses you have.
 - Related or sister candidates are hypotheses unless their review status is 'validated'; alternatives share only the active substance and are distinct products.
 - CONVERSATION (earlier turns) is given for wording only: never reuse a number, product or country from it unless it is in FACTS.
-- For a greeting or a 'what can you do' question, answer warmly in two or three sentences and give two example questions."""
+- For a greeting or a 'what can you do' question, answer warmly in two or three sentences and give two example questions.
+- If FACTS are 'product_match' rows, several products matched the wording: list them briefly and ask which one is meant."""
 
 
 def _numbers(text: str) -> set[str]:

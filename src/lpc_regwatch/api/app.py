@@ -14,11 +14,11 @@ from typing import Iterator
 from datetime import datetime, timedelta, timezone
 from fastapi import Depends, FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, Response, StreamingResponse
+from fastapi.responses import JSONResponse, Response, StreamingResponse, HTMLResponse
 from sqlalchemy.orm import Session
 
 from .. import __version__
-from ..config import DISCLAIMER, settings
+from ..config import ROOT, DISCLAIMER, settings
 from ..db import get_session
 from ..db.models import AuthorizedUse, Product, ProductAlias, Registration, ReviewLog, Snapshot, ValidationStatus
 from . import queries as Q
@@ -76,6 +76,23 @@ def _countries(csv_: str) -> list[str]:
 
 
 # --------------------------------------------------------------------------- contract endpoints
+GUIDE_CSS = ("body{font-family:Segoe UI,Arial,sans-serif;color:#212529;background:#f5f6f7;margin:0}main{max-width:900px;margin:0 auto;padding:32px 24px 60px;background:#fff}"
+             "h1{font-size:1.7rem;margin-top:0}h2{font-size:1.2rem;margin-top:2rem;border-top:1px solid #e6e8ea;padding-top:1rem}table{border-collapse:collapse;width:100%;font-size:.92rem}"
+             "th,td{border:1px solid #e1e3e4;padding:6px 8px;text-align:left;vertical-align:top}th{background:#f1f3f4}code{background:#f1f3f4;padding:1px 4px;border-radius:4px}"
+             "blockquote{border-left:4px solid #e30327;margin:1rem 0;padding:.4rem 1rem;color:#5b6770;background:#fafafa}a{color:#36434b}")
+
+
+@app.get("/guide", include_in_schema=False, response_class=HTMLResponse)
+def guide():
+    """Human-readable integration guide (docs/API_GUIDE.md): how to use the data in M365, Dataverse, Excel or any program."""
+    import markdown
+
+    md = (ROOT / "docs" / "API_GUIDE.md").read_text(encoding="utf-8")
+    body = markdown.markdown(md, extensions=["tables", "fenced_code"])
+    return HTMLResponse(f"<!doctype html><html lang='fr'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
+                        f"<title>Regulatory Watch — guide d'intégration</title><style>{GUIDE_CSS}</style></head><body><main>{body}</main></body></html>")
+
+
 @app.get("/health", operation_id="getHealth", tags=["contract"])
 def health(s: Session = Depends(db)):
     n = s.query(Registration).count()
