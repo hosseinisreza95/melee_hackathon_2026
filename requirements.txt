@@ -1,0 +1,17 @@
+langchain
+langchain-community
+langchain-openai
+langchain-ollama
+langchain-pinecone
+langchain-text-splitters
+langgraph
+pinecone
+python-dotenv
+streamlit
+# format-specific parsers
+pypdf
+docx2txt
+beautifulsoup4
+# catch-all parser (xlsx, pptx, eml, epub, images/OCR, scanned PDFs...)
+langchain-unstructured
+unstructured[all-docs]
