@@ -427,7 +427,7 @@ with st.container(key="lpc_topbar"):
         st.markdown(f'<div class="lpc-menu-h">{t("sb.lang")}</div>', unsafe_allow_html=True)
         st.segmented_control(t("sb.lang"), list(LANGS), format_func=lambda k: LANGS[k], key="lang_ctl", on_change=_set_lang, label_visibility="collapsed")
         st.markdown(f'<div class="lpc-menu-h" style="margin-top:12px">{t("sb.links")}</div><ul class="lpc-menu-list"><li><a href="{API_PUBLIC}/guide" target="_blank">{t("sb.guide")}</a></li>'
-                    f'<li><a href="{API_PUBLIC}/docs" target="_blank">{t("sb.swagger")}</a></li><li><a href="/pitch/" target="_blank">{t("sb.pitch")}</a></li></ul>', unsafe_allow_html=True)
+                    f'<li><a href="{API_PUBLIC}/docs" target="_blank">{t("sb.swagger")}</a></li><li><a href="/pitch/watcher.html" target="_blank">{t("sb.pitch")}</a></li></ul>', unsafe_allow_html=True)
 
 products = api_get("/products", {"limit": 500})["items"]
 prod_label = {p["productId"]: f"{p['commercialName']}  ({', '.join(p['countries']) or t('no_country')})" for p in products}

@@ -11,6 +11,8 @@
 
 	# Pitch presentation (static HTML)
 	handle_path /pitch/* {
+		@root path /
+		rewrite @root /watcher.html
 		root * /srv/presentation
 		file_server
 	}
