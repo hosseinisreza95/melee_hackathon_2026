@@ -185,7 +185,7 @@ st.markdown(f"""
   .st-key-lpc_topbar {{ position:fixed; top:.55rem; right:1rem; z-index:999991; width:auto; }}
   .st-key-lpc_topbar button[data-testid="stPopoverButton"] {{ border-radius:999px; min-height:2.2rem; height:2.2rem; width:2.2rem; padding:0; justify-content:center; color:{SLATE}; background:#fff; border:1.5px solid {RED}; box-shadow:0 1px 4px rgba(227,3,39,.18); }}
   .st-key-lpc_topbar button[data-testid="stPopoverButton"] p {{ display:none; }}
-  .st-key-lpc_topbar button[data-testid="stPopoverButton"] > div[aria-hidden="true"] {{ display:none; }}
+  .st-key-lpc_topbar button[data-testid="stPopoverButton"] div[aria-hidden="true"], .st-key-lpc_topbar button[data-testid="stPopoverButton"] [data-testid="stMarkdownContainer"] {{ display:none; }}
   .st-key-lpc_topbar button[data-testid="stPopoverButton"] [data-testid="stIconMaterial"] {{ font-size:1.45rem; line-height:1; font-weight:700; }}
   .st-key-lpc_topbar button[data-testid="stPopoverButton"] > div {{ justify-content:center; width:100%; }}
   .st-key-lpc_topbar button[data-testid="stPopoverButton"]:hover {{ background:{RED}; color:#fff; border-color:{RED}; }}
