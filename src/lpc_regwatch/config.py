@@ -26,13 +26,18 @@ class Settings:
     app_env: str = os.getenv("APP_ENV", "development")
     database_url: str = os.getenv("DATABASE_URL", f"sqlite:///{(ROOT / 'data' / 'lpc_regwatch.sqlite').as_posix()}")
     raw_dir: Path = Path(os.getenv("RAW_DIR", ROOT / "data" / "raw"))
-    # AI provider: any OpenAI-compatible endpoint (OpenAI, Gemini OpenAI-compat, Azure OpenAI, local)
-    ai_provider: str = os.getenv("AI_PROVIDER", "openai")
-    ai_model: str = os.getenv("AI_MODEL", "gpt-5")  # the model that answers users; gpt-5-mini only as a cheaper fallback
-    # Accepted key names: AI_API_KEY (documented), OPENAI_API_KEY, OPEN_AI (team convention). Never logged.
-    ai_api_key: str = os.getenv("AI_API_KEY") or os.getenv("OPENAI_API_KEY") or os.getenv("OPEN_AI") or ""
+    # AI provider: "anthropic" (Claude, default) or any OpenAI-compatible endpoint (openai, gemini, azure_openai, local)
+    ai_provider: str = os.getenv("AI_PROVIDER", "anthropic").strip().lower()
+    ai_model: str = os.getenv("AI_MODEL") or ("claude-sonnet-5-5" if os.getenv("AI_PROVIDER", "anthropic").strip().lower() == "anthropic" else "gpt-5")
+    # Key names, never logged. Claude: ANTHROPIC_API_KEY, CLAUDE_API_KEY or CLOUDE_API_KEY (team convention), then AI_API_KEY.
+    # OpenAI-compatible: AI_API_KEY (documented), OPENAI_API_KEY, OPEN_AI.
+    ai_api_key: str = (
+        (os.getenv("ANTHROPIC_API_KEY") or os.getenv("CLAUDE_API_KEY") or os.getenv("CLOUDE_API_KEY") or os.getenv("AI_API_KEY") or "")
+        if os.getenv("AI_PROVIDER", "anthropic").strip().lower() == "anthropic"
+        else (os.getenv("AI_API_KEY") or os.getenv("OPENAI_API_KEY") or os.getenv("OPEN_AI") or ""))
     ai_base_url: str | None = os.getenv("AI_BASE_URL") or None
-    ai_reasoning_effort: str = os.getenv("AI_REASONING_EFFORT", "minimal")  # gpt-5 family: minimal (~10 s answers) | low | medium | high
+    # gpt-5 family: minimal (~10 s answers) | low | medium | high. Claude: low | medium | high | xhigh | max ("minimal" maps to low)
+    ai_reasoning_effort: str = os.getenv("AI_REASONING_EFFORT", "")  # empty = provider default (gpt-5: minimal, Claude: low)
     http_user_agent: str = os.getenv("HTTP_USER_AGENT", "lpc-regwatch/0.1 (regulatory watch)")
     # FR E-Phy scope: 'lallemand' = pilots + Lallemand/Danstar holders + pilot species; 'all' = every AUTORISE product
     # in France (the whole current French registry) plus the Lallemand-related ones of any status

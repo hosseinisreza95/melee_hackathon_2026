@@ -34,7 +34,7 @@
 | Service | Used for | Data sent | Configurable |
 |---|---|---|---|
 | Health Canada PPID, US EPA PPLS, data.gouv.fr (ANSES), dados.agricultura.gov.br (MAPA) | official data | nothing but public GET requests with a descriptive User-Agent | `HTTP_USER_AGENT` |
-| OpenAI-compatible LLM endpoint (OpenAI / Azure OpenAI / Gemini / local) | label extraction, answer phrasing | label text of public PDFs; database facts; the user's question. Never personal data. | `AI_PROVIDER`, `AI_MODEL`, `AI_API_KEY`, `AI_BASE_URL` |
+| LLM: Claude Sonnet 5.5 (Anthropic API, default) or any OpenAI-compatible endpoint (OpenAI / Azure OpenAI / Gemini / local) | label extraction, answer phrasing | label text of public PDFs; database facts; the user's question. Never personal data. | `AI_PROVIDER`, `AI_MODEL`, `CLAUDE_API_KEY` (or `AI_API_KEY`), `AI_BASE_URL` |
 
 No other external call exists. The UI talks only to the API; the API talks only to the database and the LLM endpoint.
 

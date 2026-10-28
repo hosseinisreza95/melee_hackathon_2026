@@ -8,7 +8,8 @@ fastapi
 uvicorn
 streamlit
 plotly
-openai>=1          # OpenAI-compatible client; provider/base_url/model from .env (OpenAI, Gemini, Azure OpenAI)
+anthropic>=1        # Claude (default provider, Sonnet 5.5); model/key from .env
+openai>=1          # optional alternative: any OpenAI-compatible endpoint (OpenAI, Gemini, Azure OpenAI)
 pymupdf            # label PDF text extraction
 lxml
 openpyxl           # Excel export

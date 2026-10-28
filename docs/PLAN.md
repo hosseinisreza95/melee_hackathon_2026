@@ -76,8 +76,8 @@ across CA / US / FR; PRESTOP ↔ LALSTOP G46 WG is a `sister_product_candidate`.
 - FastAPI implementing `/health`, `/products`, `/products/{id}/registrations`, `/compare`, `/ask`.
 - `/ask`: entity resolution → tool calls (predefined SQL) → answer from rows only; returns
   `evidence[]`, `warnings[]`, `disclaimer`.
-- LLM client: OpenAI-compatible, provider/model/key from env (`AI_PROVIDER`, `AI_MODEL`, `AI_API_KEY`,
-  `AI_BASE_URL`). Works with OpenAI, Gemini (OpenAI-compatible endpoint) and Azure OpenAI.
+- LLM client: Claude Sonnet 5.5 via the Anthropic SDK by default; OpenAI-compatible endpoints (OpenAI, Gemini, Azure OpenAI, local)
+  stay available. Provider/model/key from env (`AI_PROVIDER`, `AI_MODEL`, `CLAUDE_API_KEY` / `AI_API_KEY`, `AI_BASE_URL`).
 
 Exit test: `tests/test_api.py`, `tests/test_gold.py` (T01–T05); `scripts/build_submission.py`
 → evaluator 70/70.

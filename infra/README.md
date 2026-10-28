@@ -19,13 +19,13 @@ Volumes: `pgdata` (database), `rawdata` (official files + `.meta.json`, ≈ 420 
 sudo mkdir -p /opt/lpc-regwatch && sudo chown $USER /opt/lpc-regwatch
 git clone https://github.com/hosseinisreza95/melee_hackathon_2026.git /opt/lpc-regwatch
 cd /opt/lpc-regwatch
-cp .env.example .env            # then set POSTGRES_PASSWORD, PUBLIC_BASE_URL, and (optionally) AI_API_KEY
+cp .env.example .env            # then set POSTGRES_PASSWORD, PUBLIC_BASE_URL, and (optionally) CLAUDE_API_KEY (Claude Sonnet 5.5)
 chmod 600 .env
 docker compose -f infra/docker-compose.yml --env-file .env up -d --build db api ui proxy
 docker compose -f infra/docker-compose.yml --env-file .env --profile jobs run --rm pipeline
 ```
 
-The pipeline takes ~10 minutes the first time (the Brazilian CSV is 392 MB). Without `AI_API_KEY` the label-extraction
+The pipeline takes ~10 minutes the first time (the Brazilian CSV is 392 MB). Without a key the label-extraction
 step prints `SKIPPED` and everything else is identical.
 
 ## Refresh (cron on the host)
