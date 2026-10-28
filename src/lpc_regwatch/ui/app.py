@@ -187,7 +187,7 @@ st.markdown(f"""
   .st-key-lpc_topbar button[data-testid="stPopoverButton"] p {{ display:none; }}
   .st-key-lpc_topbar button[data-testid="stPopoverButton"] div[aria-hidden="true"], .st-key-lpc_topbar button[data-testid="stPopoverButton"] [data-testid="stMarkdownContainer"] {{ display:none; }}
   .st-key-lpc_topbar button[data-testid="stPopoverButton"] [data-testid="stIconMaterial"] {{ font-size:1.45rem; line-height:1; font-weight:700; }}
-  .st-key-lpc_topbar button[data-testid="stPopoverButton"] > div {{ justify-content:center; width:100%; }}
+  .st-key-lpc_topbar button[data-testid="stPopoverButton"] div, .st-key-lpc_topbar button[data-testid="stPopoverButton"] span:not([data-testid="stIconMaterial"]) {{ margin:0 !important; padding:0 !important; width:100% !important; justify-content:center !important; }}
   .st-key-lpc_topbar button[data-testid="stPopoverButton"]:hover {{ background:{RED}; color:#fff; border-color:{RED}; }}
   .lpc-menu-h {{ font-size:.72rem; letter-spacing:.14em; text-transform:uppercase; color:#5b6770; margin:2px 0 6px; }}
   .lpc-menu-list {{ list-style:none; padding:0; margin:0; font-size:.9rem; line-height:1.8; }}
