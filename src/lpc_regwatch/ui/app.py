@@ -183,12 +183,12 @@ st.markdown(f"""
   .kpi .v.small {{ font-size:1.05rem; padding:.35rem 0; }}
   .kpi .l {{ font-size:.64rem; color:#5b6770; text-transform:uppercase; letter-spacing:.02em; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }}
   .st-key-lpc_topbar {{ position:fixed; top:.55rem; right:1rem; z-index:999991; width:auto; }}
-  .st-key-lpc_topbar button[data-testid="stPopoverButton"] {{ border-radius:999px; min-height:2.2rem; height:2.2rem; width:2.2rem; padding:0; justify-content:center; color:{SLATE}; background:#fff; border:1px solid #d7d9db; }}
+  .st-key-lpc_topbar button[data-testid="stPopoverButton"] {{ border-radius:999px; min-height:2.2rem; height:2.2rem; width:2.2rem; padding:0; justify-content:center; color:{SLATE}; background:#fff; border:1.5px solid {RED}; box-shadow:0 1px 4px rgba(227,3,39,.18); }}
   .st-key-lpc_topbar button[data-testid="stPopoverButton"] p {{ display:none; }}
-  .st-key-lpc_topbar button[data-testid="stPopoverButton"] [aria-hidden="true"] {{ display:none; }}
-  .st-key-lpc_topbar button[data-testid="stPopoverButton"] [data-testid="stIconMaterial"] {{ font-size:1.35rem; line-height:1; }}
+  .st-key-lpc_topbar button[data-testid="stPopoverButton"] > div[aria-hidden="true"] {{ display:none; }}
+  .st-key-lpc_topbar button[data-testid="stPopoverButton"] [data-testid="stIconMaterial"] {{ font-size:1.45rem; line-height:1; font-weight:700; }}
   .st-key-lpc_topbar button[data-testid="stPopoverButton"] > div {{ justify-content:center; width:100%; }}
-  .st-key-lpc_topbar button[data-testid="stPopoverButton"]:hover {{ border-color:{RED}; color:{RED}; }}
+  .st-key-lpc_topbar button[data-testid="stPopoverButton"]:hover {{ background:{RED}; color:#fff; border-color:{RED}; }}
   .lpc-menu-h {{ font-size:.72rem; letter-spacing:.14em; text-transform:uppercase; color:#5b6770; margin:2px 0 6px; }}
   .lpc-menu-list {{ list-style:none; padding:0; margin:0; font-size:.9rem; line-height:1.8; }}
   .lpc-menu-list a {{ color:{SLATE}; text-decoration:none; }}
